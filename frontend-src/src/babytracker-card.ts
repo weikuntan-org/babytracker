@@ -322,6 +322,11 @@ export class BabytrackerCard extends LitElement {
                 btn.classList.add("logged");
                 setTimeout(() => btn.classList.remove("logged"), 700);
             }
+            // The coordinator dispatches SIGNAL_DATA_UPDATED synchronously inside
+            // the service call, so hass.states is already up to date by the time
+            // the promise resolves. HA *should* push a new hass to us; force a
+            // re-render now in case it doesn't (older HA + same-reference hass).
+            this.requestUpdate();
             return result;
         } catch (err) {
             console.warn("babytracker: service call failed", service, err);

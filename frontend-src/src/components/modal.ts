@@ -36,7 +36,7 @@ function diaperForm(
     const onSubmit = (e: SubmitEvent) => {
         e.preventDefault();
         const form = e.currentTarget as HTMLFormElement;
-        const data = new FormData(form);
+        const data = new FormData(form, (e as any).submitter ?? undefined);
         submit("log_diaper", {
             baby,
             kind: String(data.get("kind") ?? "wet"),
@@ -46,17 +46,46 @@ function diaperForm(
     return html`
         <form @submit=${onSubmit}>
             <h2>Log diaper</h2>
-            <label for="kind">Type</label>
-            <select id="kind" name="kind" autofocus>
-                <option value="wet" selected>Wet</option>
-                <option value="dirty">Dirty</option>
-                <option value="both">Both</option>
-            </select>
             <label for="notes">Notes</label>
-            <input id="notes" name="notes" type="text" placeholder="optional" />
+            <input
+                id="notes"
+                name="notes"
+                type="text"
+                placeholder="optional"
+            />
+            <div
+                style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"
+            >
+                <button
+                    type="submit"
+                    name="kind"
+                    value="wet"
+                    class="quick"
+                    aria-label="Log wet diaper"
+                >
+                    Wet
+                </button>
+                <button
+                    type="submit"
+                    name="kind"
+                    value="dirty"
+                    class="quick"
+                    aria-label="Log dirty diaper"
+                >
+                    Dirty
+                </button>
+                <button
+                    type="submit"
+                    name="kind"
+                    value="both"
+                    class="quick"
+                    aria-label="Log both diaper"
+                >
+                    Both
+                </button>
+            </div>
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
-                <button type="submit" class="primary">Log</button>
             </div>
         </form>
     `;
@@ -68,7 +97,7 @@ function bottleForm(
     submit: Submit,
     close: Close
 ): TemplateResult {
-    const defaultUnit = options?.volume_unit ?? "ml";
+    const defaultUnit = options?.volume_unit ?? "oz";
     const onSubmit = (e: SubmitEvent) => {
         e.preventDefault();
         const form = e.currentTarget as HTMLFormElement;
@@ -99,8 +128,8 @@ function bottleForm(
             />
             <label for="unit">Unit</label>
             <select id="unit" name="unit">
-                <option value="ml" ?selected=${defaultUnit === "ml"}>ml</option>
                 <option value="oz" ?selected=${defaultUnit === "oz"}>oz</option>
+                <option value="ml" ?selected=${defaultUnit === "ml"}>ml</option>
             </select>
             <label for="notes">Notes</label>
             <input id="notes" name="notes" type="text" placeholder="optional" />
