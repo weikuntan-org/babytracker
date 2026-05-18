@@ -2,6 +2,8 @@
 // Inline SVG only — no chart libs.
 import { html, type TemplateResult } from "lit";
 
+import { babyEntityId } from "../lib/ha-helpers";
+
 interface UnitOverrides {
     volume?: string;
     weight?: string;
@@ -16,11 +18,14 @@ export function growthChartTemplate(
 ): TemplateResult {
     const weightUnit = units?.weight ?? options?.weight_unit ?? "kg";
     const lengthUnit = units?.length ?? options?.length_unit ?? "cm";
-    const weight = hass.states[`sensor.${baby}_weight`]?.state ?? "—";
-    const height = hass.states[`sensor.${baby}_height`]?.state ?? "—";
-    const head = hass.states[`sensor.${baby}_head_circumference`]?.state ?? "—";
-    const weightP = hass.states[`sensor.${baby}_weight_percentile`]?.state ?? "—";
-    const heightP = hass.states[`sensor.${baby}_height_percentile`]?.state ?? "—";
+    const weight = hass.states[babyEntityId(baby, "weight")]?.state ?? "—";
+    const height = hass.states[babyEntityId(baby, "height")]?.state ?? "—";
+    const head =
+        hass.states[babyEntityId(baby, "head_circumference")]?.state ?? "—";
+    const weightP =
+        hass.states[babyEntityId(baby, "weight_percentile")]?.state ?? "—";
+    const heightP =
+        hass.states[babyEntityId(baby, "height_percentile")]?.state ?? "—";
     return html`
         <div class="section" role="region" aria-label="Growth">
             <h2>Growth</h2>

@@ -1,11 +1,14 @@
 // Vaccines chip + overdue badge (§4.8 / SPECS §12).
 import { html, type TemplateResult } from "lit";
 
+import { babyEntityId } from "../lib/ha-helpers";
+
 export function vaccinesDueTemplate(hass: any, baby: string): TemplateResult | "" {
-    const due = hass.states[`sensor.${baby}_vaccines_due`];
+    const due = hass.states[babyEntityId(baby, "vaccines_due")];
     if (!due || due.state === "unknown") return "";
     const overdue =
-        hass.states[`binary_sensor.${baby}_vaccines_overdue`]?.state === "on";
+        hass.states[babyEntityId(baby, "vaccines_overdue", "binary_sensor")]
+            ?.state === "on";
     return html`
         <div
             class="section chip ${overdue ? "warning" : ""}"

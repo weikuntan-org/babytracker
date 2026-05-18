@@ -2,12 +2,14 @@
 // attribute so the totals match the 24h activity list directly underneath.
 import { html, type TemplateResult } from "lit";
 
+import { babyEntityId } from "../lib/ha-helpers";
+
 export function todayCountsTemplate(
     hass: any,
     baby: string,
     _babyConfig: any | undefined
 ): TemplateResult {
-    const sensor = hass.states?.[`sensor.${baby}_recent_entries`];
+    const sensor = hass.states?.[babyEntityId(baby, "recent_entries")];
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     const entries: any[] = (sensor?.attributes?.entries ?? []).filter(
         (e: any) => _parseMs(e.timestamp) >= cutoff

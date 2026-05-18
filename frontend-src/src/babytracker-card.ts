@@ -17,6 +17,7 @@ import { exportSheetTemplate } from "./components/export-sheet";
 import { todayCountsTemplate } from "./components/today-counts";
 import { modalTemplate, type ModalKind } from "./components/modal";
 import {
+    babyEntityId,
     fireServiceCall,
     subscribeBabyConfig,
     subscribeIntegrationOptions
@@ -263,8 +264,11 @@ export class BabytrackerCard extends LitElement {
         return this._config!.baby;
     }
 
-    private _entityId(suffix: string, prefix = "sensor"): string {
-        return `${prefix}.${this._baby()}_${suffix}`;
+    private _entityId(
+        suffix: string,
+        prefix: "sensor" | "binary_sensor" = "sensor"
+    ): string {
+        return babyEntityId(this._baby(), suffix, prefix);
     }
 
     private _renderStatus(): TemplateResult {

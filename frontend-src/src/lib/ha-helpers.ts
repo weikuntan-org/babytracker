@@ -1,5 +1,16 @@
 // WebSocket subscriptions for babytracker's commands (§15 #24).
 
+// HA composes per-baby entity_ids from the device name "babytracker — <baby>"
+// (em-dash slugified to underscore), producing the `babytracker_<slug>_*`
+// prefix. Card lookups must use this exact prefix or every state read misses.
+export function babyEntityId(
+    baby: string,
+    suffix: string,
+    domain: "sensor" | "binary_sensor" = "sensor"
+): string {
+    return `${domain}.babytracker_${baby}_${suffix}`;
+}
+
 export async function fireServiceCall(
     hass: any,
     domain: string,
