@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1] / "custom_components" / "babytracker"
 def _load_pure(name: str, rel: str):
     spec = importlib.util.spec_from_file_location(name, ROOT / rel)
     module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
 

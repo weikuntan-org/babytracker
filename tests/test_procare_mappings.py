@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1] / "custom_components" / "babytracker"
 def _load(module_name: str, relative: str):
     spec = importlib.util.spec_from_file_location(module_name, ROOT / relative)
     module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
 
