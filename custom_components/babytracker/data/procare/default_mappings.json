@@ -1,0 +1,42 @@
+[
+    {
+        "pattern": "^Diaper.*Wet",
+        "type": "diaper",
+        "kind": "wet"
+    },
+    {
+        "pattern": "^Diaper.*(BM|Dirty)",
+        "type": "diaper",
+        "kind": "dirty"
+    },
+    {
+        "pattern": "^Diaper.*Both",
+        "type": "diaper",
+        "kind": "both"
+    },
+    {
+        "pattern": "^Bottle\\s*:",
+        "type": "feeding",
+        "method": "bottle"
+    },
+    {
+        "pattern": "^Meal\\s*:",
+        "type": "feeding",
+        "method": "solids"
+    },
+    {
+        "pattern": "^Snack\\s*:",
+        "type": "feeding",
+        "method": "solids"
+    },
+    {
+        "pattern": "^Nap\\s+Started",
+        "type": "sleep",
+        "session": "start"
+    },
+    {
+        "pattern": "^Nap\\s+Ended",
+        "type": "sleep",
+        "session": "end"
+    }
+]
