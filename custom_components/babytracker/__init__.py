@@ -80,8 +80,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
             cache_bust = int(bundle_path.stat().st_mtime)
             bundle_url = f"{FRONTEND_URL}/{CARD_FILENAME}?v={cache_bust}"
-            add_extra_js_url(hass, bundle_url)
-            await _ensure_lovelace_resource(hass, bundle_url)
+            # Prefer the Storage-mode Lovelace Resource (auto-managed, cache-
+            # bust-aware). Only fall back to add_extra_js_url for YAML-mode
+            # dashboards — using BOTH causes Storage installs to load the
+            # bundle twice and double-register the custom elements.
+            registered = await _ensure_lovelace_resource(hass, bundle_url)
+            if not registered:
+                add_extra_js_url(hass, bundle_url)
         except Exception:  # noqa: BLE001
             _LOGGER.exception("Failed to register frontend resources")
 
@@ -124,42 +129,42 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def _ensure_lovelace_resource(hass: HomeAssistant, bundle_url: str) -> None:
+async def _ensure_lovelace_resource(hass: HomeAssistant, bundle_url: str) -> bool:
     """Create or update the Lovelace Resource pointing at our bundle.
 
-    `add_extra_js_url` only attaches to YAML-mode dashboards. For Storage-mode
-    (the HA default), the card has to be loaded via a Lovelace Resource. We
-    manage that Resource ourselves so users don't have to add it manually and
-    so the URL gets cache-busted on each rebuild.
+    Returns True if the Storage-mode Resource is in place (created, updated,
+    or already current). Returns False if the user is on YAML-mode Lovelace
+    or the Lovelace API is unavailable — in which case the caller should
+    fall back to `add_extra_js_url`.
 
-    If the user is on YAML-mode Lovelace, the resources collection isn't a
-    writable Storage collection — we no-op and the YAML user manages their
-    own resources (with our `add_extra_js_url` covering them automatically).
+    Always returning True for the Storage-mode path matters: we then SKIP
+    `add_extra_js_url` to avoid loading the same bundle twice, which would
+    double-register the custom elements and throw at the second `define`.
     """
     base = f"{FRONTEND_URL}/{CARD_FILENAME}"
     lovelace = hass.data.get("lovelace")
     if lovelace is None:
-        return
+        return False
     # HA exposes resources via `lovelace.resources` on the LovelaceData dataclass
     # (2024+); fall back to dict access for older versions.
     resources = getattr(lovelace, "resources", None)
     if resources is None and isinstance(lovelace, dict):
         resources = lovelace.get("resources")
     if resources is None:
-        return
+        return False
     # Storage-mode collections have async_create_item / async_update_item;
     # YAML-mode (ResourceYAMLCollection) does not.
     if not hasattr(resources, "async_create_item") or not hasattr(
         resources, "async_update_item"
     ):
-        return
+        return False
     try:
         if hasattr(resources, "async_load"):
             await resources.async_load()
         items = list(resources.async_items())
     except Exception:  # noqa: BLE001
         _LOGGER.debug("Lovelace resources unavailable; skipping auto-register")
-        return
+        return False
 
     existing = next(
         (item for item in items if str(item.get("url", "")).split("?", 1)[0] == base),
@@ -173,5 +178,7 @@ async def _ensure_lovelace_resource(hass: HomeAssistant, bundle_url: str) -> Non
         elif existing.get("url") != bundle_url:
             await resources.async_update_item(existing["id"], payload)
             _LOGGER.info("babytracker: updated Lovelace resource to %s", bundle_url)
+        return True
     except Exception:  # noqa: BLE001
         _LOGGER.exception("babytracker: failed to manage Lovelace resource")
+        return False

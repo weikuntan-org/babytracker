@@ -240,10 +240,9 @@ class CountTodaySensor(_BabyEntity):
     def native_value(self) -> int:
         return _count_today(self.hass, self._coord, self.baby.id, self._type, self._predicate)
 
-    @property
-    def last_reset(self) -> datetime:
-        local = dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        return local
+    # No last_reset: TOTAL_INCREASING infers the daily reset from the value
+    # dropping back to 0 after midnight (HA tightened this — setting
+    # last_reset on a TOTAL_INCREASING sensor is now a ValueError).
 
 
 class TotalFeedingVolumeTodaySensor(_BabyEntity):
@@ -286,9 +285,7 @@ class TotalFeedingVolumeTodaySensor(_BabyEntity):
             total += value
         return round(total, 1)
 
-    @property
-    def last_reset(self) -> datetime:
-        return dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # last_reset omitted intentionally — see CountTodaySensor.
 
 
 class MinutesTodaySensor(_BabyEntity):
@@ -304,9 +301,7 @@ class MinutesTodaySensor(_BabyEntity):
     def native_value(self) -> float:
         return _sum_minutes_today(self.hass, self._coord, self.baby.id, self._type)
 
-    @property
-    def last_reset(self) -> datetime:
-        return dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # last_reset omitted intentionally — see CountTodaySensor.
 
 
 class LastDiaperKindSensor(_BabyEntity):
@@ -596,9 +591,7 @@ class GlobalPumpingTodaySensor(_GlobalEntity):
             total += value
         return round(total, 1)
 
-    @property
-    def last_reset(self) -> datetime:
-        return dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # last_reset omitted intentionally — see CountTodaySensor.
 
 
 class GlobalRecentEntriesSensor(_GlobalEntity):
