@@ -14,10 +14,13 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from typing import TYPE_CHECKING
 
-from .const import DEFAULT_OPTIONS, DOMAIN, OPT_WHO_CDC_HANDOFF_MONTHS
-from .models import Baby
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+
+    from .const import DEFAULT_OPTIONS, DOMAIN, OPT_WHO_CDC_HANDOFF_MONTHS
+    from .models import Baby
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -152,7 +155,9 @@ def compute_percentile(
     }
 
 
-def _options(hass: HomeAssistant) -> dict[str, Any]:
+def _options(hass: "HomeAssistant") -> dict[str, Any]:
+    from .const import DEFAULT_OPTIONS, DOMAIN  # local import keeps module HA-free
+
     for entry_id in hass.data.get(DOMAIN, {}):
         entry = hass.config_entries.async_get_entry(entry_id)
         if entry is not None:
@@ -161,7 +166,7 @@ def _options(hass: HomeAssistant) -> dict[str, Any]:
 
 
 def attach_percentile_data(
-    hass: HomeAssistant, baby: Baby, data: dict[str, Any]
+    hass: "HomeAssistant", baby: "Baby", data: dict[str, Any]
 ) -> None:
     """Compute percentile fields and merge them into `data` in place.
 
@@ -169,6 +174,8 @@ def attach_percentile_data(
     `data` block so historical values stay stable across reference table
     bumps (§4.5).
     """
+    from .const import OPT_WHO_CDC_HANDOFF_MONTHS
+
     options = _options(hass)
     handoff = int(options.get(OPT_WHO_CDC_HANDOFF_MONTHS, 24))
 

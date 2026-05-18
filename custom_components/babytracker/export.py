@@ -10,10 +10,12 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from typing import TYPE_CHECKING
 
-from .const import DOMAIN
-from .models import Baby
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+
+    from .models import Baby
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,14 +42,16 @@ _TYPE_TO_SECTION = {
 }
 
 
-def _coordinator(hass: HomeAssistant):
+def _coordinator(hass: "HomeAssistant"):
+    from .const import DOMAIN
+
     runtimes = hass.data.get(DOMAIN, {})
     if not runtimes:
         return None
     return next(iter(runtimes.values()))["coordinator"]
 
 
-def _output_dir(hass: HomeAssistant) -> Path:
+def _output_dir(hass: "HomeAssistant") -> Path:
     path = Path(hass.config.path("www")) / "babytracker"
     path.mkdir(parents=True, exist_ok=True)
     return path
@@ -69,7 +73,7 @@ def _resolve_range(start: str | None, end: str | None) -> tuple[date, date]:
 
 
 def _filter_entries(
-    entries, baby: Baby, start: date, end: date, sections: set[str]
+    entries, baby, start: date, end: date, sections: set[str]
 ) -> list:
     out = []
     for entry in entries:
@@ -140,7 +144,7 @@ def _html_table(entries, section: str) -> str:
     return buf.getvalue()
 
 
-def _write_html(path: Path, baby: Baby, entries_by_section: dict[str, list]) -> None:
+def _write_html(path: Path, baby, entries_by_section: dict[str, list]) -> None:
     parts: list[str] = []
     parts.append("<!doctype html><html><head><meta charset='utf-8'>")
     parts.append(f"<title>babytracker — {html.escape(baby.name)}</title>")
@@ -167,8 +171,8 @@ def _write_html(path: Path, baby: Baby, entries_by_section: dict[str, list]) -> 
 
 
 async def generate_report(
-    hass: HomeAssistant,
-    baby: Baby,
+    hass: "HomeAssistant",
+    baby,
     *,
     fmt: str = "html",
     start: str | None = None,

@@ -1,10 +1,31 @@
 """Centralised eligibility + daycare lockout (§4.10, §12 #11)."""
 from __future__ import annotations
 
-from homeassistant.exceptions import ServiceValidationError
+try:
+    from homeassistant.exceptions import ServiceValidationError
+except ImportError:  # pragma: no cover — tests run without HA installed
 
-from .const import DOMAIN
-from .models import Baby
+    class ServiceValidationError(Exception):  # type: ignore[no-redef]
+        def __init__(
+            self,
+            message: str = "",
+            *,
+            translation_domain: str | None = None,
+            translation_key: str | None = None,
+            translation_placeholders: dict | None = None,
+        ) -> None:
+            super().__init__(message or translation_key or "ServiceValidationError")
+            self.translation_domain = translation_domain
+            self.translation_key = translation_key
+            self.translation_placeholders = translation_placeholders
+
+
+try:
+    from .const import DOMAIN
+    from .models import Baby
+except ImportError:  # pragma: no cover
+    from const import DOMAIN  # type: ignore[no-redef]
+    from models import Baby  # type: ignore[no-redef]
 
 
 def _exc(translation_key: str, placeholders: dict[str, str]) -> ServiceValidationError:

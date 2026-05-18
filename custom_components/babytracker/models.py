@@ -4,7 +4,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from .const import ALL_ACTIVITIES, ALL_FEEDING_METHODS
+try:
+    from .const import ALL_ACTIVITIES, ALL_FEEDING_METHODS
+except ImportError:  # pragma: no cover — supports bare-module loading in tests
+    from const import ALL_ACTIVITIES, ALL_FEEDING_METHODS  # type: ignore[no-redef]
 
 
 @dataclass
