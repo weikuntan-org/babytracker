@@ -5,12 +5,11 @@
     "config_flow": true,
     "single_config_entry": true,
     "iot_class": "local_push",
-    "documentation": "https://github.com/weikuntan/babytracker",
-    "issue_tracker": "https://github.com/weikuntan/babytracker/issues",
+    "documentation": "https://github.com/weikuntan-org/babytracker",
+    "issue_tracker": "https://github.com/weikuntan-org/babytracker/issues",
     "codeowners": ["@weikuntan"],
     "requirements": [],
     "dependencies": ["http", "frontend", "websocket_api"],
     "after_dependencies": ["media_source"],
-    "integration_type": "service",
-    "minimum_ha_version": "2024.6.0"
+    "integration_type": "service"
 }
