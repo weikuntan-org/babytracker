@@ -1,0 +1,412 @@
+log_feeding:
+  name: Log feeding
+  description: Log a completed feeding for a baby.
+  fields:
+    baby:
+      description: Baby slug.
+      required: true
+      example: ava
+      selector:
+        text:
+    method:
+      description: Feeding method.
+      required: true
+      selector:
+        select:
+          options:
+            - bottle
+            - breast_left
+            - breast_right
+            - solids
+    amount:
+      description: Amount fed (optional for breast/solids).
+      selector:
+        number:
+          min: 0
+          max: 500
+          step: 0.5
+          mode: box
+    unit:
+      description: Volume unit for amount.
+      selector:
+        select:
+          options:
+            - ml
+            - oz
+    started_at:
+      description: When the feeding started.
+      selector:
+        datetime:
+    ended_at:
+      description: When the feeding ended.
+      selector:
+        datetime:
+    notes:
+      description: Free-form notes.
+      selector:
+        text:
+    photo_path:
+      description: media-source:// path to an attached photo.
+      selector:
+        text:
+
+start_feeding:
+  name: Start feeding
+  description: Open a feeding session.
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    method:
+      required: true
+      selector:
+        select:
+          options:
+            - bottle
+            - breast_left
+            - breast_right
+            - solids
+
+end_feeding:
+  name: End feeding
+  description: Close the currently-open feeding session.
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    amount:
+      selector:
+        number:
+          min: 0
+          max: 500
+          step: 0.5
+          mode: box
+    unit:
+      selector:
+        select:
+          options:
+            - ml
+            - oz
+    notes:
+      selector:
+        text:
+
+log_diaper:
+  name: Log diaper
+  description: Log a diaper change.
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    kind:
+      required: true
+      selector:
+        select:
+          options:
+            - wet
+            - dirty
+            - both
+    notes:
+      selector:
+        text:
+    photo_path:
+      selector:
+        text:
+
+start_sleep:
+  name: Start sleep
+  description: Open a sleep session.
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    location:
+      selector:
+        text:
+
+end_sleep:
+  name: End sleep
+  description: Close the open sleep session.
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    notes:
+      selector:
+        text:
+
+start_tummy_time:
+  name: Start tummy time
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+
+end_tummy_time:
+  name: End tummy time
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    notes:
+      selector:
+        text:
+
+log_tummy_time:
+  name: Log tummy time (retroactive)
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    started_at:
+      required: true
+      selector:
+        datetime:
+    ended_at:
+      required: true
+      selector:
+        datetime:
+    notes:
+      selector:
+        text:
+
+log_pumping:
+  name: Log pumping
+  fields:
+    volume:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1000
+          step: 0.5
+          mode: box
+    unit:
+      required: true
+      selector:
+        select:
+          options:
+            - ml
+            - oz
+    side:
+      selector:
+        select:
+          options:
+            - left
+            - right
+            - both
+    duration:
+      selector:
+        number:
+          min: 0
+          max: 120
+          step: 1
+          mode: box
+    notes:
+      selector:
+        text:
+
+log_growth:
+  name: Log growth measurement
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    weight:
+      selector:
+        number:
+          min: 0
+          max: 200
+          step: 0.01
+          mode: box
+    height:
+      selector:
+        number:
+          min: 0
+          max: 250
+          step: 0.1
+          mode: box
+    head_circumference:
+      selector:
+        number:
+          min: 0
+          max: 80
+          step: 0.1
+          mode: box
+    weight_unit:
+      selector:
+        select:
+          options:
+            - kg
+            - lb
+    length_unit:
+      selector:
+        select:
+          options:
+            - cm
+            - in
+    notes:
+      selector:
+        text:
+    photo_path:
+      selector:
+        text:
+
+log_medication:
+  name: Log medication
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    name:
+      required: true
+      selector:
+        text:
+    dose:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1000
+          step: 0.01
+          mode: box
+    unit:
+      required: true
+      selector:
+        text:
+    notes:
+      selector:
+        text:
+
+log_vaccine:
+  name: Log vaccine
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    name:
+      required: true
+      selector:
+        text:
+    dose_number:
+      selector:
+        number:
+          min: 1
+          max: 20
+          step: 1
+          mode: box
+    lot_number:
+      selector:
+        text:
+    provider:
+      selector:
+        text:
+    site:
+      selector:
+        select:
+          options:
+            - left_thigh
+            - right_thigh
+            - left_arm
+            - right_arm
+            - oral
+            - nasal
+    timestamp:
+      selector:
+        datetime:
+    notes:
+      selector:
+        text:
+    photo_path:
+      selector:
+        text:
+
+edit_entry:
+  name: Edit entry
+  description: Mutate fields on an existing entry by id (§12 #19).
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    fields:
+      required: true
+      selector:
+        object:
+
+delete_entry:
+  name: Delete entry
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+
+purge_baby:
+  name: Purge baby
+  description: Permanently remove an archived baby and their entries.
+  fields:
+    baby_id:
+      required: true
+      selector:
+        text:
+
+export_report:
+  name: Export pediatrician report
+  description: Write a printable HTML + CSV report to /config/www/babytracker.
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    format:
+      selector:
+        select:
+          options:
+            - html
+            - csv
+    start:
+      description: ISO YYYY-MM-DD, defaults to 90 days before end.
+      selector:
+        text:
+    end:
+      description: ISO YYYY-MM-DD, defaults to today.
+      selector:
+        text:
+    sections:
+      selector:
+        select:
+          multiple: true
+          options:
+            - feedings
+            - sleep
+            - tummy_time
+            - diapers
+            - pumping
+            - growth
+            - vaccines
+            - medications
+
+set_daycare_presence:
+  name: Set daycare presence
+  description: Manual override of the Procare check-in tracker.
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    value:
+      required: true
+      selector:
+        boolean:

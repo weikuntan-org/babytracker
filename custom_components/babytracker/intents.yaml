@@ -1,0 +1,90 @@
+language: en
+
+intents:
+  BabytrackerLogDiaper:
+    data:
+      - sentences:
+          - "log a {kind} diaper for {baby}"
+          - "{baby} had a {kind} diaper"
+          - "diaper {kind} {baby}"
+
+  BabytrackerStartSleep:
+    data:
+      - sentences:
+          - "{baby} is going to sleep"
+          - "put {baby} down for a nap"
+          - "{baby} is napping at {location}"
+
+  BabytrackerEndSleep:
+    data:
+      - sentences:
+          - "{baby} woke up"
+          - "end {baby}'s nap"
+          - "{baby} is awake"
+
+  BabytrackerStartFeeding:
+    data:
+      - sentences:
+          - "start {method} for {baby}"
+          - "{baby} is having a {method}"
+
+  BabytrackerEndFeeding:
+    data:
+      - sentences:
+          - "{baby} finished feeding"
+          - "end feeding for {baby}"
+          - "{baby} drank {amount} {unit}"
+
+  BabytrackerLogFeeding:
+    data:
+      - sentences:
+          - "log {method} for {baby}"
+          - "{baby} had {amount} {unit} of {method}"
+
+  BabytrackerLogTummyTime:
+    data:
+      - sentences:
+          - "{baby} did {duration_minutes} minutes of tummy time"
+
+  BabytrackerLastFeedingTime:
+    data:
+      - sentences:
+          - "when did {baby} last eat"
+          - "how long since {baby} fed"
+
+  BabytrackerLastDiaperTime:
+    data:
+      - sentences:
+          - "when was {baby}'s last diaper"
+
+  BabytrackerIsSleeping:
+    data:
+      - sentences:
+          - "is {baby} sleeping"
+          - "is {baby} asleep"
+
+lists:
+  baby:
+    wildcard: true
+  kind:
+    values:
+      - "wet"
+      - "dirty"
+      - "both"
+  location:
+    wildcard: true
+  method:
+    values:
+      - "bottle"
+      - "breast_left"
+      - "breast_right"
+      - "breast"
+      - "solids"
+  amount:
+    wildcard: true
+  unit:
+    values:
+      - "ml"
+      - "oz"
+  duration_minutes:
+    wildcard: true

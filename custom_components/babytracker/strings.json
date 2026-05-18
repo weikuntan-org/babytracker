@@ -1,0 +1,191 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "babytracker",
+                "description": "Welcome. babytracker is a single-entry integration; add at least one baby to continue."
+            },
+            "add_baby": {
+                "title": "Add baby",
+                "description": "Enter the baby's details. Sex is required so growth percentiles are meaningful.",
+                "data": {
+                    "name": "Display name",
+                    "birthday": "Birthday",
+                    "sex": "Sex",
+                    "avatar_url": "Avatar URL (optional)"
+                }
+            },
+            "eligibility": {
+                "title": "Enabled activities",
+                "description": "Choose which activities and feeding methods to enable for this baby.",
+                "data": {
+                    "enabled_activities": "Activities",
+                    "enabled_feeding_methods": "Feeding methods"
+                }
+            },
+            "confirm": {
+                "title": "Confirm",
+                "description": "Create {name} (born {birthday}, {sex})?"
+            }
+        },
+        "error": {
+            "name_length": "Name must be 1–40 characters.",
+            "invalid_date": "Birthday must be an ISO date (YYYY-MM-DD).",
+            "birthday_future": "Birthday cannot be in the future.",
+            "birthday_too_old": "Birthday must be within the last 25 years.",
+            "slug_reserved": "That name conflicts with a reserved identifier.",
+            "slug_collision": "Another baby already uses that slug. Pick a different name."
+        },
+        "abort": {
+            "already_configured": "babytracker is already set up."
+        }
+    },
+    "options": {
+        "step": {
+            "main_menu": {
+                "title": "babytracker",
+                "menu_options": {
+                    "add_baby": "Add baby",
+                    "edit_baby": "Edit baby",
+                    "archive_baby": "Archive baby",
+                    "unarchive_baby": "Unarchive baby",
+                    "manage_importers": "Manage importers",
+                    "integration_options": "Integration options"
+                }
+            },
+            "add_baby": {
+                "title": "Add baby",
+                "data": {
+                    "name": "Display name",
+                    "birthday": "Birthday",
+                    "sex": "Sex",
+                    "avatar_url": "Avatar URL (optional)"
+                }
+            },
+            "add_baby_eligibility": {
+                "title": "Enabled activities",
+                "data": {
+                    "enabled_activities": "Activities",
+                    "enabled_feeding_methods": "Feeding methods"
+                }
+            },
+            "edit_baby": {
+                "title": "Choose a baby to edit"
+            },
+            "edit_baby_form": {
+                "title": "Edit baby",
+                "data": {
+                    "name": "Display name",
+                    "birthday": "Birthday",
+                    "sex": "Sex",
+                    "avatar_url": "Avatar URL",
+                    "enabled_activities": "Activities",
+                    "enabled_feeding_methods": "Feeding methods"
+                }
+            },
+            "archive_baby": {
+                "title": "Archive baby"
+            },
+            "unarchive_baby": {
+                "title": "Unarchive baby"
+            },
+            "manage_importers": {
+                "title": "Manage importers"
+            },
+            "importer_form": {
+                "title": "Procare importer",
+                "data": {
+                    "source_entity_id": "Procare activities sensor (leave blank to disable)",
+                    "import_types": "Import these activity types",
+                    "mark_readonly": "Mark imported entries readonly",
+                    "daycare_location_label": "Daycare location label",
+                    "daycare_open_time": "Daycare open time (HH:MM)",
+                    "daycare_close_time": "Daycare close time (HH:MM)",
+                    "daycare_days": "Operating days",
+                    "block_local_while_checked_in": "Block local logs while checked in",
+                    "presence_inference_window_minutes": "Presence inference window (minutes)"
+                }
+            },
+            "integration_options": {
+                "title": "Integration options",
+                "data": {
+                    "volume_unit": "Default volume unit",
+                    "weight_unit": "Default weight unit",
+                    "length_unit": "Default length unit",
+                    "enable_pumping": "Enable pumping",
+                    "vaccine_schedule": "Vaccine schedule",
+                    "vaccine_grace_days": "Vaccine grace days",
+                    "who_cdc_handoff_months": "WHO→CDC handoff (months)",
+                    "presence_inference_window_minutes": "Presence inference window (minutes)"
+                }
+            }
+        },
+        "error": {
+            "name_length": "Name must be 1–40 characters.",
+            "invalid_date": "Birthday must be an ISO date (YYYY-MM-DD).",
+            "birthday_future": "Birthday cannot be in the future.",
+            "birthday_too_old": "Birthday must be within the last 25 years.",
+            "slug_reserved": "That name conflicts with a reserved identifier.",
+            "slug_collision": "Another baby already uses that slug."
+        },
+        "abort": {
+            "no_babies": "No active babies to act on.",
+            "no_archived": "No archived babies to restore.",
+            "unknown_baby": "Unknown baby."
+        }
+    },
+    "entity": {
+        "sensor": {
+            "last_feeding": {"name": "Last feeding"},
+            "last_feeding_method": {"name": "Last feeding method"},
+            "last_feeding_amount": {"name": "Last feeding amount"},
+            "feedings_today": {"name": "Feedings today"},
+            "total_feeding_volume_today": {"name": "Total feeding volume today"},
+            "last_diaper": {"name": "Last diaper"},
+            "last_diaper_kind": {"name": "Last diaper kind"},
+            "diapers_today": {"name": "Diapers today"},
+            "wet_diapers_today": {"name": "Wet diapers today"},
+            "dirty_diapers_today": {"name": "Dirty diapers today"},
+            "last_sleep_start": {"name": "Last sleep start"},
+            "total_sleep_today": {"name": "Total sleep today"},
+            "naps_today": {"name": "Naps today"},
+            "last_tummy_time_start": {"name": "Last tummy time start"},
+            "total_tummy_time_today": {"name": "Total tummy time today"},
+            "tummy_time_sessions_today": {"name": "Tummy time sessions today"},
+            "last_vaccine": {"name": "Last vaccine"},
+            "vaccines_due": {"name": "Vaccines due"},
+            "weight": {"name": "Weight"},
+            "height": {"name": "Height"},
+            "head_circumference": {"name": "Head circumference"},
+            "bmi": {"name": "BMI"},
+            "weight_percentile": {"name": "Weight percentile"},
+            "height_percentile": {"name": "Height percentile"},
+            "head_circumference_percentile": {"name": "Head circumference percentile"},
+            "bmi_percentile": {"name": "BMI percentile"},
+            "age_days": {"name": "Age in days"},
+            "age_months": {"name": "Age in months"},
+            "recent_entries": {"name": "Recent entries"},
+            "last_pumping": {"name": "Last pumping"},
+            "pumping_today": {"name": "Pumping today"},
+            "unmapped_procare_titles": {"name": "Unmapped Procare titles"}
+        },
+        "binary_sensor": {
+            "sleeping": {"name": "Sleeping"},
+            "feeding": {"name": "Feeding"},
+            "tummy_time": {"name": "Tummy time"},
+            "at_daycare": {"name": "At daycare"},
+            "vaccines_overdue": {"name": "Vaccines overdue"}
+        }
+    },
+    "exceptions": {
+        "eligibility_rejected": {
+            "message": "{method_label} isn't enabled for {baby_name}"
+        },
+        "daycare_lockout": {
+            "message": "{baby_name} is checked in at daycare; logs are coming from the Procare importer"
+        },
+        "unknown_baby": {
+            "message": "Unknown baby \"{baby}\""
+        }
+    }
+}

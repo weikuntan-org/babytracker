@@ -1,0 +1,82 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "babytracker",
+                "description": "Welcome. babytracker is a single-entry integration; add at least one baby to continue."
+            },
+            "add_baby": {
+                "title": "Add baby",
+                "description": "Enter the baby's details. Sex is required so growth percentiles are meaningful.",
+                "data": {
+                    "name": "Display name",
+                    "birthday": "Birthday",
+                    "sex": "Sex",
+                    "avatar_url": "Avatar URL (optional)"
+                }
+            },
+            "eligibility": {
+                "title": "Enabled activities",
+                "description": "Choose which activities and feeding methods to enable for this baby.",
+                "data": {
+                    "enabled_activities": "Activities",
+                    "enabled_feeding_methods": "Feeding methods"
+                }
+            },
+            "confirm": {
+                "title": "Confirm",
+                "description": "Create {name} (born {birthday}, {sex})?"
+            }
+        },
+        "error": {
+            "name_length": "Name must be 1–40 characters.",
+            "invalid_date": "Birthday must be an ISO date (YYYY-MM-DD).",
+            "birthday_future": "Birthday cannot be in the future.",
+            "birthday_too_old": "Birthday must be within the last 25 years.",
+            "slug_reserved": "That name conflicts with a reserved identifier.",
+            "slug_collision": "Another baby already uses that slug. Pick a different name."
+        },
+        "abort": {
+            "already_configured": "babytracker is already set up."
+        }
+    },
+    "options": {
+        "step": {
+            "main_menu": {
+                "title": "babytracker",
+                "menu_options": {
+                    "add_baby": "Add baby",
+                    "edit_baby": "Edit baby",
+                    "archive_baby": "Archive baby",
+                    "unarchive_baby": "Unarchive baby",
+                    "manage_importers": "Manage importers",
+                    "integration_options": "Integration options"
+                }
+            }
+        },
+        "error": {
+            "name_length": "Name must be 1–40 characters.",
+            "invalid_date": "Birthday must be an ISO date (YYYY-MM-DD).",
+            "birthday_future": "Birthday cannot be in the future.",
+            "birthday_too_old": "Birthday must be within the last 25 years.",
+            "slug_reserved": "That name conflicts with a reserved identifier.",
+            "slug_collision": "Another baby already uses that slug."
+        },
+        "abort": {
+            "no_babies": "No active babies to act on.",
+            "no_archived": "No archived babies to restore.",
+            "unknown_baby": "Unknown baby."
+        }
+    },
+    "exceptions": {
+        "eligibility_rejected": {
+            "message": "{method_label} isn't enabled for {baby_name}"
+        },
+        "daycare_lockout": {
+            "message": "{baby_name} is checked in at daycare; logs are coming from the Procare importer"
+        },
+        "unknown_baby": {
+            "message": "Unknown baby \"{baby}\""
+        }
+    }
+}
