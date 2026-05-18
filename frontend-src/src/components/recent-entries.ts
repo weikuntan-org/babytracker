@@ -17,27 +17,23 @@ export function recentEntriesTemplate(
             ${entries.length === 0
                 ? html`<p>No entries yet.</p>`
                 : html`
-                      <ul style="list-style:none;padding:0;margin:0;">
+                      <ul class="entries">
                           ${entries.map(
                               (entry: any) => html`
-                                  <li
-                                      style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--divider-color);"
-                                  >
+                                  <li>
                                       <span aria-label="Entry type">${entry.type}</span>
-                                      <span style="color:var(--secondary-text-color);">
-                                          ${entry.timestamp}
-                                      </span>
+                                      <span class="muted">${entry.timestamp}</span>
                                       ${entry.photo_path
                                           ? html`<span aria-label="Has photo">📷</span>`
                                           : ""}
                                       ${entry.staff
                                           ? html`<span
-                                                style="font-size:0.8rem;color:var(--secondary-text-color);"
+                                                class="muted"
                                                 aria-label="Logged by Procare staff"
                                                 >via ${entry.staff}</span
                                             >`
                                           : ""}
-                                      <span style="flex:1"></span>
+                                      <span class="spacer"></span>
                                       <button
                                           aria-label="Delete entry"
                                           @click=${() =>

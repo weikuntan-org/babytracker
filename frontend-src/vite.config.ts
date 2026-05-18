@@ -12,7 +12,10 @@ export default defineConfig({
             fileName: () => "babytracker-card.js"
         },
         rollupOptions: {
-            external: []
+            external: [],
+            output: {
+                inlineDynamicImports: true
+            }
         }
     }
 });

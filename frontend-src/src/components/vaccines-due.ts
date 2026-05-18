@@ -11,7 +11,6 @@ export function vaccinesDueTemplate(hass: any, baby: string): TemplateResult | "
             class="section chip ${overdue ? "warning" : ""}"
             role="status"
             aria-label="Vaccines due"
-            style="display:flex;align-items:center;gap:8px;"
         >
             <span>Vaccines due:</span>
             <strong>${due.state}</strong>

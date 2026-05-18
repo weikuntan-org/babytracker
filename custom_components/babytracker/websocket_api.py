@@ -156,9 +156,23 @@ def _ws_get_options(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    payload = _entry_options(hass)
-    payload.pop("pending_baby", None)
-    connection.send_result(msg["id"], payload)
+    def _payload() -> dict[str, Any]:
+        payload = _entry_options(hass)
+        payload.pop("pending_baby", None)
+        return payload
+
+    connection.send_result(msg["id"], _payload())
+    if msg.get("subscribe"):
+        @callback
+        def _push() -> None:
+            connection.send_message(
+                websocket_api.event_message(msg["id"], _payload())
+            )
+
+        connection.subscriptions[msg["id"]] = async_dispatcher_connect(
+            hass, SIGNAL_DATA_UPDATED, _push
+        )
+        _push()
 
 
 @websocket_api.websocket_command(
