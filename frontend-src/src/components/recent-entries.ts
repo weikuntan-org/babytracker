@@ -1,7 +1,9 @@
-// Last-24-hours activity list — pulls from sensor.<baby>_recent_entries
+// Last-24-hours activity list — pulls from sensor.babytracker_<baby>_recent_entries
 // (which the coordinator keeps capped at RECENT_ENTRIES_CAP) and filters
 // to the trailing 24-hour window.
 import { html, type TemplateResult } from "lit";
+
+import { babyEntityId } from "../lib/ha-helpers";
 
 type ServiceCaller = (
     service: string,
@@ -15,7 +17,7 @@ export function recentEntriesTemplate(
     call: ServiceCaller,
     limit: number
 ): TemplateResult {
-    const sensor = hass.states[`sensor.${baby}_recent_entries`];
+    const sensor = hass.states[babyEntityId(baby, "recent_entries")];
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     const all: any[] = sensor?.attributes?.entries ?? [];
     const entries = all

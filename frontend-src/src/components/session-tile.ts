@@ -2,6 +2,8 @@
 // one-tap end button.
 import { html, type TemplateResult } from "lit";
 
+import { babyEntityId } from "../lib/ha-helpers";
+
 type ServiceCaller = (
     service: string,
     data: Record<string, unknown>,
@@ -13,15 +15,23 @@ export function sessionTileTemplate(
     baby: string,
     call: ServiceCaller
 ): TemplateResult | "" {
-    const sleeping = hass.states[`binary_sensor.${baby}_sleeping`]?.state === "on";
-    const feeding = hass.states[`binary_sensor.${baby}_feeding`]?.state === "on";
-    const tummy = hass.states[`binary_sensor.${baby}_tummy_time`]?.state === "on";
-    const walking = hass.states[`binary_sensor.${baby}_walking`]?.state === "on";
+    const sleeping =
+        hass.states[babyEntityId(baby, "sleeping", "binary_sensor")]?.state ===
+        "on";
+    const feeding =
+        hass.states[babyEntityId(baby, "feeding", "binary_sensor")]?.state ===
+        "on";
+    const tummy =
+        hass.states[babyEntityId(baby, "tummy_time", "binary_sensor")]?.state ===
+        "on";
+    const walking =
+        hass.states[babyEntityId(baby, "walking", "binary_sensor")]?.state ===
+        "on";
     if (!sleeping && !feeding && !tummy && !walking) return "";
 
     const banners: TemplateResult[] = [];
     if (sleeping) {
-        const started = hass.states[`sensor.${baby}_last_sleep_start`]?.state;
+        const started = hass.states[babyEntityId(baby, "last_sleep_start")]?.state;
         banners.push(
             html`
                 <div class="chip warning" role="status">
@@ -70,7 +80,7 @@ export function sessionTileTemplate(
         );
     }
     if (walking) {
-        const started = hass.states[`sensor.${baby}_last_walk_start`]?.state;
+        const started = hass.states[babyEntityId(baby, "last_walk_start")]?.state;
         banners.push(
             html`
                 <div class="chip warning" role="status">
