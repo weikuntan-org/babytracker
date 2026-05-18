@@ -178,6 +178,50 @@ log_tummy_time:
       selector:
         text:
 
+start_walk:
+  name: Start walk
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    location:
+      selector:
+        text:
+
+end_walk:
+  name: End walk
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    notes:
+      selector:
+        text:
+
+log_walk:
+  name: Log walk (retroactive)
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    started_at:
+      required: true
+      selector:
+        datetime:
+    ended_at:
+      required: true
+      selector:
+        datetime:
+    location:
+      selector:
+        text:
+    notes:
+      selector:
+        text:
+
 log_pumping:
   name: Log pumping
   fields:
