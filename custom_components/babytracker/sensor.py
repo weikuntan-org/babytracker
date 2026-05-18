@@ -721,6 +721,24 @@ async def async_setup_entry(
                     ),
                 ]
             )
+        if "walk" in ea:
+            entities.extend(
+                [
+                    LastEventSensor(
+                        coord,
+                        baby,
+                        "walk",
+                        "last_walk_start",
+                        "Last walk start",
+                    ),
+                    MinutesTodaySensor(
+                        coord, baby, "walk", "total_walk_today", "Total walk today"
+                    ),
+                    CountTodaySensor(
+                        coord, baby, "walk", "walks_today", "Walks today"
+                    ),
+                ]
+            )
         if "growth" in ea:
             entities.extend(
                 [

@@ -142,6 +142,10 @@ async def async_setup_entry(
             entities.append(
                 OpenSessionBinary(coord, baby, "tummy_time", "tummy_time", "Tummy time")
             )
+        if "walk" in ea:
+            entities.append(
+                OpenSessionBinary(coord, baby, "walk", "walking", "Walking")
+            )
         if baby.importer and baby.importer.get("source_entity_id"):
             entities.append(AtDaycareBinary(coord, baby))
         if "vaccine" in ea:

@@ -152,6 +152,9 @@
             "last_tummy_time_start": {"name": "Last tummy time start"},
             "total_tummy_time_today": {"name": "Total tummy time today"},
             "tummy_time_sessions_today": {"name": "Tummy time sessions today"},
+            "last_walk_start": {"name": "Last walk start"},
+            "total_walk_today": {"name": "Total walk today"},
+            "walks_today": {"name": "Walks today"},
             "last_vaccine": {"name": "Last vaccine"},
             "vaccines_due": {"name": "Vaccines due"},
             "weight": {"name": "Weight"},
@@ -173,6 +176,7 @@
             "sleeping": {"name": "Sleeping"},
             "feeding": {"name": "Feeding"},
             "tummy_time": {"name": "Tummy time"},
+            "walking": {"name": "Walking"},
             "at_daycare": {"name": "At daycare"},
             "vaccines_overdue": {"name": "Vaccines overdue"}
         }

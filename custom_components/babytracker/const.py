@@ -22,6 +22,7 @@ ACTIVITY_DIAPER: Final = "diaper"
 ACTIVITY_GROWTH: Final = "growth"
 ACTIVITY_MEDICATION: Final = "medication"
 ACTIVITY_VACCINE: Final = "vaccine"
+ACTIVITY_WALK: Final = "walk"
 
 ALL_ACTIVITIES: Final = (
     ACTIVITY_FEEDING,
@@ -31,6 +32,7 @@ ALL_ACTIVITIES: Final = (
     ACTIVITY_GROWTH,
     ACTIVITY_MEDICATION,
     ACTIVITY_VACCINE,
+    ACTIVITY_WALK,
 )
 
 FEEDING_METHOD_BOTTLE: Final = "bottle"

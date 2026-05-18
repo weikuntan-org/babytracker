@@ -6,14 +6,16 @@
 // release.yml fails on drift.
 
 import { LitElement, html, css, type TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, property, state, query } from "lit/decorators.js";
 
-import { quickLogTemplate } from "./components/quick-log";
+import { quickLogTemplate, type ModalRequester } from "./components/quick-log";
 import { sessionTileTemplate } from "./components/session-tile";
 import { recentEntriesTemplate } from "./components/recent-entries";
 import { vaccinesDueTemplate } from "./components/vaccines-due";
 import { growthChartTemplate } from "./components/growth-chart";
 import { exportSheetTemplate } from "./components/export-sheet";
+import { todayCountsTemplate } from "./components/today-counts";
+import { modalTemplate, type ModalKind } from "./components/modal";
 import {
     fireServiceCall,
     subscribeBabyConfig,
@@ -30,8 +32,9 @@ export interface BabytrackerCardConfig {
 
 const DEFAULT_SECTIONS = [
     "status",
-    "quick_log",
+    "today",
     "active_session",
+    "quick_log",
     "vaccines",
     "growth",
     "recent",
@@ -44,6 +47,8 @@ export class BabytrackerCard extends LitElement {
     @state() private _config?: BabytrackerCardConfig;
     @state() private _babyConfig?: any;
     @state() private _options?: any;
+    @state() private _modal: ModalKind | null = null;
+    @query("dialog") private _dialog!: HTMLDialogElement;
     private _unsubBaby?: () => void;
     private _unsubOptions?: () => void;
 
@@ -116,6 +121,14 @@ export class BabytrackerCard extends LitElement {
             padding: 14px 12px;
             font-weight: 600;
         }
+        @keyframes bt-flash {
+            0%   { background: var(--success-color, #43a047); color: #fff; }
+            70%  { background: var(--success-color, #43a047); color: #fff; }
+            100% { background: var(--secondary-background-color); color: var(--primary-text-color); }
+        }
+        button.quick.logged {
+            animation: bt-flash 700ms ease-out;
+        }
         svg {
             width: 100%;
             height: 120px;
@@ -139,6 +152,43 @@ export class BabytrackerCard extends LitElement {
         }
         .spacer {
             flex: 1;
+        }
+        dialog {
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            background: var(--card-background-color, #fff);
+            color: var(--primary-text-color);
+            max-width: 360px;
+            width: 90vw;
+        }
+        dialog::backdrop {
+            background: rgba(0, 0, 0, 0.4);
+        }
+        dialog form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        dialog label {
+            font-size: 0.9rem;
+            color: var(--primary-text-color);
+        }
+        dialog input,
+        dialog select,
+        dialog textarea {
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--divider-color);
+            background: var(--secondary-background-color);
+            color: var(--primary-text-color);
+            font: inherit;
+        }
+        dialog .actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 8px;
         }
     `;
 
@@ -167,6 +217,13 @@ export class BabytrackerCard extends LitElement {
     public updated(changed: Map<string, unknown>): void {
         if (changed.has("hass") || changed.has("_config")) {
             this._maybeSubscribe();
+        }
+        if (changed.has("_modal")) {
+            if (this._modal && this._dialog && !this._dialog.open) {
+                this._dialog.showModal();
+            } else if (!this._modal && this._dialog?.open) {
+                this._dialog.close();
+            }
         }
     }
 
@@ -210,6 +267,9 @@ export class BabytrackerCard extends LitElement {
         const sleeping =
             hass.states?.[this._entityId("sleeping", "binary_sensor")]?.state ===
             "on";
+        const walking =
+            hass.states?.[this._entityId("walking", "binary_sensor")]?.state ===
+            "on";
         const atDaycare =
             hass.states?.[this._entityId("at_daycare", "binary_sensor")]?.state ===
             "on";
@@ -223,6 +283,9 @@ export class BabytrackerCard extends LitElement {
                 </div>
                 ${sleeping
                     ? html`<div class="chip warning" role="listitem">Sleeping</div>`
+                    : ""}
+                ${walking
+                    ? html`<div class="chip warning" role="listitem">On a walk</div>`
                     : ""}
                 ${atDaycare
                     ? html`<div class="chip warning" role="listitem">At daycare</div>`
@@ -244,11 +307,42 @@ export class BabytrackerCard extends LitElement {
             : `${Math.floor(hrs / 24)}d`;
     }
 
-    private _handleService = (
+    private _handleService = async (
+        service: string,
+        data: Record<string, unknown>,
+        sourceBtn?: EventTarget | null
+    ): Promise<unknown> => {
+        const btn =
+            sourceBtn instanceof HTMLElement && sourceBtn.classList.contains("quick")
+                ? sourceBtn
+                : null;
+        try {
+            const result = await fireServiceCall(this.hass!, "babytracker", service, data);
+            if (btn) {
+                btn.classList.add("logged");
+                setTimeout(() => btn.classList.remove("logged"), 700);
+            }
+            return result;
+        } catch (err) {
+            console.warn("babytracker: service call failed", service, err);
+            throw err;
+        }
+    };
+
+    private _requestModal: ModalRequester = (kind) => {
+        this._modal = { kind, baby: this._baby() };
+    };
+
+    private _closeModal = () => {
+        this._modal = null;
+    };
+
+    private _submitModal = async (
         service: string,
         data: Record<string, unknown>
     ) => {
-        return fireServiceCall(this.hass!, "babytracker", service, data);
+        await this._handleService(service, data);
+        this._closeModal();
     };
 
     protected render(): TemplateResult {
@@ -258,6 +352,9 @@ export class BabytrackerCard extends LitElement {
             <ha-card>
                 <h2>${this._babyConfig?.name ?? this._baby()}</h2>
                 ${sections.includes("status") ? this._renderStatus() : ""}
+                ${sections.includes("today")
+                    ? todayCountsTemplate(this.hass, this._baby(), this._babyConfig)
+                    : ""}
                 ${sections.includes("active_session")
                     ? sessionTileTemplate(
                           this.hass,
@@ -269,7 +366,8 @@ export class BabytrackerCard extends LitElement {
                     ? quickLogTemplate(
                           this._babyConfig,
                           this._baby(),
-                          this._handleService
+                          this._handleService,
+                          this._requestModal
                       )
                     : ""}
                 ${sections.includes("vaccines")
@@ -288,13 +386,19 @@ export class BabytrackerCard extends LitElement {
                           this.hass,
                           this._baby(),
                           this._handleService,
-                          this._config.recent_limit ?? 10
+                          this._config.recent_limit ?? 50
                       )
                     : ""}
                 ${sections.includes("export")
                     ? exportSheetTemplate(this.hass, this._baby())
                     : ""}
             </ha-card>
+            ${modalTemplate(
+                this._modal,
+                this._options,
+                this._submitModal,
+                this._closeModal
+            )}
         `;
     }
 }
@@ -314,8 +418,8 @@ window.customCards = window.customCards ?? [];
 window.customCards.push({
     type: "babytracker-card",
     name: "babytracker",
-    description: "Track feedings, sleep, diapers, growth, and vaccines."
+    description: "Track feedings, sleep, diapers, growth, vaccines, and walks."
 });
 
-// Editor lives in editor.ts so the main bundle stays small.
+// Editor lives in editor.ts.
 import("./editor");
