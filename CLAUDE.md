@@ -62,3 +62,14 @@ When editing card behavior, patch the vanilla JS for any user-facing change *and
 ## Branch hygiene
 
 `main` is protected: PR required. Solo-dev workflow is "open PR → CI passes → `gh pr merge --admin --squash --delete-branch`". Don't push directly to main.
+
+## Pre-PR review policy (enforced)
+
+Before calling `gh pr create`, you MUST run **both** `/review` and `/security-review` on the current branch+commit, then touch the corresponding markers:
+
+```bash
+touch /tmp/claude-review-markers/<branch-slug>__<commit-sha>.review
+touch /tmp/claude-review-markers/<branch-slug>__<commit-sha>.security-review
+```
+
+A `PreToolUse` hook at `.claude/hooks/require-pre-pr-reviews.sh` blocks `gh pr create` until both markers exist for the **current commit**. New commits invalidate prior markers — re-run the reviews after each commit before opening the PR. If a review surfaces a finding worth fixing, fix it, re-commit, re-run the reviews.
