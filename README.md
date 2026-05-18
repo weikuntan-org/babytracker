@@ -39,9 +39,13 @@ loads, so there is **no separate HACS plugin to install**.
    integration).
 2. Install **babytracker**.
 3. Restart Home Assistant.
-4. **Hard-refresh** your dashboard tab after first install — the
-   bundled card is registered on `async_setup_entry`, but the HA
-   frontend bundle was already loaded before that registration ran.
+4. **Hard-refresh** your dashboard tab after first install. The
+   integration auto-registers the Lovelace Resource for the bundled
+   card on Storage-mode dashboards, but the HA frontend bundle was
+   already in your browser before that ran — refresh to load it.
+   On every integration update, the Resource URL is automatically
+   cache-busted with the bundle's mtime, so subsequent updates pick
+   up cleanly without manual Resource edits.
 5. Add a `type: custom:babytracker-card` card to your dashboard. Add a
    `type: custom:babytracker-growth-card` card separately if you want a
    dedicated growth panel.
