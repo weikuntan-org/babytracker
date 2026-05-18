@@ -36,10 +36,18 @@ const DEFAULT_SECTIONS = [
     "active_session",
     "quick_log",
     "vaccines",
-    "growth",
     "recent",
-    "export"
+    "export",
+    "growth"
 ];
+
+const SLEEP_INTERCEPT_LABELS: Record<string, string> = {
+    log_diaper: "logging a diaper",
+    log_feeding: "logging the feeding",
+    start_feeding: "starting a feeding session",
+    start_tummy_time: "starting tummy time",
+    start_walk: "starting a walk"
+};
 
 @customElement("babytracker-card")
 export class BabytrackerCard extends LitElement {
@@ -341,20 +349,28 @@ export class BabytrackerCard extends LitElement {
         );
     }
 
-    private _requestModal: ModalRequester = (kind) => {
-        if (this._isSleeping()) {
-            this._modal = {
-                kind: "end_sleep_first",
-                baby: this._baby(),
-                then: kind
-            };
-        } else {
-            this._modal = { kind, baby: this._baby() };
-        }
-    };
+    private _interceptIfSleeping(
+        label: string,
+        action: () => void | Promise<void>
+    ): void | Promise<void> {
+        if (!this._isSleeping()) return action();
+        this._modal = {
+            kind: "end_sleep_first",
+            baby: this._baby(),
+            label,
+            then: action
+        };
+    }
 
-    private _swapModal = (kind: "diaper" | "bottle" | "solids") => {
-        this._modal = { kind, baby: this._baby() };
+    private _requestModal: ModalRequester = (kind) => {
+        const labels: Record<typeof kind, string> = {
+            diaper: "logging a diaper",
+            bottle: "logging a bottle",
+            solids: "logging solids"
+        };
+        this._interceptIfSleeping(labels[kind], () => {
+            this._modal = { kind, baby: this._baby() };
+        });
     };
 
     private _closeModal = () => {
@@ -367,6 +383,25 @@ export class BabytrackerCard extends LitElement {
     ) => {
         await this._handleService(service, data);
         this._closeModal();
+    };
+
+    private _quickAction = async (
+        service: string,
+        data: Record<string, unknown>,
+        btn?: EventTarget | null
+    ): Promise<unknown> => {
+        const label = SLEEP_INTERCEPT_LABELS[service] ?? "logging this";
+        if (this._isSleeping()) {
+            this._modal = {
+                kind: "end_sleep_first",
+                baby: this._baby(),
+                label,
+                then: () =>
+                    this._handleService(service, data, btn).then(() => undefined)
+            };
+            return;
+        }
+        return this._handleService(service, data, btn);
     };
 
     protected render(): TemplateResult {
@@ -390,7 +425,7 @@ export class BabytrackerCard extends LitElement {
                     ? quickLogTemplate(
                           this._babyConfig,
                           this._baby(),
-                          this._handleService,
+                          this._quickAction,
                           this._requestModal
                       )
                     : ""}
@@ -421,7 +456,6 @@ export class BabytrackerCard extends LitElement {
                 this._modal,
                 this._options,
                 this._submitModal,
-                this._swapModal,
                 (service, data) => this._handleService(service, data),
                 this._closeModal
             )}

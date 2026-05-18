@@ -5,10 +5,14 @@ export type ActivityKind = "diaper" | "bottle" | "solids";
 
 export type ModalKind =
     | { kind: ActivityKind; baby: string }
-    | { kind: "end_sleep_first"; baby: string; then: ActivityKind };
+    | {
+          kind: "end_sleep_first";
+          baby: string;
+          label: string;
+          then: () => void | Promise<void>;
+      };
 
 type Submit = (service: string, data: Record<string, unknown>) => Promise<void>;
-type Swap = (kind: ActivityKind) => void;
 type Call = (service: string, data: Record<string, unknown>) => Promise<unknown>;
 type Close = () => void;
 
@@ -16,7 +20,6 @@ export function modalTemplate(
     modal: ModalKind | null,
     options: any,
     submit: Submit,
-    swap: Swap,
     call: Call,
     close: Close
 ): TemplateResult {
@@ -32,8 +35,8 @@ export function modalTemplate(
                       ? solidsForm(modal.baby, submit, close)
                       : endSleepFirstForm(
                             modal.baby,
+                            modal.label,
                             modal.then,
-                            swap,
                             call,
                             close
                         )}
@@ -43,15 +46,14 @@ export function modalTemplate(
 
 function endSleepFirstForm(
     baby: string,
-    next: ActivityKind,
-    swap: Swap,
+    label: string,
+    then: () => void | Promise<void>,
     call: Call,
     close: Close
 ): TemplateResult {
-    const labels: Record<ActivityKind, string> = {
-        diaper: "logging a diaper",
-        bottle: "logging a bottle",
-        solids: "logging solids"
+    const skip = async () => {
+        close();
+        await then();
     };
     const endAndContinue = async () => {
         try {
@@ -59,17 +61,16 @@ function endSleepFirstForm(
         } catch (err) {
             console.warn("babytracker: end_sleep failed", err);
         }
-        swap(next);
+        close();
+        await then();
     };
     return html`
         <form @submit=${(e: SubmitEvent) => e.preventDefault()}>
             <h2>End sleep first?</h2>
-            <p>${baby} is asleep. End the sleep session before ${labels[next]}?</p>
+            <p>${baby} is asleep. End the sleep session before ${label}?</p>
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
-                <button type="button" @click=${() => swap(next)}>
-                    Skip, just log
-                </button>
+                <button type="button" @click=${skip}>Skip, just log</button>
                 <button
                     type="button"
                     class="primary"
