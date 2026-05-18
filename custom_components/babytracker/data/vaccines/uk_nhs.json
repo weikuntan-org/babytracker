@@ -1,0 +1,20 @@
+{
+  "schedule_id": "uk_nhs_2024",
+  "source": "UK NHS",
+  "version": "2024-01",
+  "doses": [
+    {"name": "6-in-1 (DTaP/IPV/Hib/HepB)", "dose_number": 1, "target_age_days": 56, "min_age_days": 56, "max_age_days": 90},
+    {"name": "6-in-1 (DTaP/IPV/Hib/HepB)", "dose_number": 2, "target_age_days": 84, "min_age_days": 84, "max_age_days": 150},
+    {"name": "6-in-1 (DTaP/IPV/Hib/HepB)", "dose_number": 3, "target_age_days": 112, "min_age_days": 112, "max_age_days": 240},
+    {"name": "Rotavirus", "dose_number": 1, "target_age_days": 56, "min_age_days": 56, "max_age_days": 105},
+    {"name": "Rotavirus", "dose_number": 2, "target_age_days": 84, "min_age_days": 84, "max_age_days": 168},
+    {"name": "MenB", "dose_number": 1, "target_age_days": 56, "min_age_days": 56, "max_age_days": 120},
+    {"name": "MenB", "dose_number": 2, "target_age_days": 112, "min_age_days": 112, "max_age_days": 240},
+    {"name": "MenB", "dose_number": 3, "target_age_days": 365, "min_age_days": 365, "max_age_days": 460},
+    {"name": "PCV", "dose_number": 1, "target_age_days": 84, "min_age_days": 84, "max_age_days": 240},
+    {"name": "PCV", "dose_number": 2, "target_age_days": 365, "min_age_days": 365, "max_age_days": 460},
+    {"name": "Hib/MenC", "dose_number": 1, "target_age_days": 365, "min_age_days": 365, "max_age_days": 460},
+    {"name": "MMR", "dose_number": 1, "target_age_days": 365, "min_age_days": 365, "max_age_days": 460},
+    {"name": "MMR", "dose_number": 2, "target_age_days": 1216, "min_age_days": 1216, "max_age_days": 1460}
+  ]
+}
