@@ -334,7 +334,26 @@ export class BabytrackerCard extends LitElement {
         }
     };
 
+    private _isSleeping(): boolean {
+        return (
+            this.hass?.states?.[this._entityId("sleeping", "binary_sensor")]
+                ?.state === "on"
+        );
+    }
+
     private _requestModal: ModalRequester = (kind) => {
+        if (this._isSleeping()) {
+            this._modal = {
+                kind: "end_sleep_first",
+                baby: this._baby(),
+                then: kind
+            };
+        } else {
+            this._modal = { kind, baby: this._baby() };
+        }
+    };
+
+    private _swapModal = (kind: "diaper" | "bottle" | "solids") => {
         this._modal = { kind, baby: this._baby() };
     };
 
@@ -402,6 +421,8 @@ export class BabytrackerCard extends LitElement {
                 this._modal,
                 this._options,
                 this._submitModal,
+                this._swapModal,
+                (service, data) => this._handleService(service, data),
                 this._closeModal
             )}
         `;
