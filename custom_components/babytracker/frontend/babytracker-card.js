@@ -393,7 +393,7 @@
                     .chip { padding: 6px 10px; border-radius: 16px; background: var(--secondary-background-color); color: var(--primary-text-color); font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; }
                     .chip.warning { background: var(--warning-color); color: var(--text-primary-color, #fff); }
                     .section { margin-top: 12px; }
-                    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+                    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
                     button { background: var(--secondary-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
                     button.primary { background: var(--primary-color); color: var(--text-primary-color, #fff); border-color: transparent; }
                     button.quick { padding: 14px 12px; font-weight: 600; }

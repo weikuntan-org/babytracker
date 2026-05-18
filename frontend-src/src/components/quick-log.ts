@@ -88,7 +88,7 @@ export function quickLogTemplate(
             class="section"
             role="group"
             aria-label="Quick log"
-            style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;"
+            style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"
         >
             ${buttons}
         </div>

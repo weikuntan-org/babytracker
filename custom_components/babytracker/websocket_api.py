@@ -141,6 +141,7 @@ def _ws_get_baby_config(
         connection.subscriptions[msg["id"]] = async_dispatcher_connect(
             hass, SIGNAL_DATA_UPDATED, _push
         )
+        _push()
 
 
 @websocket_api.websocket_command(
