@@ -37,8 +37,7 @@ const DEFAULT_SECTIONS = [
     "quick_log",
     "vaccines",
     "recent",
-    "export",
-    "growth"
+    "export"
 ];
 
 const SLEEP_INTERCEPT_LABELS: Record<string, string> = {
@@ -483,3 +482,7 @@ window.customCards.push({
 
 // Editor lives in editor.ts.
 import("./editor");
+
+// Bundle the standalone growth card so it ships in the same artefact and
+// is auto-registered when users load /babytracker_static/babytracker-card.js.
+import "./babytracker-growth-card";
