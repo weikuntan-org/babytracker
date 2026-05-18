@@ -4,6 +4,7 @@
 import { html, type TemplateResult } from "lit";
 
 import { babyEntityId } from "../lib/ha-helpers";
+import { entriesInLastWindow, formatClock } from "../lib/entries";
 
 type ServiceCaller = (
     service: string,
@@ -18,12 +19,8 @@ export function recentEntriesTemplate(
     limit: number
 ): TemplateResult {
     const sensor = hass.states[babyEntityId(baby, "recent_entries")];
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     const all: any[] = sensor?.attributes?.entries ?? [];
-    const entries = all
-        .filter((e) => _parse(e.timestamp) >= cutoff)
-        .sort((a, b) => _parse(b.timestamp) - _parse(a.timestamp))
-        .slice(0, Math.min(limit, 50));
+    const entries = entriesInLastWindow(all).slice(0, Math.min(limit, 50));
 
     return html`
         <div class="section" role="region" aria-label="Last 24 hours">
@@ -39,7 +36,7 @@ export function recentEntriesTemplate(
                                           >${_label(entry)}</span
                                       >
                                       <span class="muted"
-                                          >${_clock(entry.timestamp)}</span
+                                          >${formatClock(entry.timestamp)}</span
                                       >
                                       ${entry.photo_path
                                           ? html`<span aria-label="Has photo"
@@ -72,22 +69,6 @@ export function recentEntriesTemplate(
                   `}
         </div>
     `;
-}
-
-function _parse(iso?: string): number {
-    if (!iso) return 0;
-    const t = Date.parse(iso);
-    return Number.isNaN(t) ? 0 : t;
-}
-
-function _clock(iso?: string): string {
-    if (!iso) return "";
-    const t = _parse(iso);
-    if (t === 0) return "";
-    return new Date(t).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit"
-    });
 }
 
 function _label(entry: any): string {
