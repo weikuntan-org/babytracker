@@ -72,21 +72,73 @@ export class BabytrackerCard extends LitElement {
             background: var(--secondary-background-color);
             color: var(--primary-text-color);
             font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
         .chip.warning {
             background: var(--warning-color);
-            color: var(--text-primary-color);
+            color: var(--text-primary-color, #fff);
         }
         .section {
             margin-top: 12px;
         }
-        button.primary {
-            background: var(--primary-color);
-            color: var(--text-primary-color);
-            border: none;
-            padding: 8px 14px;
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .growth-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .label {
+            font-size: 0.85rem;
+            color: var(--secondary-text-color);
+        }
+        button {
+            background: var(--secondary-background-color);
+            color: var(--primary-text-color);
+            border: 1px solid var(--divider-color);
+            padding: 8px 12px;
             border-radius: 8px;
             cursor: pointer;
+            font-size: 0.9rem;
+        }
+        button.primary {
+            background: var(--primary-color);
+            color: var(--text-primary-color, #fff);
+            border-color: transparent;
+            padding: 8px 14px;
+        }
+        button.quick {
+            padding: 14px 12px;
+            font-weight: 600;
+        }
+        svg {
+            width: 100%;
+            height: 120px;
+            margin-top: 8px;
+        }
+        ul.entries {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        ul.entries li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--divider-color);
+        }
+        .muted {
+            color: var(--secondary-text-color);
+            font-size: 0.85rem;
+        }
+        .spacer {
+            flex: 1;
         }
     `;
 

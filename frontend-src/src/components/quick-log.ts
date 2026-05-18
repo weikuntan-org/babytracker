@@ -85,12 +85,7 @@ export function quickLogTemplate(
     }
 
     return html`
-        <div
-            class="section"
-            role="group"
-            aria-label="Quick log"
-            style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"
-        >
+        <div class="section grid" role="group" aria-label="Quick log">
             ${buttons}
         </div>
     `;

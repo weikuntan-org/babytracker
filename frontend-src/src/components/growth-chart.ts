@@ -24,23 +24,17 @@ export function growthChartTemplate(
     return html`
         <div class="section" role="region" aria-label="Growth">
             <h2>Growth</h2>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+            <div class="growth-grid">
                 <div>
-                    <div style="font-size:0.85rem;color:var(--secondary-text-color);">
-                        Weight
-                    </div>
+                    <div class="label">Weight</div>
                     <div>${weight} ${weightUnit} · ${weightP}p</div>
                 </div>
                 <div>
-                    <div style="font-size:0.85rem;color:var(--secondary-text-color);">
-                        Height
-                    </div>
+                    <div class="label">Height</div>
                     <div>${height} ${lengthUnit} · ${heightP}p</div>
                 </div>
                 <div>
-                    <div style="font-size:0.85rem;color:var(--secondary-text-color);">
-                        Head
-                    </div>
+                    <div class="label">Head</div>
                     <div>${head} ${lengthUnit}</div>
                 </div>
             </div>
@@ -50,18 +44,9 @@ export function growthChartTemplate(
 }
 
 function _inlineChart(_hass: any, _baby: string): TemplateResult {
-    // Bands are conceptual — the integration's WS command
-    // babytracker/get_vaccine_schedule already exists, and a future
-    // get_lms_bands command can drive a richer chart. For v0.1 we render
-    // a placeholder grid so the section frame ships.
     const bands = [3, 15, 50, 85, 97];
     return html`
-        <svg
-            viewBox="0 0 300 120"
-            role="img"
-            aria-label="Growth chart placeholder"
-            style="width:100%;height:120px;margin-top:8px;"
-        >
+        <svg viewBox="0 0 300 120" role="img" aria-label="Growth chart placeholder">
             ${bands.map(
                 (b, i) => html`
                     <line

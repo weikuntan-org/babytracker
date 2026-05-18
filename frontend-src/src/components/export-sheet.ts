@@ -18,7 +18,7 @@ export function exportSheetTemplate(hass: any, baby: string): TemplateResult {
         if (url) window.open(url, "_blank", "noopener");
     };
     return html`
-        <div class="section" style="margin-top:16px;">
+        <div class="section">
             <button
                 class="primary"
                 aria-label="Export for pediatrician"
