@@ -230,22 +230,24 @@
             const activities = this._babyConfig?.enabled_activities ?? DEFAULT_ACTIVITIES;
             const methods = this._babyConfig?.enabled_feeding_methods ?? DEFAULT_METHODS;
             const buttons = [];
+            const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
             if (activities.includes("diaper")) {
                 for (const kind of ["wet", "dirty", "both"]) {
                     buttons.push(
                         `<button class="quick" data-service="log_diaper" data-arg-kind="${kind}" aria-label="Log ${kind} diaper">${escapeHtml(
-                            kind
+                            cap(kind)
                         )} diaper</button>`
                     );
                 }
             }
             if (activities.includes("feeding")) {
                 for (const method of methods) {
+                    const label = cap(method.replace("_", " "));
                     buttons.push(
                         `<button class="quick" data-service="start_feeding" data-arg-method="${method}" aria-label="Start ${method.replace(
                             "_",
                             " "
-                        )} feeding">${escapeHtml(method.replace("_", " "))}</button>`
+                        )} feeding">${escapeHtml(label)}</button>`
                     );
                 }
             }

@@ -24,6 +24,7 @@ export function quickLogTemplate(
         "solids"
     ];
 
+    const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
     const buttons: TemplateResult[] = [];
     if (activities.includes("diaper")) {
         for (const kind of ["wet", "dirty", "both"]) {
@@ -34,7 +35,7 @@ export function quickLogTemplate(
                         aria-label="Log ${kind} diaper for ${baby}"
                         @click=${() => call("log_diaper", { baby, kind })}
                     >
-                        ${kind} diaper
+                        ${cap(kind)} diaper
                     </button>
                 `
             );
@@ -50,7 +51,7 @@ export function quickLogTemplate(
                         @click=${() =>
                             call("start_feeding", { baby, method })}
                     >
-                        ${method.replace("_", " ")}
+                        ${cap(method.replace("_", " "))}
                     </button>
                 `
             );
