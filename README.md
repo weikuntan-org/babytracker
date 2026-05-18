@@ -19,8 +19,9 @@ loads, so there is **no separate HACS plugin to install**.
 - **Eligibility-gated.** Per-baby activity + feeding-method toggles —
   a bottle-only baby gets no breast prompts.
 - **Procare daycare ingestion** (optional). Subscribes to the
-  `procare_activities` community integration; daycare events appear
-  in babytracker without double entry.
+  [`procare_activities`](https://github.com/nmanclank/ha-procare-activity-fetcher)
+  community integration's per-kid sensor (`sensor.<kid_slug>_latest_activity`);
+  daycare events appear in babytracker without double entry.
 - **WHO + CDC growth percentiles** via the LMS method, with the
   AAP-recommended handoff at 24 months. No `scipy` dependency.
 - **Pediatrician-friendly export.** `babytracker.export_report` writes
@@ -61,6 +62,25 @@ Re-open the entry to add more babies, edit, archive, or unarchive,
 manage Procare importers, or set integration-wide options
 (default volume / weight / length units, vaccine schedule, vaccine
 grace days, WHO ↔ CDC handoff age).
+
+### Procare importer setup
+
+1. Install and configure the
+   [`procare_activities`](https://github.com/nmanclank/ha-procare-activity-fetcher)
+   custom integration. It creates one sensor per kid named
+   `sensor.<kid_slug>_latest_activity` (HA slugifies the kid's display
+   name, so "Ava Smith" becomes `sensor.ava_smith_latest_activity`).
+   Find the exact entity ID under **Developer Tools → States** by
+   filtering on `latest_activity`.
+2. In babytracker's **Configure → Manage importers**, pick the matching
+   baby and paste that entity ID into `source_entity_id`, choose which
+   activity types to import (feeding, diaper, sleep), keep
+   `mark_readonly: true` so Procare-sourced entries aren't editable
+   from the card, and save.
+3. Restart Home Assistant — the importer subscribes to state-change
+   events at integration load. After the restart, new Procare activities
+   appear in the card's "Last 24 hours" list with a `via <staff>`
+   annotation.
 
 ## Services
 
