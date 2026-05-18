@@ -26,8 +26,10 @@ loads, so there is **no separate HACS plugin to install**.
   AAP-recommended handoff at 24 months. No `scipy` dependency.
 - **Pediatrician-friendly export.** `babytracker.export_report` writes
   a printable HTML and CSV under `/config/www/babytracker/`.
-- **Bundled Lovelace card** — `type: custom:babytracker-card` is
-  auto-registered when the integration loads.
+- **Bundled Lovelace cards** — `type: custom:babytracker-card` for the
+  main per-baby card, and `type: custom:babytracker-growth-card` for a
+  standalone growth panel. Both ship in the same JS bundle and register
+  themselves when the integration loads.
 
 ## Installation
 
@@ -40,7 +42,9 @@ loads, so there is **no separate HACS plugin to install**.
 4. **Hard-refresh** your dashboard tab after first install — the
    bundled card is registered on `async_setup_entry`, but the HA
    frontend bundle was already loaded before that registration ran.
-5. Add a `type: custom:babytracker-card` card to your dashboard.
+5. Add a `type: custom:babytracker-card` card to your dashboard. Add a
+   `type: custom:babytracker-growth-card` card separately if you want a
+   dedicated growth panel.
 
 ### Manual
 

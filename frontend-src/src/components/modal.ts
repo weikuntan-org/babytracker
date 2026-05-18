@@ -1,18 +1,26 @@
 // Modal/lightbox forms for activities that need extra input on tap.
 import { html, type TemplateResult, nothing } from "lit";
 
+export type ActivityKind = "diaper" | "bottle" | "solids";
+
 export type ModalKind =
-    | { kind: "diaper"; baby: string }
-    | { kind: "bottle"; baby: string }
-    | { kind: "solids"; baby: string };
+    | { kind: ActivityKind; baby: string }
+    | {
+          kind: "end_sleep_first";
+          baby: string;
+          label: string;
+          then: () => void | Promise<void>;
+      };
 
 type Submit = (service: string, data: Record<string, unknown>) => Promise<void>;
+type Call = (service: string, data: Record<string, unknown>) => Promise<unknown>;
 type Close = () => void;
 
 export function modalTemplate(
     modal: ModalKind | null,
     options: any,
     submit: Submit,
+    call: Call,
     close: Close
 ): TemplateResult {
     return html`
@@ -23,8 +31,56 @@ export function modalTemplate(
                   ? diaperForm(modal.baby, submit, close)
                   : modal.kind === "bottle"
                     ? bottleForm(modal.baby, options, submit, close)
-                    : solidsForm(modal.baby, submit, close)}
+                    : modal.kind === "solids"
+                      ? solidsForm(modal.baby, submit, close)
+                      : endSleepFirstForm(
+                            modal.baby,
+                            modal.label,
+                            modal.then,
+                            call,
+                            close
+                        )}
         </dialog>
+    `;
+}
+
+function endSleepFirstForm(
+    baby: string,
+    label: string,
+    then: () => void | Promise<void>,
+    call: Call,
+    close: Close
+): TemplateResult {
+    const skip = async () => {
+        close();
+        await then();
+    };
+    const endAndContinue = async () => {
+        try {
+            await call("end_sleep", { baby });
+        } catch (err) {
+            console.warn("babytracker: end_sleep failed", err);
+        }
+        close();
+        await then();
+    };
+    return html`
+        <form @submit=${(e: SubmitEvent) => e.preventDefault()}>
+            <h2>End sleep first?</h2>
+            <p>${baby} is asleep. End the sleep session before ${label}?</p>
+            <div class="actions">
+                <button type="button" @click=${close}>Cancel</button>
+                <button type="button" @click=${skip}>Skip, just log</button>
+                <button
+                    type="button"
+                    class="primary"
+                    autofocus
+                    @click=${endAndContinue}
+                >
+                    End sleep &amp; continue
+                </button>
+            </div>
+        </form>
     `;
 }
 

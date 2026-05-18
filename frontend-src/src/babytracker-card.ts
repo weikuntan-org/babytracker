@@ -36,10 +36,17 @@ const DEFAULT_SECTIONS = [
     "active_session",
     "quick_log",
     "vaccines",
-    "growth",
     "recent",
     "export"
 ];
+
+const SLEEP_INTERCEPT_LABELS: Record<string, string> = {
+    log_diaper: "logging a diaper",
+    log_feeding: "logging the feeding",
+    start_feeding: "starting a feeding session",
+    start_tummy_time: "starting tummy time",
+    start_walk: "starting a walk"
+};
 
 @customElement("babytracker-card")
 export class BabytrackerCard extends LitElement {
@@ -334,8 +341,35 @@ export class BabytrackerCard extends LitElement {
         }
     };
 
+    private _isSleeping(): boolean {
+        return (
+            this.hass?.states?.[this._entityId("sleeping", "binary_sensor")]
+                ?.state === "on"
+        );
+    }
+
+    private _interceptIfSleeping(
+        label: string,
+        action: () => void | Promise<void>
+    ): void | Promise<void> {
+        if (!this._isSleeping()) return action();
+        this._modal = {
+            kind: "end_sleep_first",
+            baby: this._baby(),
+            label,
+            then: action
+        };
+    }
+
     private _requestModal: ModalRequester = (kind) => {
-        this._modal = { kind, baby: this._baby() };
+        const labels: Record<typeof kind, string> = {
+            diaper: "logging a diaper",
+            bottle: "logging a bottle",
+            solids: "logging solids"
+        };
+        this._interceptIfSleeping(labels[kind], () => {
+            this._modal = { kind, baby: this._baby() };
+        });
     };
 
     private _closeModal = () => {
@@ -348,6 +382,25 @@ export class BabytrackerCard extends LitElement {
     ) => {
         await this._handleService(service, data);
         this._closeModal();
+    };
+
+    private _quickAction = async (
+        service: string,
+        data: Record<string, unknown>,
+        btn?: EventTarget | null
+    ): Promise<unknown> => {
+        const label = SLEEP_INTERCEPT_LABELS[service] ?? "logging this";
+        if (this._isSleeping()) {
+            this._modal = {
+                kind: "end_sleep_first",
+                baby: this._baby(),
+                label,
+                then: () =>
+                    this._handleService(service, data, btn).then(() => undefined)
+            };
+            return;
+        }
+        return this._handleService(service, data, btn);
     };
 
     protected render(): TemplateResult {
@@ -371,7 +424,7 @@ export class BabytrackerCard extends LitElement {
                     ? quickLogTemplate(
                           this._babyConfig,
                           this._baby(),
-                          this._handleService,
+                          this._quickAction,
                           this._requestModal
                       )
                     : ""}
@@ -402,6 +455,7 @@ export class BabytrackerCard extends LitElement {
                 this._modal,
                 this._options,
                 this._submitModal,
+                (service, data) => this._handleService(service, data),
                 this._closeModal
             )}
         `;
@@ -428,3 +482,7 @@ window.customCards.push({
 
 // Editor lives in editor.ts.
 import("./editor");
+
+// Bundle the standalone growth card so it ships in the same artefact and
+// is auto-registered when users load /babytracker_static/babytracker-card.js.
+import "./babytracker-growth-card";
