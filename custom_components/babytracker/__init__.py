@@ -11,7 +11,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 
-from .const import CARD_FILENAME, DEFAULT_OPTIONS, DOMAIN, FRONTEND_URL, VERSION
+from .const import CARD_FILENAME, DEFAULT_OPTIONS, DOMAIN, FRONTEND_URL
 from .coordinator import BabytrackerCoordinator
 from .store import BabytrackerStore
 
@@ -64,9 +64,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await _ws.async_register(hass, entry)
 
-    # Frontend static path + extra_js_url (§9.5)
+    # Frontend static path + extra_js_url (§9.5).
+    # Cache-bust suffix is the bundle's mtime so every rebuild forces browsers
+    # off the stale copy without us having to remember to bump VERSION.
     frontend_dir = Path(__file__).parent / "frontend"
-    if (frontend_dir / CARD_FILENAME).exists():
+    bundle_path = frontend_dir / CARD_FILENAME
+    if bundle_path.exists():
         try:
             await hass.http.async_register_static_paths(
                 [
@@ -75,7 +78,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     )
                 ]
             )
-            add_extra_js_url(hass, f"{FRONTEND_URL}/{CARD_FILENAME}?v={VERSION}")
+            cache_bust = int(bundle_path.stat().st_mtime)
+            bundle_url = f"{FRONTEND_URL}/{CARD_FILENAME}?v={cache_bust}"
+            add_extra_js_url(hass, bundle_url)
+            await _ensure_lovelace_resource(hass, bundle_url)
         except Exception:  # noqa: BLE001
             _LOGGER.exception("Failed to register frontend resources")
 
@@ -116,3 +122,56 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def _ensure_lovelace_resource(hass: HomeAssistant, bundle_url: str) -> None:
+    """Create or update the Lovelace Resource pointing at our bundle.
+
+    `add_extra_js_url` only attaches to YAML-mode dashboards. For Storage-mode
+    (the HA default), the card has to be loaded via a Lovelace Resource. We
+    manage that Resource ourselves so users don't have to add it manually and
+    so the URL gets cache-busted on each rebuild.
+
+    If the user is on YAML-mode Lovelace, the resources collection isn't a
+    writable Storage collection — we no-op and the YAML user manages their
+    own resources (with our `add_extra_js_url` covering them automatically).
+    """
+    base = f"{FRONTEND_URL}/{CARD_FILENAME}"
+    lovelace = hass.data.get("lovelace")
+    if lovelace is None:
+        return
+    # HA exposes resources via `lovelace.resources` on the LovelaceData dataclass
+    # (2024+); fall back to dict access for older versions.
+    resources = getattr(lovelace, "resources", None)
+    if resources is None and isinstance(lovelace, dict):
+        resources = lovelace.get("resources")
+    if resources is None:
+        return
+    # Storage-mode collections have async_create_item / async_update_item;
+    # YAML-mode (ResourceYAMLCollection) does not.
+    if not hasattr(resources, "async_create_item") or not hasattr(
+        resources, "async_update_item"
+    ):
+        return
+    try:
+        if hasattr(resources, "async_load"):
+            await resources.async_load()
+        items = list(resources.async_items())
+    except Exception:  # noqa: BLE001
+        _LOGGER.debug("Lovelace resources unavailable; skipping auto-register")
+        return
+
+    existing = next(
+        (item for item in items if str(item.get("url", "")).split("?", 1)[0] == base),
+        None,
+    )
+    payload = {"url": bundle_url, "res_type": "module"}
+    try:
+        if existing is None:
+            await resources.async_create_item(payload)
+            _LOGGER.info("babytracker: registered Lovelace resource %s", bundle_url)
+        elif existing.get("url") != bundle_url:
+            await resources.async_update_item(existing["id"], payload)
+            _LOGGER.info("babytracker: updated Lovelace resource to %s", bundle_url)
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("babytracker: failed to manage Lovelace resource")
