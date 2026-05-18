@@ -20,6 +20,7 @@ export function recentEntriesTemplate(
     const all: any[] = sensor?.attributes?.entries ?? [];
     const entries = all
         .filter((e) => _parse(e.timestamp) >= cutoff)
+        .sort((a, b) => _parse(b.timestamp) - _parse(a.timestamp))
         .slice(0, Math.min(limit, 50));
 
     return html`
