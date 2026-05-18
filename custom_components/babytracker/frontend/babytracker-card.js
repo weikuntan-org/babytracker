@@ -230,22 +230,24 @@
             const activities = this._babyConfig?.enabled_activities ?? DEFAULT_ACTIVITIES;
             const methods = this._babyConfig?.enabled_feeding_methods ?? DEFAULT_METHODS;
             const buttons = [];
+            const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
             if (activities.includes("diaper")) {
                 for (const kind of ["wet", "dirty", "both"]) {
                     buttons.push(
                         `<button class="quick" data-service="log_diaper" data-arg-kind="${kind}" aria-label="Log ${kind} diaper">${escapeHtml(
-                            kind
+                            cap(kind)
                         )} diaper</button>`
                     );
                 }
             }
             if (activities.includes("feeding")) {
                 for (const method of methods) {
+                    const label = cap(method.replace("_", " "));
                     buttons.push(
                         `<button class="quick" data-service="start_feeding" data-arg-method="${method}" aria-label="Start ${method.replace(
                             "_",
                             " "
-                        )} feeding">${escapeHtml(method.replace("_", " "))}</button>`
+                        )} feeding">${escapeHtml(label)}</button>`
                     );
                 }
             }
@@ -393,7 +395,7 @@
                     .chip { padding: 6px 10px; border-radius: 16px; background: var(--secondary-background-color); color: var(--primary-text-color); font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; }
                     .chip.warning { background: var(--warning-color); color: var(--text-primary-color, #fff); }
                     .section { margin-top: 12px; }
-                    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+                    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
                     button { background: var(--secondary-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
                     button.primary { background: var(--primary-color); color: var(--text-primary-color, #fff); border-color: transparent; }
                     button.quick { padding: 14px 12px; font-weight: 600; }
