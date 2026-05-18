@@ -1096,7 +1096,7 @@ function fe(s, t, e) {
     `;
 }
 function ge(s, t, e, i) {
-  const r = (t == null ? void 0 : t.volume_unit) ?? "oz";
+  const r = "oz";
   return d`
         <form @submit=${(n) => {
     n.preventDefault();

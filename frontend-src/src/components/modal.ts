@@ -149,11 +149,15 @@ function diaperForm(
 
 function bottleForm(
     baby: string,
-    options: any,
+    _options: any,
     submit: Submit,
     close: Close
 ): TemplateResult {
-    const defaultUnit = options?.volume_unit ?? "oz";
+    // Hard-default to oz in the modal — the integration's volume_unit
+    // option still drives sensor display, but the bottle dialog defaults
+    // to oz because most US users measure bottles in oz. The dropdown
+    // lets you pick ml per-entry.
+    const defaultUnit = "oz";
     const onSubmit = (e: SubmitEvent) => {
         e.preventDefault();
         const form = e.currentTarget as HTMLFormElement;
