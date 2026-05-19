@@ -82,7 +82,6 @@ export class PhotoButton extends LitElement {
                           <bt-entry-thumbnail
                               .hass=${this.hass}
                               .photoPath=${this.value}
-                              .size=${64}
                           ></bt-entry-thumbnail>
                           <button
                               type="button"

@@ -19,10 +19,11 @@ export class EntryThumbnail extends LitElement {
 
     @property() photoPath = "";
 
-    /** Edge length in pixels for the inline thumbnail. The edit modal
-     * passes a larger value so the user gets a real preview; rows in
-     * the card use the compact default. The lightbox is unaffected. */
-    @property({ type: Number }) size = 32;
+    /** Edge length in pixels for the inline thumbnail. Defaults to 128
+     * — large enough to actually see the photo in entry rows and the
+     * edit modal. Override per-instance for tighter layouts. The
+     * lightbox is unaffected. */
+    @property({ type: Number }) size = 128;
 
     @state() private _url = "";
     @state() private _failed = false;
