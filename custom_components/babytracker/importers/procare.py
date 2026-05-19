@@ -29,7 +29,12 @@ from homeassistant.helpers.event import async_track_state_change_event, async_tr
 
 from ..const import ENTRY_SOURCE_PROCARE
 from ..models import Baby, Entry
-from ..photo_storage import PHOTO_MAX_BYTES, PHOTO_MIME_TO_EXT, write_photo
+from ..photo_storage import (
+    PHOTO_MAX_BYTES,
+    PHOTO_MIME_TO_EXT,
+    sniff_image_mime,
+    write_photo,
+)
 from .base import BaseImporter
 from .procare_mappings import async_load_mappings, match_title
 
@@ -153,11 +158,19 @@ async def _download_procare_photo(
                     url,
                 )
                 return None
-            mime = (resp.content_type or "").lower().strip()
-            if mime not in PHOTO_MIME_TO_EXT:
+            header_mime = (resp.content_type or "").lower().strip()
+            # Procare's signed CDN responses often come back as
+            # `application/octet-stream` (or empty), so we don't reject
+            # on the header alone — we sniff the actual payload below.
+            # A header that's a concrete non-image type still short-circuits.
+            if (
+                header_mime
+                and header_mime != "application/octet-stream"
+                and header_mime not in PHOTO_MIME_TO_EXT
+            ):
                 _LOGGER.warning(
                     "babytracker: Procare photo unsupported content-type %r",
-                    mime,
+                    header_mime,
                 )
                 return None
             # Stream the body so a server that omits Content-Length
@@ -174,6 +187,18 @@ async def _download_procare_photo(
             payload = bytes(buf)
     except (asyncio.TimeoutError, aiohttp.ClientError) as err:
         _LOGGER.warning("babytracker: Procare photo download failed: %s", err)
+        return None
+    mime = (
+        header_mime
+        if header_mime in PHOTO_MIME_TO_EXT
+        else sniff_image_mime(payload)
+    )
+    if mime is None:
+        _LOGGER.warning(
+            "babytracker: Procare photo magic bytes did not match a known "
+            "image format (header was %r); dropping",
+            header_mime,
+        )
         return None
     return await write_photo(hass, payload, mime)
 

@@ -16,6 +16,8 @@ photo_url preserved as a diagnostic pointer but photo_path null.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from homeassistant.core import HomeAssistant
 
@@ -24,9 +26,11 @@ from custom_components.babytracker.coordinator import BabytrackerCoordinator
 from custom_components.babytracker.importers import procare as procare_module
 from custom_components.babytracker.importers.procare import (
     ProcareImporter,
+    _download_procare_photo,
     _existing_by_source_id,
 )
 from custom_components.babytracker.models import Baby, Entry
+from custom_components.babytracker.photo_storage import sniff_image_mime
 from custom_components.babytracker.store import BabytrackerStore
 
 
@@ -484,3 +488,150 @@ async def test_backfill_failure_leaves_entry_alone(
     entry = coord.entry_by_id("stale-1")
     assert entry.photo_path is None
     assert entry.photo_url == "https://cdn.procare.example/photo/stale.jpg"
+
+
+# ---------------------------------------------------------------------------
+# Magic-byte sniffer + Procare CDN content-type handling
+#
+# Procare's signed S3/CloudFront URLs return `Content-Type:
+# application/octet-stream` rather than a real image mime, which used to
+# trip the strict allow-list check in `_download_procare_photo`. The fix
+# is to sniff the payload's magic bytes when the header is generic.
+# These tests pin both the sniffer itself and the importer's tolerant
+# header handling.
+# ---------------------------------------------------------------------------
+
+
+_JPEG_HEAD = b"\xff\xd8\xff\xe0" + b"\x00" * 20
+_PNG_HEAD = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+_WEBP_HEAD = b"RIFF\x00\x00\x00\x00WEBPVP8 " + b"\x00" * 8
+_HEIC_HEAD = b"\x00\x00\x00\x20ftypheic" + b"\x00" * 16
+
+
+def test_sniff_image_mime_recognises_known_formats() -> None:
+    assert sniff_image_mime(_JPEG_HEAD) == "image/jpeg"
+    assert sniff_image_mime(_PNG_HEAD) == "image/png"
+    assert sniff_image_mime(_WEBP_HEAD) == "image/webp"
+    assert sniff_image_mime(_HEIC_HEAD) == "image/heic"
+    # `mif1` brand is part of the HEIF family — collapsed to image/heic
+    # by the sniffer since the formats are interchangeable.
+    mif1 = b"\x00\x00\x00\x20ftypmif1" + b"\x00" * 16
+    assert sniff_image_mime(mif1) == "image/heic"
+
+
+def test_sniff_image_mime_rejects_non_images_and_truncated_payloads() -> None:
+    assert sniff_image_mime(b"") is None
+    assert sniff_image_mime(b"<html>not an image") is None
+    # Looks JPEG-ish but too short to reach the 12-byte guard.
+    assert sniff_image_mime(b"\xff\xd8") is None
+    # `ftyp` box with an unknown brand — we don't write what we can't name.
+    unknown_brand = b"\x00\x00\x00\x20ftypxxxx" + b"\x00" * 16
+    assert sniff_image_mime(unknown_brand) is None
+
+
+class _FakeResponse:
+    """Minimal async-context-manager standing in for an aiohttp response.
+
+    Streams `payload` in 8-byte chunks via `content.iter_chunked` so the
+    code-under-test exercises the streaming/size-cap branch the way it
+    would against a real CDN response.
+    """
+
+    def __init__(self, *, status: int = 200, content_type: str | None = "", payload: bytes = b"") -> None:
+        self.status = status
+        self.content_type = content_type
+        self._payload = payload
+        self.content = self  # iter_chunked lives on `resp.content`
+
+    async def __aenter__(self) -> "_FakeResponse":
+        return self
+
+    async def __aexit__(self, *exc: Any) -> None:
+        return None
+
+    async def iter_chunked(self, _size: int):
+        for i in range(0, len(self._payload), 8):
+            yield self._payload[i : i + 8]
+
+
+class _FakeSession:
+    def __init__(self, response: _FakeResponse) -> None:
+        self._response = response
+        self.requested_urls: list[str] = []
+
+    def get(self, url: str, timeout=None) -> _FakeResponse:
+        self.requested_urls.append(url)
+        return self._response
+
+
+@pytest.mark.asyncio
+async def test_download_procare_photo_sniffs_octet_stream_jpeg(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """The reported bug: Procare CDN serves photos as
+    `application/octet-stream` and the strict header check used to drop
+    them. With sniffing in place the JPEG magic bytes win and the photo
+    is written.
+    """
+    monkeypatch.setattr(hass.config, "path", lambda *parts: str(tmp_path.joinpath(*parts)))
+    session = _FakeSession(
+        _FakeResponse(content_type="application/octet-stream", payload=_JPEG_HEAD)
+    )
+    monkeypatch.setattr(
+        procare_module, "async_get_clientsession", lambda _hass: session
+    )
+
+    result = await _download_procare_photo(
+        hass, "https://cdn.procare.example/photo/signed.jpg"
+    )
+    assert result is not None
+    assert result.startswith("media-source://media_source/local/babytracker/")
+    assert result.endswith(".jpg")
+    assert session.requested_urls == ["https://cdn.procare.example/photo/signed.jpg"]
+
+
+@pytest.mark.asyncio
+async def test_download_procare_photo_drops_octet_stream_with_unknown_payload(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """If the header is generic AND the payload isn't a recognisable
+    image, we drop it — we never write bytes whose format we can't name.
+    """
+    monkeypatch.setattr(hass.config, "path", lambda *parts: str(tmp_path.joinpath(*parts)))
+    session = _FakeSession(
+        _FakeResponse(
+            content_type="application/octet-stream",
+            payload=b"<html>not an image at all</html>",
+        )
+    )
+    monkeypatch.setattr(
+        procare_module, "async_get_clientsession", lambda _hass: session
+    )
+
+    result = await _download_procare_photo(
+        hass, "https://cdn.procare.example/photo/bogus.jpg"
+    )
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_download_procare_photo_still_rejects_concrete_non_image_header(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A response that explicitly says `text/html` short-circuits before
+    we even stream the body — no point pulling bytes we'll throw away.
+    """
+    session = _FakeSession(
+        _FakeResponse(content_type="text/html", payload=b"<html></html>")
+    )
+    monkeypatch.setattr(
+        procare_module, "async_get_clientsession", lambda _hass: session
+    )
+
+    result = await _download_procare_photo(
+        hass, "https://cdn.procare.example/photo/redirect.html"
+    )
+    assert result is None
+    # Confirm we didn't even try to drain the body (session.get was called
+    # but no iter_chunked happened — implicit via the early return).
+    assert session.requested_urls == ["https://cdn.procare.example/photo/redirect.html"]
