@@ -286,7 +286,7 @@ j.elementStyles = [], j.shadowRootOptions = { mode: "open" }, j[J("elementProper
  */
 const Q = globalThis, Lt = (e) => e, dt = Q.trustedTypes, Ht = dt ? dt.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, Zt = "$lit$", E = `lit$${Math.random().toFixed(9).slice(2)}$`, Kt = "?" + E, be = `<${Kt}>`, U = document, tt = () => U.createComment(""), et = (e) => e === null || typeof e != "object" && typeof e != "function", Dt = Array.isArray, ge = (e) => Dt(e) || typeof (e == null ? void 0 : e[Symbol.iterator]) == "function", gt = `[ 	
 \f\r]`, X = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, It = /-->/g, Rt = />/g, I = RegExp(`>|${gt}(?:([^\\s"'>=/]+)(${gt}*=${gt}*(?:[^ 	
-\f\r"'\`<>=]|("|')|))|$)`, "g"), Vt = /'/g, Ut = /"/g, Xt = /^(?:script|style|textarea|title)$/i, fe = (e) => (t, ...i) => ({ _$litType$: e, strings: t, values: i }), u = fe(1), Y = Symbol.for("lit-noChange"), $ = Symbol.for("lit-nothing"), zt = /* @__PURE__ */ new WeakMap(), R = U.createTreeWalker(U, 129);
+\f\r"'\`<>=]|("|')|))|$)`, "g"), Vt = /'/g, Ut = /"/g, Xt = /^(?:script|style|textarea|title)$/i, fe = (e) => (t, ...i) => ({ _$litType$: e, strings: t, values: i }), u = fe(1), svgTag = fe(2), Y = Symbol.for("lit-noChange"), $ = Symbol.for("lit-nothing"), zt = /* @__PURE__ */ new WeakMap(), R = U.createTreeWalker(U, 129);
 function Jt(e, t) {
   if (!Dt(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
   return Ht !== void 0 ? Ht.createHTML(t) : t;
@@ -2614,7 +2614,7 @@ function ot(e, t, i) {
       d.value > 0 ? 2 : 0,
       d.value / a * (90 - 24 * 2)
     ), m = 66 - l;
-    return u`
+    return svgTag`
                         <rect
                             x=${g}
                             y=${m}
