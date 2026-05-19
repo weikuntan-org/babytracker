@@ -952,7 +952,7 @@ function growthLogForm(
             head_circumference: num("head"),
             weight_unit: String(f.get("weight_unit") ?? weightUnit),
             length_unit: String(f.get("length_unit") ?? lengthUnit),
-            timestamp: _localInputToIso(String(f.get("when") ?? "")),
+            timestamp: _dateInputToIso(String(f.get("when") ?? "")),
             notes: String(f.get("notes") ?? "") || undefined
         });
     };
@@ -1020,12 +1020,12 @@ function growthLogForm(
                     <span class="muted">(uses the length unit above)</span>
                 </div>
             </div>
-            <label for="when">When</label>
+            <label for="when">Date</label>
             <input
                 id="when"
                 name="when"
-                type="datetime-local"
-                .value=${_nowLocalForInput()}
+                type="date"
+                .value=${_todayDateInput()}
             />
             <label for="notes">Notes</label>
             <input id="notes" name="notes" type="text" placeholder="optional" />
