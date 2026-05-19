@@ -37,7 +37,9 @@ export function recentEntriesTemplate(
     hass: any,
     baby: string,
     requestEdit: EntryRequester,
-    limit: number
+    limit: number,
+    expandedNotes: ReadonlySet<string> = new Set(),
+    toggleNotes: (entryId: string) => void = () => {}
 ): TemplateResult {
     const sensor = hass.states[babyEntityId(baby, "recent_entries")];
     const all: any[] = sensor?.attributes?.entries ?? [];
@@ -65,21 +67,59 @@ export function recentEntriesTemplate(
                                           }
                                       }}
                                   >
-                                      <span aria-label="Entry type"
-                                          >${_label(entry)}</span
-                                      >
-                                      ${_renderTime(entry)}
-                                      ${entry.photo_path
-                                          ? html`<span aria-label="Has photo"
-                                                >📷</span
-                                            >`
-                                          : ""}
-                                      ${entry.staff
-                                          ? html`<span
-                                                class="muted"
-                                                aria-label="Logged by Procare staff"
-                                                >via ${entry.staff}</span
-                                            >`
+                                      <div class="entry-row">
+                                          <span aria-label="Entry type"
+                                              >${_label(entry)}</span
+                                          >
+                                          ${_renderTime(entry)}
+                                          ${entry.photo_path
+                                              ? html`<span aria-label="Has photo"
+                                                    >📷</span
+                                                >`
+                                              : ""}
+                                          ${entry.staff
+                                              ? html`<span
+                                                    class="muted"
+                                                    aria-label="Logged by Procare staff"
+                                                    >via ${entry.staff}</span
+                                                >`
+                                              : ""}
+                                      </div>
+                                      ${entry.notes
+                                          ? html`<div
+                                                class="entry-notes muted ${expandedNotes.has(
+                                                    entry.id
+                                                )
+                                                    ? "expanded"
+                                                    : ""}"
+                                                role="button"
+                                                tabindex="0"
+                                                aria-label="Toggle notes"
+                                                aria-expanded=${expandedNotes.has(
+                                                    entry.id
+                                                )
+                                                    ? "true"
+                                                    : "false"}
+                                                title=${entry.notes}
+                                                @click=${(e: Event) => {
+                                                    e.stopPropagation();
+                                                    toggleNotes(entry.id);
+                                                }}
+                                                @keydown=${(
+                                                    e: KeyboardEvent
+                                                ) => {
+                                                    if (
+                                                        e.key === "Enter" ||
+                                                        e.key === " "
+                                                    ) {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        toggleNotes(entry.id);
+                                                    }
+                                                }}
+                                            >
+                                                ${entry.notes}
+                                            </div>`
                                           : ""}
                                   </li>
                               `
