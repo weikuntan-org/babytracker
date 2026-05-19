@@ -91,6 +91,34 @@ export class BabytrackerSummaryCard extends LitElement {
         .growth-date {
             margin-bottom: 4px;
         }
+        .growth-trend {
+            margin-top: 12px;
+        }
+        .growth-trend .label-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 4px 12px;
+            justify-content: space-between;
+        }
+        .growth-trend .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.75rem;
+            color: var(--secondary-text-color);
+        }
+        .growth-trend .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .growth-trend .swatch {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
         .label {
             font-size: 0.85rem;
             color: var(--secondary-text-color);
@@ -410,7 +438,8 @@ export class BabytrackerSummaryCard extends LitElement {
                           this._config.units,
                           this._requestLogGrowth,
                           this._growth[0],
-                          this._requestEditEntry
+                          this._requestEditEntry,
+                          this._growth
                       )
                     : ""}
                 ${sections.includes("trends")
