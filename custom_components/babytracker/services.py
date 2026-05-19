@@ -531,6 +531,7 @@ LOG_GROWTH_SCHEMA = vol.Schema(
         vol.Optional("head_circumference"): vol.Coerce(float),
         vol.Optional("weight_unit"): vol.In(list(ALL_WEIGHT_UNITS)),
         vol.Optional("length_unit"): vol.In(list(ALL_LENGTH_UNITS)),
+        vol.Optional("timestamp"): cv.datetime,
         vol.Optional("notes"): cv.string,
         vol.Optional("photo_path"): vol.Any(None, str),
     }
@@ -561,9 +562,11 @@ async def _handle_log_growth(call: ServiceCall) -> None:
     from . import percentiles
 
     percentiles.attach_percentile_data(hass, baby, data)
+    ts = call.data.get("timestamp")
     entry = _build_entry(
         type_="growth",
         baby_id=baby.id,
+        timestamp=ts.isoformat() if ts else None,
         notes=call.data.get("notes"),
         photo_path=call.data.get("photo_path"),
         data=data,

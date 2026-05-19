@@ -391,10 +391,15 @@ function solidsForm(
         e.preventDefault();
         const form = e.currentTarget as HTMLFormElement;
         const data = new FormData(form);
+        const at = _localInputToIso(String(data.get("when") ?? ""));
+        // Solids, like bottle, is a point-in-time event — close the entry
+        // at the same timestamp so it doesn't show up as an ongoing feeding
+        // in OpenSessionBinary.
         submit("log_feeding", {
             baby,
             method: "solids",
-            started_at: _localInputToIso(String(data.get("when") ?? "")),
+            started_at: at,
+            ended_at: at,
             notes: String(data.get("notes") ?? "") || undefined
         });
     };
@@ -510,11 +515,11 @@ function editEntryForm(
 ): TemplateResult {
     const type = String(entry?.type ?? "");
     const data = entry?.data ?? {};
+    const isPointInTimeFeeding =
+        type === "feeding" &&
+        (data.method === "bottle" || data.method === "solids");
     const isSession =
-        SESSION_ENTRY_TYPES.has(type) &&
-        // Bottle feedings are point-in-time (started_at == ended_at); render
-        // them as a single Time field, same as the log form.
-        !(type === "feeding" && data.method === "bottle");
+        SESSION_ENTRY_TYPES.has(type) && !isPointInTimeFeeding;
     const onSubmit = (e: SubmitEvent) => {
         e.preventDefault();
         const form = e.currentTarget as HTMLFormElement;
@@ -526,9 +531,9 @@ function editEntryForm(
             const endIso = _localInputToIso(String(f.get("ended") ?? ""));
             // Empty end → leave the session open (set to null).
             fields.ended_at = endIso ?? null;
-        } else if (type === "feeding" && data.method === "bottle") {
-            // Single-time bottle: mirror started_at into ended_at so the
-            // entry stays "closed" and doesn't reappear in OpenSessionBinary.
+        } else if (isPointInTimeFeeding) {
+            // Bottle/solids: mirror started_at into ended_at so the entry
+            // stays "closed" and doesn't reappear in OpenSessionBinary.
             if (startIso) fields.ended_at = startIso;
         }
         const notes = String(f.get("notes") ?? "");
@@ -818,6 +823,7 @@ function growthLogForm(
             head_circumference: num("head"),
             weight_unit: String(f.get("weight_unit") ?? weightUnit),
             length_unit: String(f.get("length_unit") ?? lengthUnit),
+            timestamp: _localInputToIso(String(f.get("when") ?? "")),
             notes: String(f.get("notes") ?? "") || undefined
         });
     };
@@ -885,6 +891,13 @@ function growthLogForm(
                     <span class="muted">(uses the length unit above)</span>
                 </div>
             </div>
+            <label for="when">When</label>
+            <input
+                id="when"
+                name="when"
+                type="datetime-local"
+                .value=${_nowLocalForInput()}
+            />
             <label for="notes">Notes</label>
             <input id="notes" name="notes" type="text" placeholder="optional" />
             <div class="actions">
