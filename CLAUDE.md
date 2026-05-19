@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A Home Assistant custom integration (`custom_components/babytracker/`) plus a bundled Lovelace bundle (`custom_components/babytracker/frontend/babytracker-card.js`) that registers two custom elements: `babytracker-card` (main per-baby UI — status, today's counts, quick-log, last 24 hours) and `babytracker-summary-card` (standalone vaccines + growth + 7-day trend charts + pediatrician export panel). The integration is `single_config_entry: true` — multi-baby support is internal, not a per-entry concept. All state lives in HA's `Store` (single JSON file under `.storage/babytracker`, rewritten in full on each mutation); there are no external services and no third-party Python deps (`manifest.requirements` stays `[]`).
+A Home Assistant custom integration (`custom_components/babytracker/`) plus a bundled Lovelace bundle (`custom_components/babytracker/frontend/babytracker-card.js`) that registers three custom elements: `babytracker-card` (main per-baby UI — status, today's counts, quick-log, last 24 hours), `babytracker-summary-card` (standalone vaccines + growth + 7-day trend charts + pediatrician export panel), and `babytracker-history-card` (paginated entry history with edit/delete). The integration is `single_config_entry: true` — multi-baby support is internal, not a per-entry concept. All state lives in HA's `Store` (single JSON file under `.storage/babytracker`, rewritten in full on each mutation); there are no external services and no third-party Python deps (`manifest.requirements` stays `[]`).
 
 The authoritative spec is `SPECS.md`. The Python code is sprinkled with section references like `§4.10`, `§8.2`, `§12 #25` — when a design choice looks surprising, the answer is usually in SPECS.md at that reference.
 
@@ -19,11 +19,11 @@ pytest tests/test_eligibility.py::test_X   # one test
 # Pure-Python tests work without HA installed; test_config_flow.py needs
 # home-assistant-frontend (pinned in requirements-dev.txt).
 
-# Frontend (Lit/TS source — see "Two card implementations" below)
+# Frontend (Lit/TS source — see "Frontend bundle" below)
 cd frontend-src
 npm install
 npm test                                   # vitest
-npm run build                              # vite → custom_components/babytracker/frontend/
+npm run build                              # vite → custom_components/babytracker/frontend/babytracker-card.js
 ```
 
 CI runs on `ubuntu-latest` (`.github/workflows/tests.yml`, `validate.yml`, `release.yml`). `validate.yml` runs `hacs/action` + `hassfest`; `release.yml` builds the card on tag push and fails if the built artefact drifts from what's committed.
@@ -39,12 +39,19 @@ CI runs on `ubuntu-latest` (`.github/workflows/tests.yml`, `validate.yml`, `rele
 - **`importers/procare.py`** is opt-in; it subscribes to the community [`procare_activities`](https://github.com/nmanclank/ha-procare-activity-fetcher) integration's per-kid sensor (`sensor.<kid_slug>_latest_activity`, one per kid) and reads the `activities` attribute (list of `{id, timestamp, title, details, staff, photo_url}`). The importer dedups by `(source, source_id)` and routes recognised activity titles to the coordinator. Title→type mappings live in `importers/procare_mappings.py` — unmapped titles surface in HA logs as `babytracker: unmapped Procare title <title>` and are tracked in `sensor.babytracker_unmapped_procare_titles`. The presence-inference window is configurable (`OPT_PRESENCE_INFERENCE_WINDOW_MINUTES`).
 - **`__init__.py`** registers the card with two mechanisms: `add_extra_js_url` (covers YAML-mode dashboards) AND `_ensure_lovelace_resource` (programmatically creates/updates the Lovelace `Resource` in Storage-mode dashboards via `hass.data["lovelace"].resources`). The cache-bust query string is the bundle file's mtime, so every rebuild forces browsers to pull the new bundle without us bumping any version constant. If you change the JS bundle, the URL changes; if you change the URL, `_ensure_lovelace_resource` updates the existing Storage resource (matched by base URL, ignoring the `?v=`). YAML-mode resource collections aren't writable from Python and are left alone.
 
-## Two card implementations — they have diverged
+## Frontend bundle
 
-- `custom_components/babytracker/frontend/babytracker-card.js` (511 lines, hand-written vanilla JS using template strings + `data-service` click delegation) — **this is what HA actually loads.**
-- `frontend-src/src/babytracker-card.ts` (Lit + decorators, decomposed into `components/quick-log.ts` etc., with vitest coverage) — has the same intent but was written independently. Running `vite build` produces an ES-module artefact incompatible with the current static-path layout.
+The Lit/TypeScript source under `frontend-src/src/` is canonical. `npm run build` (Vite) emits a single ES-module bundle at `custom_components/babytracker/frontend/babytracker-card.js` that registers all three custom elements plus the editor (`babytracker-card-editor`). The bundle is **checked into git** so HACS users don't need a Node toolchain; `release.yml` rebuilds on tag push and fails the release if the committed artefact drifts from a fresh build.
 
-When editing card behavior, patch the vanilla JS for any user-facing change *and* mirror in the TS source so they stay aligned. Eventual cleanup is to pick one as canonical (see open question — the audit hasn't been done).
+When editing card behavior, edit the TS source under `frontend-src/src/` and rebuild — never hand-patch `frontend/babytracker-card.js`. The shipped file looks like vanilla JS because Vite bundles + tree-shakes Lit into a single ~4k-line module; it is *not* hand-written and any direct edit will be obliterated by the next build.
+
+Component layout:
+- `babytracker-card.ts` — main per-baby card
+- `babytracker-summary-card.ts` — vaccines + growth + trends + export
+- `babytracker-history-card.ts` — paginated entry history
+- `editor.ts` — Lovelace visual editor (only exposes `baby` and `recent_limit`; other config keys are YAML-only)
+- `components/` — shared widgets (`quick-log`, `trends`, `growth-chart`, `mic-button`, `photo-button`, `entry-thumbnail`, `modal`, …); `modal.ts` is large because all entry-type forms live in it
+- `lib/` — `ha-helpers` (WS subscriptions, service calls), `entries`, `stt`, `chart`, `photo-upload`
 
 ## Test conventions
 

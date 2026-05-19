@@ -9,6 +9,9 @@ frontend-src/dist/
 frontend-src/.vite/
 *.tsbuildinfo
 
+# Claude Code scratch + git worktrees spawned by EnterWorktree sessions
+.dev/
+
 # C extensions
 *.so
 
