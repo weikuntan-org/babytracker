@@ -51,6 +51,20 @@ function _todayDateInput(): string {
 }
 
 /**
+ * Convert a stored ISO timestamp to the `YYYY-MM-DD` (local) value an
+ * `<input type="date">` expects. Returns "" for missing or unparseable
+ * input so the input stays empty.
+ */
+function _isoToDateInput(iso?: string | null): string {
+    if (!iso) return "";
+    const ms = Date.parse(iso);
+    if (Number.isNaN(ms)) return "";
+    const d = new Date(ms);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
  * Convert a `YYYY-MM-DD` (local) date input value to a UTC ISO datetime
  * the backend's `cv.datetime` can parse. Anchors to local noon so a date
  * doesn't shift across timezones during the JSON round-trip — important
@@ -539,6 +553,9 @@ function editEntryForm(
     const isPointInTimeFeeding =
         type === "feeding" &&
         (data.method === "bottle" || data.method === "solids");
+    // Vaccines + growth measurements are calendar-day-only — drop the
+    // time picker on the edit form too (matches the log forms).
+    const isDateOnly = type === "vaccine" || type === "growth";
     const isSession =
         SESSION_ENTRY_TYPES.has(type) && !isPointInTimeFeeding;
     const onSubmit = (e: SubmitEvent) => {
@@ -546,7 +563,9 @@ function editEntryForm(
         const form = e.currentTarget as HTMLFormElement;
         const f = new FormData(form);
         const fields: Record<string, unknown> = {};
-        const startIso = _localInputToIso(String(f.get("started") ?? ""));
+        const startIso = isDateOnly
+            ? _dateInputToIso(String(f.get("started") ?? ""))
+            : _localInputToIso(String(f.get("started") ?? ""));
         if (startIso) fields.timestamp = startIso;
         if (isSession) {
             const endIso = _localInputToIso(String(f.get("ended") ?? ""));
@@ -638,6 +657,17 @@ function editEntryForm(
                           name="ended"
                           type="datetime-local"
                           .value=${_isoToLocalInput(entry.ended_at)}
+                      />
+                  `
+                : isDateOnly
+                ? html`
+                      <label for="started">Date</label>
+                      <input
+                          id="started"
+                          name="started"
+                          type="date"
+                          .value=${_isoToDateInput(entry.timestamp)}
+                          required
                       />
                   `
                 : html`
