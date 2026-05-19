@@ -29,6 +29,37 @@ PHOTO_MIME_TO_EXT: dict[str, str] = {
     "image/heif": "heif",
 }
 
+# HEIF-family brand codes the ISO/IEC 23008-12 spec defines in the
+# `ftyp` box. We collapse all of them to `image/heic` because the two
+# extensions are functionally interchangeable and the card / media-source
+# stack treats them identically.
+_HEIF_FAMILY_BRANDS = frozenset(
+    {b"heic", b"heix", b"heim", b"heis", b"hevc", b"hevx", b"mif1", b"msf1", b"heif"}
+)
+
+
+def sniff_image_mime(payload: bytes) -> str | None:
+    """Return the image mime inferred from `payload`'s magic bytes.
+
+    Used when the upstream server doesn't return a useful Content-Type
+    (Procare's signed CDN responses come back as
+    `application/octet-stream`). Returns one of the values in
+    `PHOTO_MIME_TO_EXT`, or None if no known image signature matched —
+    the caller treats None as a hard reject (we never write bytes whose
+    format we can't identify).
+    """
+    if len(payload) < 12:
+        return None
+    if payload[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if payload[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if payload[:4] == b"RIFF" and payload[8:12] == b"WEBP":
+        return "image/webp"
+    if payload[4:8] == b"ftyp" and payload[8:12] in _HEIF_FAMILY_BRANDS:
+        return "image/heic"
+    return None
+
 
 def media_source_url(filename: str) -> str:
     """Return the `media-source://` URL for a `media/babytracker/<filename>`.
