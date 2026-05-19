@@ -642,7 +642,7 @@ Entity ids use the slugified baby name. Examples below assume "Ava".
 | `sensor.ava_bmi`                          | computed BMI                   | —            |
 | `sensor.ava_bmi_percentile`               | 0–100, attr `z_score`, `source`| —            |
 | `sensor.ava_age_days`                     | days since birthday            | duration     |
-| `sensor.ava_recent_entries`               | count; attributes hold this baby's last 50 entries with ids | — |
+| `sensor.ava_recent_entries`               | count; attributes hold this baby's last 120 entries with ids | — |
 
 ### Per-baby binary sensors
 
@@ -660,7 +660,7 @@ Entity ids use the slugified baby name. Examples below assume "Ava".
 | --------------------------------- | ---------------------------------- |
 | `sensor.babytracker_last_pumping` | ISO timestamp                      |
 | `sensor.babytracker_pumping_today`| total ml/oz pumped today           |
-| `sensor.babytracker_recent_entries` | count; attributes hold last 50 entries across all babies |
+| `sensor.babytracker_recent_entries` | count; attributes hold last 120 entries across all babies |
 
 All entities are grouped under a single `babytracker` HA Device per
 baby (plus a device for pumping/global), so the device page in HA acts
@@ -851,7 +851,7 @@ units:
   volume: ml                  # ml | oz, overrides integration default
   weight: kg
   length: cm
-recent_limit: 10              # capped at the source sensor's cached size (50)
+recent_limit: 10              # capped at the source sensor's cached size (120)
 ```
 
 A GUI editor (`editor.ts`) renders this configuration so users on

@@ -19,7 +19,7 @@ export function recentEntriesTemplate(
 ): TemplateResult {
     const sensor = hass.states[babyEntityId(baby, "recent_entries")];
     const all: any[] = sensor?.attributes?.entries ?? [];
-    const entries = entriesInLastWindow(all).slice(0, Math.min(limit, 50));
+    const entries = entriesInLastWindow(all).slice(0, Math.min(limit, 120));
 
     return html`
         <div class="section" role="region" aria-label="Last 24 hours">

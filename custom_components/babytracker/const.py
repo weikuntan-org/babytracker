@@ -110,7 +110,7 @@ DEFAULT_OPTIONS: Final = {
 MAX_BIRTHDAY_AGE_YEARS: Final = 25
 
 # Recent-entries sensor cap (§4.3, §15 #26)
-RECENT_ENTRIES_CAP: Final = 50
+RECENT_ENTRIES_CAP: Final = 120
 
 # Per-baby schema version. Bump whenever new activity types are added
 # upstream so existing babies pick them up via the coordinator's load-time

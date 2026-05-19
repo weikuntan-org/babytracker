@@ -1,8 +1,8 @@
 // 7-day daily-bucket bar charts: sleep, feedings, bottle volume, diapers.
 // Data source is the same `sensor.babytracker_<baby>_recent_entries`
 // attribute the rest of the card reads. Caveat: the sensor caps at
-// RECENT_ENTRIES_CAP (50) entries, so days at the far edge of the window
-// can underreport if the baby has more than ~7 events/day. Acceptable for
+// RECENT_ENTRIES_CAP (120) entries, so days at the far edge of the window
+// can underreport if the baby has more than ~17 events/day. Acceptable for
 // at-a-glance trends; a richer history would need a WS history command.
 import { html, type TemplateResult } from "lit";
 
