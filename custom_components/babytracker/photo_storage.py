@@ -2,9 +2,15 @@
 
 Both the user-upload WS command (`websocket_api._ws_upload_photo`) and the
 Procare importer (which downloads photos from Procare's CDN) persist files
-to `/config/media/babytracker/<uuid>.<ext>` and surface them as
+under HA's `local` media_source directory and surface them as
 `media-source://media_source/local/babytracker/<uuid>.<ext>` so the
-existing `_validate_photo_path` (§5 photos) accepts them.
+existing `_validate_photo_path` (§5 photos) accepts them. The on-disk
+location is `hass.config.media_dirs["local"]` — *not* always
+`<config>/media`: HA OS / Supervised setups often point `local` at
+`/media`, and users can override it via `homeassistant.media_dirs` in
+configuration.yaml. Writing under `<config>/media` directly used to look
+right in dev but 404 on those installs because the media_source resolver
+served from a different root than where we'd written.
 
 The mime allow-list and 5 MB cap are kept here so both paths stay in
 lock-step — adding a new format only requires one edit.
@@ -62,12 +68,47 @@ def sniff_image_mime(payload: bytes) -> str | None:
 
 
 def media_source_url(filename: str) -> str:
-    """Return the `media-source://` URL for a `media/babytracker/<filename>`.
+    """Return the `media-source://` URL for a `babytracker/<filename>`.
 
     Kept in one place so the format stays consistent with what
     `services._validate_photo_path` expects (must include `"babytracker"`).
     """
     return f"media-source://media_source/local/babytracker/{filename}"
+
+
+_MEDIA_SOURCE_PREFIX = "media-source://media_source/local/"
+
+
+def local_media_root(hass: HomeAssistant) -> Path:
+    """On-disk root for the `local` media_source — i.e. the directory the
+    `media_source/resolve_media` WS will serve from.
+
+    Uses `hass.config.media_dirs["local"]` when set (HA's resolver does
+    the same), falling back to `<config>/media` which is the HA default
+    when `media_dirs` isn't in `configuration.yaml`. Writing here keeps
+    the on-disk path and the served URL in lock-step.
+    """
+    media_dirs = getattr(hass.config, "media_dirs", None) or {}
+    local = media_dirs.get("local") if isinstance(media_dirs, dict) else None
+    if local:
+        return Path(local)
+    return Path(hass.config.path("media"))
+
+
+def local_path_for(hass: HomeAssistant, photo_path: str | None) -> Path | None:
+    """Resolve a stored `media-source://media_source/local/...` URL to its
+    on-disk path under `local_media_root`. Returns None for inputs that
+    don't match the expected prefix — the caller treats that as
+    "this entry's photo isn't ours to manage".
+    """
+    if not isinstance(photo_path, str):
+        return None
+    if not photo_path.startswith(_MEDIA_SOURCE_PREFIX):
+        return None
+    rel = photo_path[len(_MEDIA_SOURCE_PREFIX):]
+    if not rel:
+        return None
+    return local_media_root(hass) / rel
 
 
 def _write_sync(target: Path, payload: bytes) -> None:
@@ -102,7 +143,7 @@ async def write_photo(
         )
         return None
     filename = f"{uuid.uuid4().hex}.{ext}"
-    target = Path(hass.config.path("media", "babytracker", filename))
+    target = local_media_root(hass) / "babytracker" / filename
     try:
         await hass.async_add_executor_job(_write_sync, target, payload)
     except OSError as err:
