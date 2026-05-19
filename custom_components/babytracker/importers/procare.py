@@ -5,21 +5,31 @@ Procare entries arrive via state-change events on
 N activities with `id`, `timestamp`, `title`, `details`, `photo_url`,
 `staff`. The importer dedups on `(source, source_id)` and routes
 recognised activity titles to the coordinator's normal mutation
-pipeline.
+pipeline. When an activity carries a `photo_url`, we download the
+bytes via HA's aiohttp session and persist them locally under
+`/config/media/babytracker/` so the card can display Procare photos
+the same way it shows user-uploaded ones (a `media-source://` URL on
+the entry's `photo_path` field). Procare photo URLs are signed and
+time-bounded, so we attempt the download promptly at ingest time; on
+failure the entry's `photo_url` is preserved as a diagnostic pointer.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import uuid
 from datetime import datetime, time, timedelta, timezone
 from typing import Any
 
+import aiohttp
 from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_change
 
 from ..const import ENTRY_SOURCE_PROCARE
 from ..models import Baby, Entry
+from ..photo_storage import PHOTO_MAX_BYTES, PHOTO_MIME_TO_EXT, write_photo
 from .base import BaseImporter
 from .procare_mappings import async_load_mappings, match_title
 
@@ -107,6 +117,65 @@ def _existing_by_source_id(baby: Baby, coordinator) -> dict[str, Entry]:
         for e in coordinator.entries_by_baby(baby.id)
         if e.source == ENTRY_SOURCE_PROCARE and e.source_id
     }
+
+
+# Procare photo URLs are signed CDN links (S3/CloudFront). We allow only
+# https because (a) Procare always uses TLS in practice and (b) it removes
+# the trivial "fetch http://internal/foo" SSRF shape even though the URL
+# arrives via a user-installed trusted integration.
+_PROCARE_PHOTO_TIMEOUT = aiohttp.ClientTimeout(total=30)
+
+
+async def _download_procare_photo(
+    hass: HomeAssistant, url: str
+) -> str | None:
+    """Fetch a Procare photo URL and persist it locally.
+
+    Returns the resulting `media-source://...` URL on success, or None
+    on any failure (HTTP error, wrong content-type, size cap exceeded,
+    network timeout). Failures are logged but never propagate — the
+    caller leaves the entry's `photo_url` field alone so the upstream
+    pointer remains visible in diagnostics even when we couldn't grab
+    a local copy.
+    """
+    if not isinstance(url, str) or not url.startswith("https://"):
+        _LOGGER.warning(
+            "babytracker: refusing non-https Procare photo URL: %r", url
+        )
+        return None
+    session = async_get_clientsession(hass)
+    try:
+        async with session.get(url, timeout=_PROCARE_PHOTO_TIMEOUT) as resp:
+            if resp.status != 200:
+                _LOGGER.warning(
+                    "babytracker: Procare photo HTTP %s for %s",
+                    resp.status,
+                    url,
+                )
+                return None
+            mime = (resp.content_type or "").lower().strip()
+            if mime not in PHOTO_MIME_TO_EXT:
+                _LOGGER.warning(
+                    "babytracker: Procare photo unsupported content-type %r",
+                    mime,
+                )
+                return None
+            # Stream the body so a server that omits Content-Length
+            # can't push us past the 5 MB cap before we react.
+            buf = bytearray()
+            async for chunk in resp.content.iter_chunked(65536):
+                buf.extend(chunk)
+                if len(buf) > PHOTO_MAX_BYTES:
+                    _LOGGER.warning(
+                        "babytracker: Procare photo exceeds %d bytes, abandoning",
+                        PHOTO_MAX_BYTES,
+                    )
+                    return None
+            payload = bytes(buf)
+    except (asyncio.TimeoutError, aiohttp.ClientError) as err:
+        _LOGGER.warning("babytracker: Procare photo download failed: %s", err)
+        return None
+    return await write_photo(hass, payload, mime)
 
 
 class ProcareImporter(BaseImporter):
@@ -261,7 +330,7 @@ class ProcareImporter(BaseImporter):
         if self.config.get("mode", "inference_window") == "inference_window":
             await self._set_at_daycare(True, source="inference_window")
 
-        photo_url = activity.get("photo_url")
+        photo_url = activity.get("photo_url") or None
         staff = activity.get("staff")
         data = self._derive_data(entry_type, activity, mapping)
         timestamp = data.pop("__timestamp_override", None) or timestamp
@@ -288,17 +357,20 @@ class ProcareImporter(BaseImporter):
                     entry_type,
                 )
                 return
+            photo_path = await self._resolve_photo_path(photo_url, prior)
             await self.coordinator.update_imported_entry(
                 prior.id,
                 timestamp=timestamp,
                 ended_at=ended_at,
                 notes=notes,
+                photo_path=photo_path,
                 photo_url=photo_url,
                 staff=staff,
                 data=data,
             )
             return
 
+        photo_path = await self._resolve_photo_path(photo_url, None)
         entry = Entry(
             id=str(uuid.uuid4()),
             type=entry_type,
@@ -310,6 +382,7 @@ class ProcareImporter(BaseImporter):
             source_id=source_id,
             imported_at=_now_iso(),
             readonly=self.config.get("mark_readonly", True),
+            photo_path=photo_path,
             photo_url=photo_url,
             staff=staff,
             notes=notes,
@@ -317,6 +390,28 @@ class ProcareImporter(BaseImporter):
         )
         await self.coordinator.add_entry(entry)
         existing[source_id] = entry
+
+    async def _resolve_photo_path(
+        self, photo_url: str | None, prior: Entry | None
+    ) -> str | None:
+        """Return the local `photo_path` for an activity's `photo_url`.
+
+        Reuses a previously-downloaded file when the upstream URL is
+        unchanged (`prior.photo_url == photo_url` and `prior.photo_path`
+        is set); otherwise pulls the bytes from Procare's CDN and
+        persists them. Returns None when there's no photo to attach or
+        the download failed — the entry's `photo_url` field still
+        preserves the upstream pointer either way.
+        """
+        if not photo_url:
+            return None
+        if (
+            prior is not None
+            and prior.photo_url == photo_url
+            and prior.photo_path
+        ):
+            return prior.photo_path
+        return await _download_procare_photo(self.hass, photo_url)
 
     def _derive_data(
         self,

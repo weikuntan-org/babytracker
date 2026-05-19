@@ -8,7 +8,11 @@ the nap ended) the local entry stayed frozen at the initial state.
 These tests exercise the new code path through the public importer
 `_process_activity` entry point: a repeat activity with mutated state
 must patch the existing entry instead of creating a duplicate, and a
-truly-unchanged repeat must be a no-op (no `imported_at` bump).
+truly-unchanged repeat must be a no-op (no `imported_at` bump). They
+also pin the Procare-photo-download behaviour: photo_url present →
+local `photo_path`, URL stable → no re-download, URL changed → new
+download, URL cleared → photo_path cleared, download failure →
+photo_url preserved as a diagnostic pointer but photo_path null.
 """
 from __future__ import annotations
 
@@ -16,6 +20,7 @@ import pytest
 from homeassistant.core import HomeAssistant
 
 from custom_components.babytracker.coordinator import BabytrackerCoordinator
+from custom_components.babytracker.importers import procare as procare_module
 from custom_components.babytracker.importers.procare import (
     ProcareImporter,
     _existing_by_source_id,
@@ -183,3 +188,168 @@ async def test_type_change_between_updates_is_logged_and_skipped(
         and "sleep -> diaper" in record.getMessage()
         for record in caplog.records
     )
+
+
+class _PhotoStub:
+    """Stand-in for `_download_procare_photo`. Records calls so tests can
+    assert (a) how many downloads happened and (b) which URLs we asked
+    for; returns a different local path per URL so we can tell which
+    download the entry's `photo_path` reflects.
+    """
+
+    def __init__(self, *, fail: bool = False) -> None:
+        self.calls: list[str] = []
+        self.fail = fail
+
+    async def __call__(self, _hass, url: str) -> str | None:
+        self.calls.append(url)
+        if self.fail:
+            return None
+        # Deterministic per-URL output so test asserts can name a path.
+        return f"media-source://media_source/local/babytracker/{abs(hash(url))}.jpg"
+
+
+@pytest.mark.asyncio
+async def test_new_activity_with_photo_downloads_and_stores_locally(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importer, coord, baby = await _make_importer(hass)
+    stub = _PhotoStub()
+    monkeypatch.setattr(procare_module, "_download_procare_photo", stub)
+
+    await importer._process_activity(
+        {
+            "id": "act-photo-1",
+            "title": "Diaper: Wet",
+            "timestamp": "2026-05-19T13:00:00+00:00",
+            "details": None,
+            "photo_url": "https://cdn.procare.example/photo/abc.jpg",
+        },
+        {},
+    )
+    entries = coord.entries_by_baby(baby.id)
+    assert len(entries) == 1
+    entry = entries[0]
+    assert stub.calls == ["https://cdn.procare.example/photo/abc.jpg"]
+    assert entry.photo_url == "https://cdn.procare.example/photo/abc.jpg"
+    assert entry.photo_path is not None
+    assert entry.photo_path.startswith("media-source://media_source/local/babytracker/")
+
+
+@pytest.mark.asyncio
+async def test_unchanged_photo_url_reuses_local_copy(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importer, coord, baby = await _make_importer(hass)
+    stub = _PhotoStub()
+    monkeypatch.setattr(procare_module, "_download_procare_photo", stub)
+
+    activity = {
+        "id": "act-photo-2",
+        "title": "Diaper: Wet",
+        "timestamp": "2026-05-19T13:00:00+00:00",
+        "details": None,
+        "photo_url": "https://cdn.procare.example/photo/xyz.jpg",
+    }
+    await importer._process_activity(activity, {})
+    first_path = coord.entries_by_baby(baby.id)[0].photo_path
+    assert stub.calls == [activity["photo_url"]]
+
+    # Repeat with same URL — must NOT trigger a second download, and
+    # the entry's photo_path must remain the locally-stored copy.
+    await importer._process_activity(
+        activity, _existing_by_source_id(baby, coord)
+    )
+    entries = coord.entries_by_baby(baby.id)
+    assert len(entries) == 1
+    assert entries[0].photo_path == first_path
+    assert stub.calls == [activity["photo_url"]], "re-download must not fire"
+
+
+@pytest.mark.asyncio
+async def test_photo_url_change_triggers_redownload(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importer, coord, baby = await _make_importer(hass)
+    stub = _PhotoStub()
+    monkeypatch.setattr(procare_module, "_download_procare_photo", stub)
+
+    base = {
+        "id": "act-photo-3",
+        "title": "Diaper: Wet",
+        "timestamp": "2026-05-19T13:00:00+00:00",
+        "details": None,
+    }
+    await importer._process_activity(
+        {**base, "photo_url": "https://cdn.procare.example/photo/v1.jpg"}, {}
+    )
+    initial_path = coord.entries_by_baby(baby.id)[0].photo_path
+
+    await importer._process_activity(
+        {**base, "photo_url": "https://cdn.procare.example/photo/v2.jpg"},
+        _existing_by_source_id(baby, coord),
+    )
+    entry = coord.entries_by_baby(baby.id)[0]
+    assert stub.calls == [
+        "https://cdn.procare.example/photo/v1.jpg",
+        "https://cdn.procare.example/photo/v2.jpg",
+    ]
+    assert entry.photo_path is not None
+    assert entry.photo_path != initial_path
+    assert entry.photo_url == "https://cdn.procare.example/photo/v2.jpg"
+
+
+@pytest.mark.asyncio
+async def test_photo_url_cleared_clears_photo_path(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importer, coord, baby = await _make_importer(hass)
+    stub = _PhotoStub()
+    monkeypatch.setattr(procare_module, "_download_procare_photo", stub)
+
+    base = {
+        "id": "act-photo-4",
+        "title": "Diaper: Wet",
+        "timestamp": "2026-05-19T13:00:00+00:00",
+        "details": None,
+    }
+    await importer._process_activity(
+        {**base, "photo_url": "https://cdn.procare.example/photo/gone.jpg"}, {}
+    )
+    assert coord.entries_by_baby(baby.id)[0].photo_path is not None
+
+    # Procare drops the photo from the activity record (unusual but
+    # possible if e.g. the parent deletes the photo upstream).
+    await importer._process_activity(
+        {**base, "photo_url": None},
+        _existing_by_source_id(baby, coord),
+    )
+    entry = coord.entries_by_baby(baby.id)[0]
+    assert entry.photo_url is None
+    assert entry.photo_path is None
+
+
+@pytest.mark.asyncio
+async def test_download_failure_preserves_photo_url_pointer(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importer, coord, baby = await _make_importer(hass)
+    stub = _PhotoStub(fail=True)
+    monkeypatch.setattr(procare_module, "_download_procare_photo", stub)
+
+    await importer._process_activity(
+        {
+            "id": "act-photo-5",
+            "title": "Diaper: Wet",
+            "timestamp": "2026-05-19T13:00:00+00:00",
+            "details": None,
+            "photo_url": "https://cdn.procare.example/photo/broken.jpg",
+        },
+        {},
+    )
+    entry = coord.entries_by_baby(baby.id)[0]
+    assert stub.calls == ["https://cdn.procare.example/photo/broken.jpg"]
+    assert entry.photo_path is None
+    # photo_url is preserved so users / diagnostics still see the
+    # upstream pointer even though we couldn't grab a local copy.
+    assert entry.photo_url == "https://cdn.procare.example/photo/broken.jpg"

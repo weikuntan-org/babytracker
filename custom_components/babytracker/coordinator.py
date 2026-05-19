@@ -406,6 +406,7 @@ class BabytrackerCoordinator:
         timestamp: str,
         ended_at: str | None,
         notes: str | None,
+        photo_path: str | None,
         photo_url: str | None,
         staff: str | None,
         data: dict[str, Any],
@@ -439,6 +440,7 @@ class BabytrackerCoordinator:
                 entry.timestamp == timestamp
                 and entry.ended_at == ended_at
                 and entry.notes == notes
+                and entry.photo_path == photo_path
                 and entry.photo_url == photo_url
                 and entry.staff == staff
                 and entry.data == new_data
@@ -448,6 +450,7 @@ class BabytrackerCoordinator:
             entry.timestamp = timestamp
             entry.ended_at = ended_at
             entry.notes = notes
+            entry.photo_path = photo_path
             entry.photo_url = photo_url
             entry.staff = staff
             entry.data = new_data

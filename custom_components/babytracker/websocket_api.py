@@ -5,7 +5,6 @@ import base64
 import binascii
 import json
 import logging
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -16,19 +15,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import DEFAULT_OPTIONS, DOMAIN, SIGNAL_DATA_UPDATED
-
-# Photo upload (§5 photos). Mirrored constraint with services._validate_photo_path:
-# resulting `media-source://` URL must include "babytracker" so it passes the
-# soft-scope check there.
-PHOTO_MAX_BYTES = 5 * 1024 * 1024
-PHOTO_MIME_TO_EXT: dict[str, str] = {
-    "image/jpeg": "jpg",
-    "image/jpg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-    "image/heic": "heic",
-    "image/heif": "heif",
-}
+from .photo_storage import PHOTO_MAX_BYTES, PHOTO_MIME_TO_EXT, write_photo
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -460,12 +447,6 @@ def _ws_list_growth(
         _push()
 
 
-def _write_photo_sync(target: Path, payload: bytes) -> None:
-    """Persist the decoded photo bytes. Runs in executor thread."""
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(payload)
-
-
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "babytracker/upload_photo",
@@ -480,8 +461,7 @@ async def _ws_upload_photo(
     msg: dict[str, Any],
 ) -> None:
     mime = msg["mime"].lower().strip()
-    ext = PHOTO_MIME_TO_EXT.get(mime)
-    if ext is None:
+    if mime not in PHOTO_MIME_TO_EXT:
         connection.send_error(
             msg["id"], "unsupported_mime", f"unsupported photo mime: {mime!r}"
         )
@@ -501,18 +481,10 @@ async def _ws_upload_photo(
             f"photo exceeds {PHOTO_MAX_BYTES} bytes",
         )
         return
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    # `media/<...>` under HA's config dir is what the `media_source` local
-    # provider serves, and the resulting `media-source://media_source/local/...`
-    # URL satisfies services._validate_photo_path's "babytracker" check.
-    target = Path(hass.config.path("media", "babytracker", filename))
-    try:
-        await hass.async_add_executor_job(_write_photo_sync, target, payload)
-    except OSError as err:
-        _LOGGER.warning("babytracker: photo write failed: %s", err)
-        connection.send_error(msg["id"], "write_failed", str(err))
+    photo_path = await write_photo(hass, payload, mime)
+    if photo_path is None:
+        connection.send_error(msg["id"], "write_failed", "photo write failed")
         return
-    photo_path = f"media-source://media_source/local/babytracker/{filename}"
     connection.send_result(msg["id"], {"photo_path": photo_path})
 
 
