@@ -637,6 +637,15 @@ const Ee = [
 function Wn(e) {
   return typeof e == "string" && e.length ? e.charAt(0).toUpperCase() + e.slice(1) : e;
 }
+// Decorator helper used by `@customElement`/`@property`/`@state` plumbing
+// below. Hoisted from later in the file so the `bt-mic-button` and
+// `bt-photo-button` registrations at module-load time can resolve `F`
+// before any of the card classes are evaluated.
+var mi = Object.defineProperty, bi = Object.getOwnPropertyDescriptor, F = (e, t, i, r) => {
+  for (var n = r > 1 ? void 0 : r ? bi(t, i) : t, s = e.length - 1, o; s >= 0; s--)
+    (o = e[s]) && (n = (r ? o(t, i, n) : o(n)) || n);
+  return r && n && mi(t, i, n), n;
+};
 // --- speech-to-text helpers (dual-path: Web Speech, then assist_pipeline) ---
 function btCanUseWebSpeech() {
   return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -2715,11 +2724,6 @@ function hi(e, t, i) {
         </div>
     `;
 }
-var mi = Object.defineProperty, bi = Object.getOwnPropertyDescriptor, F = (e, t, i, r) => {
-  for (var n = r > 1 ? void 0 : r ? bi(t, i) : t, s = e.length - 1, o; s >= 0; s--)
-    (o = e[s]) && (n = (r ? o(t, i, n) : o(n)) || n);
-  return r && n && mi(t, i, n), n;
-};
 const gi = ["vaccines", "growth", "trends", "export"];
 let A = class extends P {
   constructor() {
