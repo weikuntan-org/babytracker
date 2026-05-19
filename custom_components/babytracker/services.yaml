@@ -518,3 +518,12 @@ set_daycare_presence:
       required: true
       selector:
         boolean:
+
+resync_importers:
+  name: Resync importers
+  description: Force a re-read of every configured importer's source sensor. Already-imported activities are skipped via the existing (source, source_id) dedup, so this is safe to call repeatedly. Returns the count of imported activities.
+  fields:
+    baby:
+      description: Scope to a single baby's importer. Omit to resync all.
+      selector:
+        text:

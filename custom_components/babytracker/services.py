@@ -736,6 +736,34 @@ async def _handle_set_daycare(call: ServiceCall) -> None:
     await coord.set_at_daycare(baby, call.data["value"])
 
 
+# ----- Resync importers ---------------------------------------------------
+RESYNC_IMPORTERS_SCHEMA = vol.Schema(
+    {vol.Optional("baby"): cv.string}
+)
+
+
+async def _handle_resync_importers(call: ServiceCall) -> ServiceResponse:
+    hass = call.hass
+    coord = _coordinator(hass)
+    if coord is None:
+        raise ServiceValidationError("babytracker not configured")
+    runtime = _runtime(hass)
+    importers = (runtime or {}).get("importers") or []
+    baby_slug = call.data.get("baby")
+    target_id: str | None = None
+    if baby_slug:
+        target_baby = find_baby_by_slug(coord.babies, baby_slug)
+        target_id = target_baby.id
+    imported = 0
+    matched = 0
+    for importer in importers:
+        if target_id and importer.baby.id != target_id:
+            continue
+        matched += 1
+        imported += await importer.async_resync()
+    return {"matched_importers": matched, "imported": imported}
+
+
 # -----------------------------------------------------------------
 # Registration
 # -----------------------------------------------------------------
@@ -782,6 +810,12 @@ async def async_register_services(hass: HomeAssistant, entry: ConfigEntry) -> No
         supports_response=SupportsResponse.ONLY,
     )
     _reg("set_daycare_presence", _handle_set_daycare, SET_DAYCARE_SCHEMA)
+    _reg(
+        "resync_importers",
+        _handle_resync_importers,
+        RESYNC_IMPORTERS_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
 
 
 async def async_unregister_services(hass: HomeAssistant) -> None:

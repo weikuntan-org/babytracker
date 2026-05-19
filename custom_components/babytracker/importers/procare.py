@@ -123,6 +123,26 @@ class ProcareImporter(BaseImporter):
         for activity in activities:
             await self._process_activity(activity, seen)
 
+    async def async_resync(self) -> int:
+        """Re-read the source sensor's current state and process every
+        activity through the dedup pipeline. Returns the number of new
+        entries created (activities already imported are skipped via
+        the existing `(source, source_id)` dedup, so this is safe to
+        call repeatedly).
+        """
+        state = self.hass.states.get(self.sensor_entity_id)
+        if state is None:
+            return 0
+        activities = state.attributes.get("activities") or []
+        if not activities:
+            return 0
+        before = len(self.coordinator.entries_by_baby(self.baby.id))
+        seen = _seen_ids_for(self.baby, self.coordinator)
+        for activity in activities:
+            await self._process_activity(activity, seen)
+        after = len(self.coordinator.entries_by_baby(self.baby.id))
+        return max(0, after - before)
+
     async def _process_activity(self, activity: dict[str, Any], seen: set[str]) -> None:
         source_id = str(activity.get("id") or "")
         if not source_id or source_id in seen:
