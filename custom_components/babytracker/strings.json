@@ -127,7 +127,7 @@
             "birthday_too_old": "Birthday must be within the last 25 years.",
             "slug_reserved": "That name conflicts with a reserved identifier.",
             "slug_collision": "Another baby already uses that slug.",
-            "sensor_invalid_domain": "Entity ID must be in the sensor domain (e.g. sensor.<kid>_latest_activity).",
+            "sensor_invalid_domain": "Entity ID must be in the sensor domain (e.g. sensor.[kid]_latest_activity).",
             "sensor_not_found": "That sensor doesn't exist. Make sure the Procare activities integration is installed and the kid sensor is loaded.",
             "sensor_no_activities": "That sensor has no `activities` attribute — it doesn't look like a Procare activities sensor."
         },
