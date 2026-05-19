@@ -14,6 +14,7 @@ import { recentEntriesTemplate } from "./components/recent-entries";
 import { vaccinesDueTemplate } from "./components/vaccines-due";
 import { growthChartTemplate } from "./components/growth-chart";
 import { exportSheetTemplate } from "./components/export-sheet";
+import { importerSyncTemplate } from "./components/importer-sync";
 import { todayCountsTemplate } from "./components/today-counts";
 import { modalTemplate, type ModalKind } from "./components/modal";
 import {
@@ -38,6 +39,7 @@ const DEFAULT_SECTIONS = [
     "quick_log",
     "vaccines",
     "recent",
+    "importer_sync",
     "export"
 ];
 
@@ -481,6 +483,13 @@ export class BabytrackerCard extends LitElement {
                           this._baby(),
                           this._requestDelete,
                           this._config.recent_limit ?? 50
+                      )
+                    : ""}
+                ${sections.includes("importer_sync")
+                    ? importerSyncTemplate(
+                          this._babyConfig,
+                          this._baby(),
+                          this._handleService
                       )
                     : ""}
                 ${sections.includes("export")
