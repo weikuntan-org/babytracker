@@ -399,6 +399,63 @@ class BabytrackerCoordinator:
             self._unmapped_procare_titles.add(title)
             self._notify()
 
+    async def update_imported_entry(
+        self,
+        entry_id: str,
+        *,
+        timestamp: str,
+        ended_at: str | None,
+        notes: str | None,
+        photo_url: str | None,
+        staff: str | None,
+        data: dict[str, Any],
+    ) -> Entry | None:
+        """Re-sync an imported entry with the latest upstream state.
+
+        Used by the importer pipeline when an activity's `source_id` is
+        already known: instead of dedup-and-skip, we patch the entry in
+        place so updates upstream (e.g. a "Nap Started" turning into
+        "Slept from X to Y" once it ends) propagate to our log.
+
+        Returns the entry if anything actually changed, or None if the
+        upstream state matches what we already have (so callers can
+        avoid superfluous `_notify` fan-outs).
+
+        Intentionally narrow vs `edit_entry`:
+        - `readonly` is preserved (imports stay readonly by default).
+        - `revised_at` is NOT bumped — `imported_at` is, because this
+          isn't a user edit.
+        - `id`, `baby_id`, `type`, `source`, `source_id`,
+          `source_entity_id` are immutable here.
+        - `data` is replaced wholesale (upstream is authoritative for
+          imported entries), not merged.
+        """
+        async with self._lock:
+            entry = next((e for e in self._entries if e.id == entry_id), None)
+            if entry is None:
+                return None
+            new_data = dict(data)
+            unchanged = (
+                entry.timestamp == timestamp
+                and entry.ended_at == ended_at
+                and entry.notes == notes
+                and entry.photo_url == photo_url
+                and entry.staff == staff
+                and entry.data == new_data
+            )
+            if unchanged:
+                return None
+            entry.timestamp = timestamp
+            entry.ended_at = ended_at
+            entry.notes = notes
+            entry.photo_url = photo_url
+            entry.staff = staff
+            entry.data = new_data
+            entry.imported_at = datetime.now(tz=timezone.utc).isoformat()
+            await self._async_persist()
+        self._notify()
+        return entry
+
     # ------------------------------------------------------------------
     # Utilities
     # ------------------------------------------------------------------
