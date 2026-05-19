@@ -964,7 +964,7 @@ var ii = Object.defineProperty, ri = Object.getOwnPropertyDescriptor, Q = (e, t,
 };
 let O = class extends D {
   constructor() {
-    super(...arguments), this.photoPath = "", this.size = 32, this._url = "", this._failed = !1, this._open = !1, this._lastResolved = "", this._resolveToken = 0, this._onKeydown = (e) => {
+    super(...arguments), this.photoPath = "", this.size = 128, this._url = "", this._failed = !1, this._open = !1, this._lastResolved = "", this._resolveToken = 0, this._onKeydown = (e) => {
       e.key === "Escape" && (e.preventDefault(), this._close_lightbox());
     }, this._open_lightbox = (e) => {
       e.preventDefault(), e.stopPropagation(), !(!this._url || this._open) && (this._open = !0, this._attachKeyHandler());
@@ -1733,7 +1733,6 @@ let z = class extends D {
                           <bt-entry-thumbnail
                               .hass=${this.hass}
                               .photoPath=${this.value}
-                              .size=${64}
                           ></bt-entry-thumbnail>
                           <button
                               type="button"
