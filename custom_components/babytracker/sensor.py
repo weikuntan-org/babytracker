@@ -425,6 +425,13 @@ class RecentEntriesSensor(_BabyEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         recent = self._coord.recent_entries(self.baby.id)
         return {
+            # `photo_url` is omitted on purpose: it's only set on Procare
+            # imports and can be a few hundred bytes of signed URL — at 50
+            # entries it can push the attribute past HA's 16 KB recorder
+            # cap (`State attributes ... exceed maximum size`). The card
+            # only reads `photo_path` from this attribute, so dropping
+            # `photo_url` is free; consumers that need it can subscribe
+            # to `babytracker/list_entries_in_range` over WS instead.
             "entries": [
                 {
                     "id": e.id,
@@ -435,7 +442,6 @@ class RecentEntriesSensor(_BabyEntity):
                     "readonly": e.readonly,
                     "data": dict(e.data),
                     "photo_path": e.photo_path,
-                    "photo_url": e.photo_url,
                     "staff": e.staff,
                     "notes": e.notes,
                 }
