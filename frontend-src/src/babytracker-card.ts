@@ -11,7 +11,6 @@ import { customElement, property, state, query } from "lit/decorators.js";
 import { quickLogTemplate, type ModalRequester } from "./components/quick-log";
 import { sessionTileTemplate } from "./components/session-tile";
 import { recentEntriesTemplate } from "./components/recent-entries";
-import { vaccinesDueTemplate } from "./components/vaccines-due";
 import { growthChartTemplate } from "./components/growth-chart";
 import { exportSheetTemplate } from "./components/export-sheet";
 import { importerSyncTemplate } from "./components/importer-sync";
@@ -37,7 +36,6 @@ const DEFAULT_SECTIONS = [
     "today",
     "active_session",
     "quick_log",
-    "vaccines",
     "recent",
     "importer_sync",
     "export"
@@ -495,9 +493,6 @@ export class BabytrackerCard extends LitElement {
                           this._requestModal
                       )
                     : ""}
-                ${sections.includes("vaccines")
-                    ? vaccinesDueTemplate(this.hass, this._baby())
-                    : ""}
                 ${sections.includes("growth")
                     ? growthChartTemplate(
                           this.hass,
@@ -557,6 +552,9 @@ window.customCards.push({
 // Editor lives in editor.ts.
 import("./editor");
 
-// Bundle the standalone growth card so it ships in the same artefact and
-// is auto-registered when users load /babytracker_static/babytracker-card.js.
-import "./babytracker-growth-card";
+// Bundle the standalone medical/summary card (vaccines + growth) so it
+// ships in the same artefact and is auto-registered when users load
+// /babytracker_static/babytracker-card.js. The same class is also
+// registered as `babytracker-growth-card` for backward compat with the
+// old card name.
+import "./babytracker-medical-card";
