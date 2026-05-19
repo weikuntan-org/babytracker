@@ -76,8 +76,18 @@ export function recentEntriesTemplate(
 function _label(entry: any): string {
     const t = String(entry.type ?? "");
     // "other" entries carry their description in data.name; everything else
-    // is differentiated by method (feeding) or kind (diaper).
-    const detail =
-        entry?.data?.name ?? entry?.data?.method ?? entry?.data?.kind;
-    return detail ? `${t} (${detail})` : t;
+    // is differentiated by method (feeding) or kind (diaper). Feeding rows
+    // also surface the amount+unit so bottles show "feeding (bottle, 4 oz)".
+    const d = entry?.data ?? {};
+    const detail = d.name ?? d.method ?? d.kind;
+    if (!detail) return t;
+    if (
+        t === "feeding" &&
+        d.amount != null &&
+        d.amount !== "" &&
+        d.unit
+    ) {
+        return `${t} (${detail}, ${d.amount} ${d.unit})`;
+    }
+    return `${t} (${detail})`;
 }
