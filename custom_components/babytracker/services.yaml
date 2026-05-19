@@ -222,6 +222,23 @@ log_walk:
       selector:
         text:
 
+log_other:
+  name: Log other (free-form activity)
+  description: Capture an activity that doesn't fit any of the typed entries (bath, milestone, doctor visit, etc.).
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    name:
+      required: true
+      description: Short label that appears in the 24h list (e.g. "bath", "first smile").
+      selector:
+        text:
+    notes:
+      selector:
+        text:
+
 log_pumping:
   name: Log pumping
   fields:

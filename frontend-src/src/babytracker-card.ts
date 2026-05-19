@@ -369,11 +369,34 @@ export class BabytrackerCard extends LitElement {
         const labels: Record<typeof kind, string> = {
             diaper: "logging a diaper",
             bottle: "logging a bottle",
-            solids: "logging solids"
+            solids: "logging solids",
+            other: "logging this"
         };
         this._interceptIfSleeping(labels[kind], () => {
             this._modal = { kind, baby: this._baby() };
         });
+    };
+
+    private _requestDelete = (entry: {
+        id: string;
+        type?: string;
+        source?: string;
+        staff?: string | null;
+    }) => {
+        // User-authored entries delete with no confirmation (the existing
+        // behavior). Anything else came from an importer (Procare today),
+        // so prompt before removing the local copy.
+        if (!entry.source || entry.source === "user") {
+            this._handleService("delete_entry", { entry_id: entry.id });
+            return;
+        }
+        this._modal = {
+            kind: "confirm_delete_imported",
+            entryId: entry.id,
+            entryType: entry.type ?? "entry",
+            source: entry.source,
+            staff: entry.staff ?? null
+        };
     };
 
     private _closeModal = () => {
@@ -447,7 +470,7 @@ export class BabytrackerCard extends LitElement {
                     ? recentEntriesTemplate(
                           this.hass,
                           this._baby(),
-                          this._handleService,
+                          this._requestDelete,
                           this._config.recent_limit ?? 50
                       )
                     : ""}

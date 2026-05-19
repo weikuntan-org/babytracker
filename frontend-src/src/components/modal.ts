@@ -1,7 +1,7 @@
 // Modal/lightbox forms for activities that need extra input on tap.
 import { html, type TemplateResult, nothing } from "lit";
 
-export type ActivityKind = "diaper" | "bottle" | "solids";
+export type ActivityKind = "diaper" | "bottle" | "solids" | "other";
 
 export type ModalKind =
     | { kind: ActivityKind; baby: string }
@@ -10,6 +10,13 @@ export type ModalKind =
           baby: string;
           label: string;
           then: () => void | Promise<void>;
+      }
+    | {
+          kind: "confirm_delete_imported";
+          entryId: string;
+          entryType: string;
+          source: string;
+          staff?: string | null;
       };
 
 type Submit = (service: string, data: Record<string, unknown>) => Promise<void>;
@@ -23,24 +30,44 @@ export function modalTemplate(
     call: Call,
     close: Close
 ): TemplateResult {
+    let body: TemplateResult | typeof nothing = nothing;
+    if (modal !== null) {
+        switch (modal.kind) {
+            case "diaper":
+                body = diaperForm(modal.baby, submit, close);
+                break;
+            case "bottle":
+                body = bottleForm(modal.baby, options, submit, close);
+                break;
+            case "solids":
+                body = solidsForm(modal.baby, submit, close);
+                break;
+            case "other":
+                body = otherForm(modal.baby, submit, close);
+                break;
+            case "end_sleep_first":
+                body = endSleepFirstForm(
+                    modal.baby,
+                    modal.label,
+                    modal.then,
+                    call,
+                    close
+                );
+                break;
+            case "confirm_delete_imported":
+                body = confirmDeleteImportedForm(
+                    modal.entryId,
+                    modal.entryType,
+                    modal.source,
+                    modal.staff ?? null,
+                    submit,
+                    close
+                );
+                break;
+        }
+    }
     return html`
-        <dialog @cancel=${close} @close=${close}>
-            ${modal === null
-                ? nothing
-                : modal.kind === "diaper"
-                  ? diaperForm(modal.baby, submit, close)
-                  : modal.kind === "bottle"
-                    ? bottleForm(modal.baby, options, submit, close)
-                    : modal.kind === "solids"
-                      ? solidsForm(modal.baby, submit, close)
-                      : endSleepFirstForm(
-                            modal.baby,
-                            modal.label,
-                            modal.then,
-                            call,
-                            close
-                        )}
-        </dialog>
+        <dialog @cancel=${close} @close=${close}>${body}</dialog>
     `;
 }
 
@@ -227,6 +254,75 @@ function solidsForm(
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
+            </div>
+        </form>
+    `;
+}
+
+function otherForm(
+    baby: string,
+    submit: Submit,
+    close: Close
+): TemplateResult {
+    const onSubmit = (e: SubmitEvent) => {
+        e.preventDefault();
+        const form = e.currentTarget as HTMLFormElement;
+        const data = new FormData(form);
+        submit("log_other", {
+            baby,
+            name: String(data.get("name") ?? ""),
+            notes: String(data.get("notes") ?? "") || undefined
+        });
+    };
+    return html`
+        <form @submit=${onSubmit}>
+            <h2>Log activity</h2>
+            <label for="name">What happened</label>
+            <input
+                id="name"
+                name="name"
+                type="text"
+                placeholder="e.g. bath, doctor visit, first smile"
+                autofocus
+                required
+            />
+            <label for="notes">Notes</label>
+            <input id="notes" name="notes" type="text" placeholder="optional" />
+            <div class="actions">
+                <button type="button" @click=${close}>Cancel</button>
+                <button type="submit" class="primary">Log</button>
+            </div>
+        </form>
+    `;
+}
+
+function confirmDeleteImportedForm(
+    entryId: string,
+    entryType: string,
+    source: string,
+    staff: string | null,
+    submit: Submit,
+    close: Close
+): TemplateResult {
+    const onConfirm = (e: Event) => {
+        e.preventDefault();
+        submit("delete_entry", { entry_id: entryId });
+    };
+    const provenance = staff ? `${source} (${staff})` : source;
+    return html`
+        <form @submit=${(e: SubmitEvent) => e.preventDefault()}>
+            <h2>Delete this entry?</h2>
+            <p>
+                This <strong>${entryType}</strong> was logged by
+                <strong>${provenance}</strong>, not from this card. Deleting it
+                here only removes it from babytracker — the upstream record is
+                not affected.
+            </p>
+            <div class="actions">
+                <button type="button" @click=${close} autofocus>Cancel</button>
+                <button type="button" class="primary" @click=${onConfirm}>
+                    Delete anyway
+                </button>
             </div>
         </form>
     `;

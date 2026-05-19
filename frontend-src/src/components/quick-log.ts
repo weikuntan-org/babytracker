@@ -1,6 +1,6 @@
 // Quick-log grid — buttons filtered by eligibility (§4.10).
-// Some activities open a modal (diaper, bottle, solids) for extra input;
-// others fire directly (sleep, tummy time, walk, breast feeds).
+// Some activities open a modal (diaper, bottle, solids, other) for extra
+// input; others fire directly (sleep, tummy time, walk, breast feeds).
 import { html, type TemplateResult } from "lit";
 
 type ServiceCaller = (
@@ -9,7 +9,9 @@ type ServiceCaller = (
     sourceBtn?: EventTarget | null
 ) => Promise<unknown>;
 
-export type ModalRequester = (kind: "diaper" | "bottle" | "solids") => void;
+export type ModalRequester = (
+    kind: "diaper" | "bottle" | "solids" | "other"
+) => void;
 
 const DEFAULT_ACTIVITIES = [
     "feeding",
@@ -19,7 +21,8 @@ const DEFAULT_ACTIVITIES = [
     "growth",
     "medication",
     "vaccine",
-    "walk"
+    "walk",
+    "other"
 ];
 const DEFAULT_METHODS = ["bottle", "breast_left", "breast_right", "solids"];
 
@@ -133,6 +136,19 @@ export function quickLogTemplate(
                         call("start_walk", { baby }, e.currentTarget)}
                 >
                     Start walk
+                </button>
+            `
+        );
+    }
+    if (activities.includes("other")) {
+        buttons.push(
+            html`
+                <button
+                    class="quick"
+                    aria-label="Log other activity for ${baby}"
+                    @click=${() => requestModal("other")}
+                >
+                    Other
                 </button>
             `
         );

@@ -155,6 +155,7 @@
             "last_walk_start": {"name": "Last walk start"},
             "total_walk_today": {"name": "Total walk today"},
             "walks_today": {"name": "Walks today"},
+            "last_other": {"name": "Last other"},
             "last_vaccine": {"name": "Last vaccine"},
             "vaccines_due": {"name": "Vaccines due"},
             "weight": {"name": "Weight"},

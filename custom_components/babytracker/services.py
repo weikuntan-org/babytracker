@@ -416,6 +416,29 @@ async def _handle_log_walk(call: ServiceCall) -> None:
     await _coordinator(hass).add_entry(entry)
 
 
+# ----- Other (free-form) --------------------------------------------------
+LOG_OTHER_SCHEMA = vol.Schema(
+    {
+        vol.Required("baby"): cv.string,
+        vol.Required("name"): cv.string,
+        vol.Optional("notes"): cv.string,
+    }
+)
+
+
+async def _handle_log_other(call: ServiceCall) -> None:
+    hass = call.hass
+    baby = await _resolve_baby(hass, call.data["baby"])
+    await _ensure_can_log(hass, baby, "other", ENTRY_SOURCE_USER)
+    entry = _build_entry(
+        type_="other",
+        baby_id=baby.id,
+        notes=call.data.get("notes"),
+        data={"name": call.data["name"]},
+    )
+    await _coordinator(hass).add_entry(entry)
+
+
 # ----- Pumping / growth / medication (M4) ---------------------------------
 LOG_PUMPING_SCHEMA = vol.Schema(
     {
@@ -690,6 +713,7 @@ async def async_register_services(hass: HomeAssistant, entry: ConfigEntry) -> No
     _reg("start_walk", _handle_start_walk, START_WALK_SCHEMA)
     _reg("end_walk", _handle_end_walk, END_WALK_SCHEMA)
     _reg("log_walk", _handle_log_walk, LOG_WALK_SCHEMA)
+    _reg("log_other", _handle_log_other, LOG_OTHER_SCHEMA)
     _reg("log_pumping", _handle_log_pumping, LOG_PUMPING_SCHEMA)
     _reg("log_growth", _handle_log_growth, LOG_GROWTH_SCHEMA)
     _reg("log_medication", _handle_log_medication, LOG_MEDICATION_SCHEMA)
