@@ -30,6 +30,7 @@ export function recentEntriesTemplate(
                       <ul class="entries">
                           ${entries.map((entry: any) =>
                               entryRowTemplate(
+                                  hass,
                                   entry,
                                   requestEdit,
                                   expandedNotes,

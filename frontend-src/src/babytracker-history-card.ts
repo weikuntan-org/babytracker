@@ -392,6 +392,7 @@ export class BabytrackerHistoryCard extends LitElement {
                           <ul class="entries">
                               ${this._entries.map((entry: any) =>
                                   entryRowTemplate(
+                                      this.hass,
                                       entry,
                                       this._requestEdit,
                                       this._expandedNotes,

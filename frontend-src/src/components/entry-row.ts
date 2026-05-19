@@ -5,12 +5,14 @@
 import { html, type TemplateResult } from "lit";
 
 import { formatClock } from "../lib/entries";
+import "./entry-thumbnail";
 
 export type EntryRequester = (entry: any) => void;
 
 const SESSION_TYPES = new Set(["sleep", "feeding", "tummy_time", "walk"]);
 
 export function entryRowTemplate(
+    hass: any,
     entry: any,
     requestEdit: EntryRequester,
     expandedNotes: ReadonlySet<string>,
@@ -34,7 +36,10 @@ export function entryRowTemplate(
                 <span aria-label="Entry type">${_label(entry)}</span>
                 ${_renderTime(entry)}
                 ${entry.photo_path
-                    ? html`<span aria-label="Has photo">📷</span>`
+                    ? html`<bt-entry-thumbnail
+                          .hass=${hass}
+                          .photoPath=${entry.photo_path}
+                      ></bt-entry-thumbnail>`
                     : ""}
                 ${entry.staff
                     ? html`<span
