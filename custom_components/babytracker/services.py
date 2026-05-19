@@ -231,6 +231,7 @@ LOG_DIAPER_SCHEMA = vol.Schema(
     {
         vol.Required("baby"): cv.string,
         vol.Required("kind"): vol.In(list(ALL_DIAPER_KINDS)),
+        vol.Optional("timestamp"): cv.datetime,
         vol.Optional("notes"): cv.string,
         vol.Optional("photo_path"): vol.Any(None, str),
     }
@@ -241,9 +242,11 @@ async def _handle_log_diaper(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
     await _ensure_can_log(hass, baby, "diaper", ENTRY_SOURCE_USER)
+    ts = call.data.get("timestamp")
     entry = _build_entry(
         type_="diaper",
         baby_id=baby.id,
+        timestamp=ts.isoformat() if ts else None,
         notes=call.data.get("notes"),
         photo_path=call.data.get("photo_path"),
         data={"kind": call.data["kind"]},
@@ -421,6 +424,7 @@ LOG_OTHER_SCHEMA = vol.Schema(
     {
         vol.Required("baby"): cv.string,
         vol.Required("name"): cv.string,
+        vol.Optional("timestamp"): cv.datetime,
         vol.Optional("notes"): cv.string,
     }
 )
@@ -430,9 +434,11 @@ async def _handle_log_other(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
     await _ensure_can_log(hass, baby, "other", ENTRY_SOURCE_USER)
+    ts = call.data.get("timestamp")
     entry = _build_entry(
         type_="other",
         baby_id=baby.id,
+        timestamp=ts.isoformat() if ts else None,
         notes=call.data.get("notes"),
         data={"name": call.data["name"]},
     )

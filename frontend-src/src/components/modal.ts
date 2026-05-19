@@ -1,6 +1,31 @@
 // Modal/lightbox forms for activities that need extra input on tap.
 import { html, type TemplateResult, nothing } from "lit";
 
+/**
+ * Current local time as the `value` for an `<input type="datetime-local">`.
+ * The input expects `YYYY-MM-DDTHH:MM` in *local* time (no timezone suffix).
+ */
+function _nowLocalForInput(): string {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return (
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+        `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    );
+}
+
+/**
+ * Convert a `datetime-local` input value (`YYYY-MM-DDTHH:MM` in local time)
+ * to a UTC ISO string the backend can parse via `cv.datetime`. Empty input
+ * returns undefined so the backend falls back to "now".
+ */
+function _localInputToIso(value: string): string | undefined {
+    if (!value) return undefined;
+    const ms = Date.parse(value);
+    if (Number.isNaN(ms)) return undefined;
+    return new Date(ms).toISOString();
+}
+
 export type ActivityKind = "diaper" | "bottle" | "solids" | "other";
 
 export type ModalKind =
@@ -123,12 +148,20 @@ function diaperForm(
         submit("log_diaper", {
             baby,
             kind: String(data.get("kind") ?? "wet"),
+            timestamp: _localInputToIso(String(data.get("when") ?? "")),
             notes: String(data.get("notes") ?? "") || undefined
         });
     };
     return html`
         <form @submit=${onSubmit}>
             <h2>Log diaper</h2>
+            <label for="when">When</label>
+            <input
+                id="when"
+                name="when"
+                type="datetime-local"
+                .value=${_nowLocalForInput()}
+            />
             <label for="notes">Notes</label>
             <input
                 id="notes"
@@ -192,6 +225,8 @@ function bottleForm(
             method: "bottle",
             amount,
             unit: String(data.get("unit") ?? defaultUnit),
+            // log_feeding uses started_at (not timestamp) as the entry's "when"
+            started_at: _localInputToIso(String(data.get("when") ?? "")),
             notes: String(data.get("notes") ?? "") || undefined
         });
     };
@@ -214,6 +249,13 @@ function bottleForm(
                 <option value="oz" ?selected=${defaultUnit === "oz"}>oz</option>
                 <option value="ml" ?selected=${defaultUnit === "ml"}>ml</option>
             </select>
+            <label for="when">When</label>
+            <input
+                id="when"
+                name="when"
+                type="datetime-local"
+                .value=${_nowLocalForInput()}
+            />
             <label for="notes">Notes</label>
             <input id="notes" name="notes" type="text" placeholder="optional" />
             <div class="actions">
@@ -236,6 +278,7 @@ function solidsForm(
         submit("log_feeding", {
             baby,
             method: "solids",
+            started_at: _localInputToIso(String(data.get("when") ?? "")),
             notes: String(data.get("notes") ?? "") || undefined
         });
     };
@@ -250,6 +293,13 @@ function solidsForm(
                 placeholder="e.g. banana, oatmeal"
                 autofocus
                 required
+            />
+            <label for="when">When</label>
+            <input
+                id="when"
+                name="when"
+                type="datetime-local"
+                .value=${_nowLocalForInput()}
             />
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
@@ -271,6 +321,7 @@ function otherForm(
         submit("log_other", {
             baby,
             name: String(data.get("name") ?? ""),
+            timestamp: _localInputToIso(String(data.get("when") ?? "")),
             notes: String(data.get("notes") ?? "") || undefined
         });
     };
@@ -285,6 +336,13 @@ function otherForm(
                 placeholder="e.g. bath, doctor visit, first smile"
                 autofocus
                 required
+            />
+            <label for="when">When</label>
+            <input
+                id="when"
+                name="when"
+                type="datetime-local"
+                .value=${_nowLocalForInput()}
             />
             <label for="notes">Notes</label>
             <input id="notes" name="notes" type="text" placeholder="optional" />
