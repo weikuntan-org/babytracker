@@ -406,14 +406,15 @@ function solidsForm(
     return html`
         <form @submit=${onSubmit}>
             <h2>Log solids</h2>
-            <label for="notes">What was fed</label>
+            <label for="notes"
+                >What was fed <span class="muted">(optional)</span></label
+            >
             <input
                 id="notes"
                 name="notes"
                 type="text"
                 placeholder="e.g. banana, oatmeal"
                 autofocus
-                required
             />
             <label for="when">When</label>
             <input
