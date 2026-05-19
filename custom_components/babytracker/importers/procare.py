@@ -95,9 +95,15 @@ def _parse_sleep_range(
     return start_dt.isoformat(), end_dt.isoformat()
 
 
-def _seen_ids_for(baby: Baby, coordinator) -> set[str]:
+def _existing_by_source_id(baby: Baby, coordinator) -> dict[str, Entry]:
+    """Map `source_id` → `Entry` for every Procare-imported entry on `baby`.
+
+    Used by the importer pipeline to detect whether a refreshed
+    upstream activity corresponds to an existing local entry (update
+    path) or a brand-new one (create path).
+    """
     return {
-        e.source_id
+        e.source_id: e
         for e in coordinator.entries_by_baby(baby.id)
         if e.source == ENTRY_SOURCE_PROCARE and e.source_id
     }
@@ -163,24 +169,23 @@ class ProcareImporter(BaseImporter):
         activities = new_state.attributes.get("activities") or []
         if not activities:
             return
-        seen = _seen_ids_for(self.baby, self.coordinator)
+        existing = _existing_by_source_id(self.baby, self.coordinator)
         for activity in activities:
-            await self._process_activity(activity, seen)
+            await self._process_activity(activity, existing)
 
     async def async_resync(self) -> int:
-        """Re-read the source sensor's current state and process every
-        activity through the dedup pipeline. Returns the number of new
-        entries created (activities already imported are skipped via
-        the existing `(source, source_id)` dedup, so this is safe to
-        call repeatedly).
+        """Re-read the source sensor's current state and re-process every
+        activity. New activities are created; previously-imported ones
+        are checked against their current upstream state and patched
+        in place if anything changed (see `_process_activity`). Returns
+        the number of new entries created — updates don't count toward
+        the total but are logged separately.
 
         Important limitation: the source sensor only exposes whatever the
         upstream Procare integration has cached (typically the most recent
         ~N activities). Resync cannot recover deleted babytracker entries
         whose corresponding source activity has aged out of that cache —
-        the data isn't reachable from here. The INFO log line below makes
-        the boundary visible so users can confirm whether their missing
-        entries are still in the source.
+        the data isn't reachable from here.
         """
         state = self.hass.states.get(self.sensor_entity_id)
         if state is None:
@@ -191,14 +196,14 @@ class ProcareImporter(BaseImporter):
             return 0
         activities = state.attributes.get("activities") or []
         before = len(self.coordinator.entries_by_baby(self.baby.id))
-        seen = _seen_ids_for(self.baby, self.coordinator)
+        existing = _existing_by_source_id(self.baby, self.coordinator)
         already_seen = sum(
             1
             for a in activities
-            if str(a.get("id") or "") and str(a.get("id") or "") in seen
+            if str(a.get("id") or "") and str(a.get("id") or "") in existing
         )
         for activity in activities:
-            await self._process_activity(activity, seen)
+            await self._process_activity(activity, existing)
         after = len(self.coordinator.entries_by_baby(self.baby.id))
         imported = max(0, after - before)
         _LOGGER.info(
@@ -211,9 +216,11 @@ class ProcareImporter(BaseImporter):
         )
         return imported
 
-    async def _process_activity(self, activity: dict[str, Any], seen: set[str]) -> None:
+    async def _process_activity(
+        self, activity: dict[str, Any], existing: dict[str, Entry]
+    ) -> None:
         source_id = str(activity.get("id") or "")
-        if not source_id or source_id in seen:
+        if not source_id:
             return
         title = (activity.get("title") or "").strip()
         if not title:
@@ -258,16 +265,46 @@ class ProcareImporter(BaseImporter):
         staff = activity.get("staff")
         data = self._derive_data(entry_type, activity, mapping)
         timestamp = data.pop("__timestamp_override", None) or timestamp
+        ended_at = data.pop("__ended_at", None)
         # Surface the Procare `details` payload as the entry's `notes`
         # field so it shows up in the recent-entries notes row.
         notes = (activity.get("details") or "").strip() or None
+
+        prior = existing.get(source_id)
+        if prior is not None:
+            # Update path: upstream may have mutated this activity (most
+            # commonly "Nap Started" → "Slept from X to Y" once the nap
+            # ends, but also added details/photo_url after the fact).
+            # We refuse to silently change the entry's *type*, since a
+            # type change between updates would indicate a Procare bug
+            # or a remapping race — better to log and skip than to
+            # corrupt counts/eligibility downstream.
+            if prior.type != entry_type:
+                _LOGGER.warning(
+                    "babytracker: Procare activity %s type changed (%s -> %s); "
+                    "leaving existing entry alone",
+                    source_id,
+                    prior.type,
+                    entry_type,
+                )
+                return
+            await self.coordinator.update_imported_entry(
+                prior.id,
+                timestamp=timestamp,
+                ended_at=ended_at,
+                notes=notes,
+                photo_url=photo_url,
+                staff=staff,
+                data=data,
+            )
+            return
 
         entry = Entry(
             id=str(uuid.uuid4()),
             type=entry_type,
             baby_id=self.baby.id,
             timestamp=timestamp,
-            ended_at=data.pop("__ended_at", None),
+            ended_at=ended_at,
             source=ENTRY_SOURCE_PROCARE,
             source_entity_id=self.sensor_entity_id,
             source_id=source_id,
@@ -279,7 +316,7 @@ class ProcareImporter(BaseImporter):
             data=data,
         )
         await self.coordinator.add_entry(entry)
-        seen.add(source_id)
+        existing[source_id] = entry
 
     def _derive_data(
         self,
