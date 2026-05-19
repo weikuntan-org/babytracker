@@ -1,8 +1,36 @@
 // Growth chart with WHO/CDC percentile bands (§9.2, §9.3).
 // Inline SVG only — no chart libs.
-import { html, type TemplateResult } from "lit";
+import { html, svg, type TemplateResult } from "lit";
 
 import { babyEntityId } from "../lib/ha-helpers";
+
+interface PercentileSeries {
+    key: "weight" | "height" | "head";
+    label: string;
+    color: string;
+}
+
+const PERCENTILE_SERIES: PercentileSeries[] = [
+    { key: "weight", label: "Weight", color: "var(--primary-color, #2563eb)" },
+    { key: "height", label: "Height", color: "var(--success-color, #16a34a)" },
+    { key: "head", label: "Head", color: "var(--warning-color, #ea580c)" }
+];
+
+function _percentileFromEntry(
+    entry: any,
+    key: PercentileSeries["key"]
+): number | null {
+    const d = entry?.data ?? {};
+    const raw =
+        key === "weight"
+            ? d.weight_percentile
+            : key === "height"
+              ? d.height_percentile
+              : d.head_percentile;
+    if (raw == null) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+}
 
 interface UnitOverrides {
     volume?: string;
@@ -50,7 +78,11 @@ export function growthChartTemplate(
     units?: UnitOverrides,
     onLog?: () => void,
     latestEntry?: any,
-    onEdit?: (entry: any) => void
+    onEdit?: (entry: any) => void,
+    /** Full growth-entry history (newest-first, from `babytracker/list_growth`).
+     *  When passed and at least two entries carry a percentile, a
+     *  percentile-over-time chart is rendered below the summary chips. */
+    growthEntries?: any[]
 ): TemplateResult {
     // Prefer the entry's stored value + unit pair so the chip shows what
     // the user actually logged. Falling back to the sensor state would
@@ -145,6 +177,175 @@ export function growthChartTemplate(
                     </div>
                 </div>
             </div>
+            ${percentileOverTimeChart(growthEntries)}
         </div>
     `;
+}
+
+/** Plot weight/height/head percentiles over time as three line series.
+ *  Returns "" when fewer than two data points across the three series
+ *  exist — a single dot wouldn't tell a parent anything they don't
+ *  already see in the latest-measurement chips above.
+ */
+function percentileOverTimeChart(
+    entries: any[] | undefined
+): TemplateResult | "" {
+    if (!Array.isArray(entries) || entries.length < 2) return "";
+    // Ascending chronological for plotting.
+    const sorted = [...entries]
+        .filter(e => Number.isFinite(Date.parse(e?.timestamp)))
+        .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+    if (sorted.length < 2) return "";
+
+    const tMin = Date.parse(sorted[0].timestamp);
+    const tMax = Date.parse(sorted[sorted.length - 1].timestamp);
+    const span = Math.max(1, tMax - tMin);
+    // Render is bypassed for spans under a day to avoid divide-by-zero
+    // visuals; collapsing two measurements taken the same hour onto the
+    // same x slot is meaningless.
+
+    const W = 320;
+    const H = 140;
+    const padL = 22; // room for the p10/50/90 axis labels
+    const padR = 8;
+    const padT = 8;
+    const padB = 20; // room for the date labels
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+
+    const x = (ts: number) => padL + ((ts - tMin) / span) * innerW;
+    const y = (p: number) => padT + (1 - p / 100) * innerH;
+
+    const seriesWithPoints = PERCENTILE_SERIES.map(s => ({
+        ...s,
+        points: sorted
+            .map(e => {
+                const p = _percentileFromEntry(e, s.key);
+                if (p === null) return null;
+                return { ts: Date.parse(e.timestamp), p };
+            })
+            .filter((pt): pt is { ts: number; p: number } => pt !== null)
+    }));
+    const totalPoints = seriesWithPoints.reduce(
+        (acc, s) => acc + s.points.length,
+        0
+    );
+    if (totalPoints < 2) return "";
+
+    // Date labels: first and last entry. Older HA themes don't carry
+    // intl info — fall back to ISO if the locale path returns "".
+    const firstLabel = _fmtDateShort(sorted[0].timestamp);
+    const lastLabel = _fmtDateShort(sorted[sorted.length - 1].timestamp);
+
+    const gridPercentiles = [10, 50, 90];
+
+    return html`
+        <div class="growth-trend">
+            <div class="label-row">
+                <div class="label">Percentile over time</div>
+                <div class="legend">
+                    ${PERCENTILE_SERIES.map(
+                        s => html`
+                            <span class="legend-item">
+                                <span
+                                    class="swatch"
+                                    style=${`background:${s.color}`}
+                                ></span>
+                                ${s.label}
+                            </span>
+                        `
+                    )}
+                </div>
+            </div>
+            <svg
+                viewBox="0 0 ${W} ${H}"
+                role="img"
+                aria-label="Percentile over time"
+                style="width:100%;height:${H}px;"
+            >
+                ${gridPercentiles.map(
+                    p => svg`
+                        <line
+                            x1=${padL}
+                            x2=${W - padR}
+                            y1=${y(p)}
+                            y2=${y(p)}
+                            stroke="var(--divider-color, #888)"
+                            stroke-dasharray=${p === 50 ? "" : "2 2"}
+                            stroke-width="1"
+                        ></line>
+                        <text
+                            x=${padL - 4}
+                            y=${y(p) + 3}
+                            font-size="8"
+                            text-anchor="end"
+                            fill="var(--secondary-text-color)"
+                        >
+                            p${p}
+                        </text>
+                    `
+                )}
+                ${seriesWithPoints.map(s => {
+                    if (s.points.length === 0) return svg``;
+                    const d = s.points
+                        .map(
+                            (pt, i) =>
+                                `${i === 0 ? "M" : "L"}${x(pt.ts).toFixed(1)},${y(pt.p).toFixed(1)}`
+                        )
+                        .join(" ");
+                    return svg`
+                        ${s.points.length > 1
+                            ? svg`<path
+                                d=${d}
+                                fill="none"
+                                stroke=${s.color}
+                                stroke-width="1.6"
+                                stroke-linejoin="round"
+                                stroke-linecap="round"
+                              ></path>`
+                            : ""}
+                        ${s.points.map(
+                            pt => svg`
+                                <circle
+                                    cx=${x(pt.ts)}
+                                    cy=${y(pt.p)}
+                                    r="2.5"
+                                    fill=${s.color}
+                                >
+                                    <title>${s.label} ${_fmtDateShort(new Date(pt.ts).toISOString())}: p${Math.round(pt.p)}</title>
+                                </circle>
+                            `
+                        )}
+                    `;
+                })}
+                <text
+                    x=${padL}
+                    y=${H - 4}
+                    font-size="9"
+                    fill="var(--secondary-text-color)"
+                >
+                    ${firstLabel}
+                </text>
+                <text
+                    x=${W - padR}
+                    y=${H - 4}
+                    font-size="9"
+                    text-anchor="end"
+                    fill="var(--secondary-text-color)"
+                >
+                    ${lastLabel}
+                </text>
+            </svg>
+        </div>
+    `;
+}
+
+function _fmtDateShort(iso?: string | null): string {
+    if (!iso) return "";
+    const t = Date.parse(iso);
+    if (Number.isNaN(t)) return "";
+    return new Date(t).toLocaleDateString([], {
+        month: "short",
+        day: "numeric"
+    });
 }
