@@ -57,11 +57,18 @@ class Baby:
             birthday=data["birthday"],
             sex=data["sex"],
             avatar_url=data.get("avatar_url"),
+            # Use `data.get(key, default)` rather than `data.get(key) or default`
+            # so a stored empty list (user disabled everything) survives a
+            # reload instead of being silently replaced with ALL_ACTIVITIES.
             enabled_activities=list(
-                data.get("enabled_activities") or list(ALL_ACTIVITIES)
+                data["enabled_activities"]
+                if "enabled_activities" in data
+                else ALL_ACTIVITIES
             ),
             enabled_feeding_methods=list(
-                data.get("enabled_feeding_methods") or list(ALL_FEEDING_METHODS)
+                data["enabled_feeding_methods"]
+                if "enabled_feeding_methods" in data
+                else ALL_FEEDING_METHODS
             ),
             archived=bool(data.get("archived", False)),
             importer=data.get("importer"),

@@ -224,6 +224,13 @@ class BabytrackerCoordinator:
                 enabled_feeding_methods=list(
                     enabled_feeding_methods or ALL_FEEDING_METHODS
                 ),
+                # Stamp the current schema version on creation so the
+                # one-shot "union back ALL_ACTIVITIES" migration in
+                # `_migrate_babies` doesn't run on this baby. Without
+                # this, a user who edits enabled_activities (or feeding
+                # methods) before the first restart watches their
+                # disabled buttons re-appear when the migration runs.
+                schema_version=CURRENT_BABY_SCHEMA_VERSION,
             )
             self._babies.append(baby)
             self._at_daycare[baby.slug] = False
