@@ -11,6 +11,11 @@ export function babyEntityId(
     return `${domain}.babytracker_${baby}_${suffix}`;
 }
 
+export function displayBabyName(name: string | undefined | null): string {
+    if (typeof name !== "string" || name.length === 0) return "";
+    return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 export async function fireServiceCall(
     hass: any,
     domain: string,

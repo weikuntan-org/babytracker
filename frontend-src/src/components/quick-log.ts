@@ -5,6 +5,7 @@
 //    end. If End is left blank → starts an open session at Started. If filled
 //    → log_* retroactively with both bounds.
 import { html, type TemplateResult } from "lit";
+import { displayBabyName } from "../lib/ha-helpers";
 
 type ServiceCaller = (
     service: string,
@@ -43,6 +44,7 @@ export function quickLogTemplate(
     const methods: string[] = babyConfig?.enabled_feeding_methods ?? DEFAULT_METHODS;
 
     const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+    const displayName = displayBabyName(babyConfig?.name ?? baby);
     const buttons: TemplateResult[] = [];
 
     if (activities.includes("diaper")) {
@@ -50,7 +52,7 @@ export function quickLogTemplate(
             html`
                 <button
                     class="quick"
-                    aria-label="Log diaper for ${baby}"
+                    aria-label="Log diaper for ${displayName}"
                     @click=${() => requestModal("diaper")}
                 >
                     Diaper
@@ -65,7 +67,7 @@ export function quickLogTemplate(
                     html`
                         <button
                             class="quick"
-                            aria-label="Log bottle feeding for ${baby}"
+                            aria-label="Log bottle feeding for ${displayName}"
                             @click=${() => requestModal("bottle")}
                         >
                             Bottle
@@ -77,7 +79,7 @@ export function quickLogTemplate(
                     html`
                         <button
                             class="quick"
-                            aria-label="Log solids feeding for ${baby}"
+                            aria-label="Log solids feeding for ${displayName}"
                             @click=${() => requestModal("solids")}
                         >
                             Solids
@@ -89,7 +91,7 @@ export function quickLogTemplate(
                     html`
                         <button
                             class="quick"
-                            aria-label="Log ${method} feeding for ${baby}"
+                            aria-label="Log ${method} feeding for ${displayName}"
                             @click=${() =>
                                 requestModal({ activity: "feeding", method })}
                         >
@@ -105,7 +107,7 @@ export function quickLogTemplate(
             html`
                 <button
                     class="quick"
-                    aria-label="Log sleep for ${baby}"
+                    aria-label="Log sleep for ${displayName}"
                     @click=${() => requestModal({ activity: "sleep" })}
                 >
                     Sleep
@@ -118,7 +120,7 @@ export function quickLogTemplate(
             html`
                 <button
                     class="quick"
-                    aria-label="Log tummy time for ${baby}"
+                    aria-label="Log tummy time for ${displayName}"
                     @click=${() => requestModal({ activity: "tummy_time" })}
                 >
                     Tummy time
@@ -131,7 +133,7 @@ export function quickLogTemplate(
             html`
                 <button
                     class="quick"
-                    aria-label="Log walk for ${baby}"
+                    aria-label="Log walk for ${displayName}"
                     @click=${() => requestModal({ activity: "walk" })}
                 >
                     Walk
@@ -144,7 +146,7 @@ export function quickLogTemplate(
             html`
                 <button
                     class="quick"
-                    aria-label="Log other activity for ${baby}"
+                    aria-label="Log other activity for ${displayName}"
                     @click=${() => requestModal("other")}
                 >
                     Other
