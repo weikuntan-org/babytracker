@@ -1042,26 +1042,63 @@ function growthLogForm(
 // schedule files in `data/vaccines/` ship. "Other…" is the escape hatch
 // for anything novel (travel, COVID variants, brand-specific lots) that
 // the dropdown doesn't cover.
+// Canonical labels: full name + abbreviation in parentheses where both
+// forms are in common use. Pure-acronym vaccines (DTaP, MMR, Hib, etc.)
+// stay as-is because nobody refers to "Diphtheria/Tetanus/acellular
+// Pertussis" outside of textbooks.
 const COMMON_VACCINES = [
     "COVID-19",
     "DTaP",
-    "Tdap",
-    "HepA",
-    "HepB",
+    "Hepatitis A (HepA)",
+    "Hepatitis B (HepB)",
     "Hib",
     "HPV",
     "Influenza",
-    "IPV",
     "MenACWY",
     "MenB",
     "MMR",
-    "PCV13",
-    "PCV15",
-    "PCV20",
+    "Pneumococcal (PCV13)",
+    "Pneumococcal (PCV15)",
+    "Pneumococcal (PCV20)",
+    "Polio (IPV)",
+    "Rotavirus (RV)",
     "RSV",
-    "Rotavirus",
-    "VAR"
+    "Tdap",
+    "Varicella (VAR)"
 ];
+
+// Map of older/shorter/alternate vaccine names to their canonical labels
+// above. Used to:
+//   1. Dedupe the merged COMMON + scheduleNames list so we don't show
+//      both "HepB" and "Hepatitis B" in the dropdown.
+//   2. Map a stored entry's name back onto a dropdown entry when
+//      pre-selecting `defaultName`, so an existing "HepA" log doesn't
+//      fall through to the "Other…" branch.
+// Keep keys as the raw strings users / the schedule have historically
+// produced; values are the canonical label.
+const VACCINE_ALIASES: Record<string, string> = {
+    HepA: "Hepatitis A (HepA)",
+    "Hepatitis A": "Hepatitis A (HepA)",
+    HepB: "Hepatitis B (HepB)",
+    "Hepatitis B": "Hepatitis B (HepB)",
+    IPV: "Polio (IPV)",
+    Polio: "Polio (IPV)",
+    RV: "Rotavirus (RV)",
+    RV1: "Rotavirus (RV)",
+    RV5: "Rotavirus (RV)",
+    Rotavirus: "Rotavirus (RV)",
+    "Rotavirus (RV1)": "Rotavirus (RV)",
+    "Rotavirus (RV5)": "Rotavirus (RV)",
+    VAR: "Varicella (VAR)",
+    Varicella: "Varicella (VAR)",
+    PCV13: "Pneumococcal (PCV13)",
+    PCV15: "Pneumococcal (PCV15)",
+    PCV20: "Pneumococcal (PCV20)"
+};
+
+function _canonicalVaccine(name: string): string {
+    return VACCINE_ALIASES[name] ?? name;
+}
 
 function vaccineLogForm(
     baby: string,
@@ -1104,28 +1141,32 @@ function vaccineLogForm(
         });
     };
     // Build the dropdown list: common vaccines + anything the configured
-    // schedule references that isn't already in the common list, sorted.
+    // schedule references, run through the canonical-form normalizer so
+    // "HepB" and "Hepatitis B" collapse into the same "Hepatitis B (HepB)"
+    // entry, sorted.
     const dropdownNames = Array.from(
         new Set(
-            [...COMMON_VACCINES, ...scheduleNames].filter(
-                (n): n is string => Boolean(n) && n !== "none"
-            )
+            [...COMMON_VACCINES, ...scheduleNames]
+                .filter((n): n is string => Boolean(n) && n !== "none")
+                .map(_canonicalVaccine)
         )
     ).sort((a, b) => a.localeCompare(b));
-    // Resolve the initial selection: if `defaultName` matches a dropdown
-    // entry, preselect it. If it's set but not in the list, fall back to
-    // "Other…" and prefill the freeform input. Empty / "none" stays on
-    // the placeholder.
+    // Resolve the initial selection: canonicalize the stored name first
+    // so older entries logged as "HepA" (etc.) land on the canonical
+    // dropdown entry rather than falling through to "Other…".
+    const canonicalDefault =
+        defaultName && defaultName !== "none"
+            ? _canonicalVaccine(defaultName)
+            : "";
     const defaultIsKnown =
-        defaultName && defaultName !== "none" && dropdownNames.includes(defaultName);
-    const defaultIsCustom =
-        defaultName && defaultName !== "none" && !defaultIsKnown;
+        !!canonicalDefault && dropdownNames.includes(canonicalDefault);
+    const defaultIsCustom = !!canonicalDefault && !defaultIsKnown;
     const initialSelect = defaultIsKnown
-        ? defaultName
+        ? canonicalDefault
         : defaultIsCustom
         ? "__other__"
         : "";
-    const initialCustom = defaultIsCustom ? defaultName : "";
+    const initialCustom = defaultIsCustom ? canonicalDefault : "";
     const onSelectChange = (e: Event) => {
         const select = e.currentTarget as HTMLSelectElement;
         const custom = select
