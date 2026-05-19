@@ -30,7 +30,7 @@ from .const import (
     SIGNAL_DATA_UPDATED,
 )
 from .coordinator import BabytrackerCoordinator
-from .models import Baby
+from .models import Baby, entry_to_card_dict
 
 # ------------------------------------------------------------------
 # Helpers
@@ -423,31 +423,19 @@ class RecentEntriesSensor(_BabyEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        recent = self._coord.recent_entries(self.baby.id)
-        return {
-            # `photo_url` is omitted on purpose: it's only set on Procare
-            # imports and can be a few hundred bytes of signed URL — at 50
-            # entries it can push the attribute past HA's 16 KB recorder
-            # cap (`State attributes ... exceed maximum size`). The card
-            # only reads `photo_path` from this attribute, so dropping
-            # `photo_url` is free; consumers that need it can subscribe
-            # to `babytracker/list_entries_in_range` over WS instead.
-            "entries": [
-                {
-                    "id": e.id,
-                    "type": e.type,
-                    "timestamp": e.timestamp,
-                    "ended_at": e.ended_at,
-                    "source": e.source,
-                    "readonly": e.readonly,
-                    "data": dict(e.data),
-                    "photo_path": e.photo_path,
-                    "staff": e.staff,
-                    "notes": e.notes,
-                }
-                for e in recent
-            ]
-        }
+        # `photo_url` is omitted on purpose: it's only set on Procare
+        # imports and can be a few hundred bytes of signed URL — at 50
+        # entries it can push the attribute past HA's 16 KB recorder
+        # cap (`State attributes ... exceed maximum size`). The card
+        # only reads `photo_path` from this attribute, so dropping
+        # `photo_url` is free; consumers that need it can subscribe
+        # to `babytracker/list_entries_in_range` over WS instead.
+        entries = []
+        for e in self._coord.recent_entries(self.baby.id):
+            d = entry_to_card_dict(e)
+            d.pop("photo_url", None)
+            entries.append(d)
+        return {"entries": entries}
 
 
 # ----- Vaccines (M7) ------------------------------------------------

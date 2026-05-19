@@ -10,7 +10,7 @@ sys.path.insert(
     0, str(Path(__file__).resolve().parents[1] / "custom_components" / "babytracker")
 )
 
-from models import Baby, Entry  # type: ignore  # noqa: E402
+from models import Baby, Entry, entry_to_card_dict  # type: ignore  # noqa: E402
 
 
 def test_baby_round_trip():
@@ -73,3 +73,73 @@ def test_entry_round_trip_procare_source():
     assert raw["source_id"] == "pc-123"
     rebuilt = Entry.from_dict(raw)
     assert rebuilt == entry
+
+
+def test_entry_new_defaults_timestamp_and_source():
+    entry = Entry.new(type_="diaper", baby_id="abc", data={"kind": "wet"})
+    assert entry.id  # uuid stamped
+    assert entry.type == "diaper"
+    assert entry.timestamp  # auto-defaulted
+    assert entry.source == "user"
+    assert entry.data == {"kind": "wet"}
+    # `data` should be a fresh dict, not the caller's reference
+    src = {"kind": "wet"}
+    e2 = Entry.new(type_="diaper", baby_id="abc", data=src)
+    src["mutated"] = True
+    assert "mutated" not in e2.data
+
+
+def test_entry_new_passthrough_timestamp_and_notes():
+    entry = Entry.new(
+        type_="sleep",
+        baby_id="abc",
+        timestamp="2026-05-17T08:00:00+00:00",
+        ended_at="2026-05-17T09:00:00+00:00",
+        notes="",
+    )
+    assert entry.timestamp == "2026-05-17T08:00:00+00:00"
+    assert entry.ended_at == "2026-05-17T09:00:00+00:00"
+    # empty-string notes should collapse to None — matches the prior
+    # `_build_entry` contract that services depended on.
+    assert entry.notes is None
+
+
+def test_entry_to_card_dict_shape():
+    entry = Entry(
+        id="e1",
+        type="diaper",
+        baby_id="abc",
+        timestamp="2026-05-17T08:00:00+00:00",
+        data={"kind": "wet"},
+        notes="changed mid-nap",
+    )
+    payload = entry_to_card_dict(entry)
+    # All 11 card-facing fields present, baby_id omitted by default.
+    assert set(payload) == {
+        "id",
+        "type",
+        "timestamp",
+        "ended_at",
+        "source",
+        "readonly",
+        "data",
+        "photo_path",
+        "photo_url",
+        "staff",
+        "notes",
+    }
+    assert payload["data"] == {"kind": "wet"}
+    # `data` is shallow-copied so callers can't mutate the entry.
+    payload["data"]["mutated"] = True
+    assert "mutated" not in entry.data
+
+
+def test_entry_to_card_dict_with_baby_id():
+    entry = Entry(
+        id="e1",
+        type="diaper",
+        baby_id="abc",
+        timestamp="2026-05-17T08:00:00+00:00",
+    )
+    payload = entry_to_card_dict(entry, include_baby_id=True)
+    assert payload["baby_id"] == "abc"

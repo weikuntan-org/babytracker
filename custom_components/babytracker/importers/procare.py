@@ -36,6 +36,7 @@ from ..photo_storage import (
     sniff_image_mime,
     write_photo,
 )
+from ..runtime import now_iso
 from .base import BaseImporter
 from .procare_mappings import async_load_mappings, match_title
 
@@ -58,10 +59,6 @@ _WEEKDAY_BY_NAME = {
     "sat": 5,
     "sun": 6,
 }
-
-
-def _now_iso() -> str:
-    return datetime.now(tz=timezone.utc).isoformat()
 
 
 def _parse_time(value: str | None) -> time | None:
@@ -383,7 +380,7 @@ class ProcareImporter(BaseImporter):
         title = (activity.get("title") or "").strip()
         if not title:
             return
-        timestamp = activity.get("timestamp") or _now_iso()
+        timestamp = activity.get("timestamp") or now_iso()
         # Sign in/out (§15 #17) — set presence AND log as an "other" entry so
         # the check-in/out shows up in the activity log. The presence side
         # effect runs regardless of import_types; the log entry is created
@@ -469,7 +466,7 @@ class ProcareImporter(BaseImporter):
             source=ENTRY_SOURCE_PROCARE,
             source_entity_id=self.sensor_entity_id,
             source_id=source_id,
-            imported_at=_now_iso(),
+            imported_at=now_iso(),
             readonly=self.config.get("mark_readonly", True),
             photo_path=photo_path,
             photo_url=photo_url,
@@ -532,13 +529,13 @@ class ProcareImporter(BaseImporter):
             # Procare feeding events are point-in-time logs, not session
             # start/end pairs — close the entry at the same timestamp so it
             # doesn't show up as an ongoing feeding in OpenSessionBinary.
-            data["__ended_at"] = activity.get("timestamp") or _now_iso()
+            data["__ended_at"] = activity.get("timestamp") or now_iso()
             return data
         if entry_type == "sleep":
             data = {"location": self.config.get("daycare_location_label", "daycare")}
             session = mapping.get("session")
             if session == "end":
-                data["__ended_at"] = activity.get("timestamp") or _now_iso()
+                data["__ended_at"] = activity.get("timestamp") or now_iso()
             elif session == "range":
                 parsed = _parse_sleep_range(
                     activity.get("title") or "", activity.get("timestamp")

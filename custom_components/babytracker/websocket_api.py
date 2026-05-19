@@ -14,8 +14,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
-from .const import DEFAULT_OPTIONS, DOMAIN, SIGNAL_DATA_UPDATED
+from .const import SIGNAL_DATA_UPDATED
+from .models import entry_to_card_dict
 from .photo_storage import PHOTO_MAX_BYTES, PHOTO_MIME_TO_EXT, write_photo
+from .runtime import get_coordinator, get_entry_options
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,26 +27,6 @@ _LOGGER = logging.getLogger(__name__)
 # triggers blocking file I/O inside the event loop. Missing files are cached
 # as `None` so we don't repeatedly stat them.
 _SCHEDULE_CACHE: dict[str, dict[str, Any] | None] = {}
-
-
-def _runtime(hass: HomeAssistant):
-    runtimes = hass.data.get(DOMAIN, {})
-    if not runtimes:
-        return None
-    return next(iter(runtimes.values()), None)
-
-
-def _coordinator(hass: HomeAssistant):
-    runtime = _runtime(hass)
-    return runtime["coordinator"] if runtime else None
-
-
-def _entry_options(hass: HomeAssistant) -> dict[str, Any]:
-    for entry_id in hass.data.get(DOMAIN, {}):
-        entry = hass.config_entries.async_get_entry(entry_id)
-        if entry is not None:
-            return {**DEFAULT_OPTIONS, **(entry.options or {})}
-    return dict(DEFAULT_OPTIONS)
 
 
 def _list_babies_payload(coord) -> list[dict[str, Any]]:
@@ -129,7 +111,7 @@ def _ws_list_babies(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    coord = _coordinator(hass)
+    coord = get_coordinator(hass)
     if coord is None:
         connection.send_error(msg["id"], "not_configured", "babytracker not configured")
         return
@@ -159,7 +141,7 @@ def _ws_get_baby_config(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    coord = _coordinator(hass)
+    coord = get_coordinator(hass)
     if coord is None:
         connection.send_error(msg["id"], "not_configured", "babytracker not configured")
         return
@@ -196,7 +178,7 @@ def _ws_get_options(
     msg: dict[str, Any],
 ) -> None:
     def _payload() -> dict[str, Any]:
-        payload = _entry_options(hass)
+        payload = get_entry_options(hass)
         payload.pop("pending_baby", None)
         return payload
 
@@ -226,7 +208,7 @@ async def _ws_get_schedule(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    schedule_id = _entry_options(hass).get("vaccine_schedule", "us_cdc")
+    schedule_id = get_entry_options(hass).get("vaccine_schedule", "us_cdc")
     payload = _load_schedule(schedule_id)
     if payload is None:
         payload = await async_preload_schedule(hass, schedule_id)
@@ -248,25 +230,11 @@ def _entries_in_range_payload(
     baby = coord.baby_by_slug(slug)
     if baby is None:
         return None
-    out: list[dict[str, Any]] = []
-    for e in coord.entries_by_baby(baby.id):
-        if e.timestamp < start_iso or e.timestamp > end_iso:
-            continue
-        out.append(
-            {
-                "id": e.id,
-                "type": e.type,
-                "timestamp": e.timestamp,
-                "ended_at": e.ended_at,
-                "source": e.source,
-                "readonly": e.readonly,
-                "data": dict(e.data),
-                "photo_path": e.photo_path,
-                "photo_url": e.photo_url,
-                "staff": e.staff,
-                "notes": e.notes,
-            }
-        )
+    out = [
+        entry_to_card_dict(e)
+        for e in coord.entries_by_baby(baby.id)
+        if start_iso <= e.timestamp <= end_iso
+    ]
     out.sort(key=lambda r: r["timestamp"], reverse=True)
     return out
 
@@ -286,7 +254,7 @@ def _ws_list_entries_in_range(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    coord = _coordinator(hass)
+    coord = get_coordinator(hass)
     if coord is None:
         connection.send_error(msg["id"], "not_configured", "babytracker not configured")
         return
@@ -355,7 +323,7 @@ def _ws_list_vaccines(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    coord = _coordinator(hass)
+    coord = get_coordinator(hass)
     if coord is None:
         connection.send_error(msg["id"], "not_configured", "babytracker not configured")
         return
@@ -422,7 +390,7 @@ def _ws_list_growth(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    coord = _coordinator(hass)
+    coord = get_coordinator(hass)
     if coord is None:
         connection.send_error(msg["id"], "not_configured", "babytracker not configured")
         return

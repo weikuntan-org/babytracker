@@ -22,6 +22,7 @@ from .const import (
     SIGNAL_DATA_UPDATED,
 )
 from .models import Baby, Entry
+from .runtime import now_iso
 from .store import BabytrackerStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -339,7 +340,7 @@ class BabytrackerCoordinator:
                     entry.data = {**entry.data, **value}
                 else:
                     setattr(entry, key, value)
-            entry.revised_at = datetime.now(tz=timezone.utc).isoformat()
+            entry.revised_at = now_iso()
             if entry.readonly:
                 entry.readonly = False
             await self._async_persist()
@@ -454,7 +455,7 @@ class BabytrackerCoordinator:
             entry.photo_url = photo_url
             entry.staff = staff
             entry.data = new_data
-            entry.imported_at = datetime.now(tz=timezone.utc).isoformat()
+            entry.imported_at = now_iso()
             await self._async_persist()
         self._notify()
         return entry

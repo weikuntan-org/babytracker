@@ -42,15 +42,6 @@ _TYPE_TO_SECTION = {
 }
 
 
-def _coordinator(hass: "HomeAssistant"):
-    from .const import DOMAIN
-
-    runtimes = hass.data.get(DOMAIN, {})
-    if not runtimes:
-        return None
-    return next(iter(runtimes.values()))["coordinator"]
-
-
 def _output_dir(hass: "HomeAssistant") -> Path:
     path = Path(hass.config.path("www")) / "babytracker"
     path.mkdir(parents=True, exist_ok=True)
@@ -179,7 +170,9 @@ async def generate_report(
     end: str | None = None,
     sections: list[str] | None = None,
 ) -> dict[str, str]:
-    coord = _coordinator(hass)
+    from .runtime import get_coordinator
+
+    coord = get_coordinator(hass)
     if coord is None:
         raise RuntimeError("babytracker not configured")
     start_date, end_date = _resolve_range(start, end)
