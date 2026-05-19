@@ -1153,10 +1153,6 @@ function fe(e, t, i, r, n) {
             <div class="entry-row">
                 <span aria-label="Entry type">${si(t)}</span>
                 ${oi(t)}
-                ${t.photo_path ? u`<bt-entry-thumbnail
-                          .hass=${e}
-                          .photoPath=${t.photo_path}
-                      ></bt-entry-thumbnail>` : ""}
                 ${t.staff ? u`<span
                           class="muted"
                           aria-label="Logged by Procare staff"
@@ -1177,6 +1173,12 @@ function fe(e, t, i, r, n) {
     (o.key === "Enter" || o.key === " ") && (o.preventDefault(), o.stopPropagation(), n(t.id));
   }}
                   >${t.notes}</div>` : ""}
+            ${t.photo_path ? u`<div class="entry-photo">
+                      <bt-entry-thumbnail
+                          .hass=${e}
+                          .photoPath=${t.photo_path}
+                      ></bt-entry-thumbnail>
+                  </div>` : ""}
         </li>
     `;
 }
@@ -3592,6 +3594,10 @@ L.styles = Z`
             overflow: visible;
             text-overflow: clip;
         }
+        ul.entries li .entry-photo {
+            margin-top: 4px;
+            line-height: 0;
+        }
         ul.entries li.clickable {
             cursor: pointer;
             border-radius: 4px;
@@ -4015,6 +4021,10 @@ M.styles = Z`
             white-space: pre-wrap;
             overflow: visible;
             text-overflow: clip;
+        }
+        ul.entries li .entry-photo {
+            margin-top: 4px;
+            line-height: 0;
         }
         ul.entries li.clickable {
             cursor: pointer;
