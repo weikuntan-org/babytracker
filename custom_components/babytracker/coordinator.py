@@ -27,6 +27,17 @@ from .store import BabytrackerStore
 _LOGGER = logging.getLogger(__name__)
 
 
+def _normalize_name(value: str) -> str:
+    """Trim + uppercase the first character. Preserves the rest of the
+    string verbatim so casing like "McKenzie" or initials like "TJ" stay
+    intact — only the leading character is touched.
+    """
+    trimmed = (value or "").strip()
+    if not trimmed:
+        return trimmed
+    return trimmed[:1].upper() + trimmed[1:]
+
+
 class BabytrackerCoordinator:
     """Owns the in-memory model + persistence (§8.2)."""
 
@@ -52,10 +63,29 @@ class BabytrackerCoordinator:
         # Bring at_daycare back from importer config if any
         for baby in self._babies:
             self._at_daycare.setdefault(baby.slug, False)
-        if self._migrate_babies():
+        names_changed = self._normalize_baby_names()
+        if self._migrate_babies() or names_changed:
             # Migration touched at least one baby — persist so the change
             # survives a restart and we don't re-run the migration next time.
             await self._async_persist()
+
+    def _normalize_baby_names(self) -> bool:
+        """One-shot backfill: ensure every stored baby name starts with an
+        uppercase letter. Idempotent — names already capitalized are left
+        untouched, so this runs cheaply on every load.
+        """
+        changed = False
+        for baby in self._babies:
+            normalized = _normalize_name(baby.name)
+            if normalized != baby.name:
+                _LOGGER.info(
+                    "babytracker: normalized baby name %r -> %r",
+                    baby.name,
+                    normalized,
+                )
+                baby.name = normalized
+                changed = True
+        return changed
 
     def _migrate_babies(self) -> bool:
         """Bring older babies up to CURRENT_BABY_SCHEMA_VERSION.
@@ -181,11 +211,12 @@ class BabytrackerCoordinator:
         avatar_url: str | None = None,
     ) -> Baby:
         async with self._lock:
-            slug = self.slug_for_name(name.strip())
+            normalized_name = _normalize_name(name)
+            slug = self.slug_for_name(normalized_name)
             baby = Baby(
                 id=str(uuid.uuid4()),
                 slug=slug,
-                name=name.strip(),
+                name=normalized_name,
                 birthday=birthday,
                 sex=sex,
                 avatar_url=avatar_url,
@@ -217,7 +248,7 @@ class BabytrackerCoordinator:
                 raise ValueError(f"unknown baby_id {baby_id}")
             if name is not None:
                 # slug stays stable (§4.1, §12 #22)
-                baby.name = name.strip()
+                baby.name = _normalize_name(name)
             if birthday is not None:
                 baby.birthday = birthday
             if sex is not None:

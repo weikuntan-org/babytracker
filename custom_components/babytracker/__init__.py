@@ -64,6 +64,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await _ws.async_register(hass, entry)
 
+    # Pre-load the active vaccine schedule (and the alternate ID, so a user
+    # toggling the option doesn't hit the file from the event loop). The
+    # sensor platform reads schedules synchronously from `native_value`.
+    options = {**DEFAULT_OPTIONS, **(entry.options or {})}
+    for schedule_id in {options.get("vaccine_schedule", "us_cdc"), "us_cdc"}:
+        await _ws.async_preload_schedule(hass, schedule_id)
+
     # Frontend static path + extra_js_url (§9.5).
     # Cache-bust suffix is the bundle's mtime so every rebuild forces browsers
     # off the stale copy without us having to remember to bump VERSION.

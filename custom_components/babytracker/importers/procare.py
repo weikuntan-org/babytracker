@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import Any
 
 from homeassistant.core import Event, HomeAssistant, callback
@@ -21,13 +21,17 @@ from homeassistant.helpers.event import async_track_state_change_event, async_tr
 from ..const import ENTRY_SOURCE_PROCARE
 from ..models import Baby, Entry
 from .base import BaseImporter
-from .procare_mappings import load_mappings, match_title
+from .procare_mappings import async_load_mappings, match_title
 
 _LOGGER = logging.getLogger(__name__)
 
 BOTTLE_AMOUNT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(ml|oz|mL|OZ)\b")
 SIGN_IN_RE = re.compile(r"^Sign(?:ed)? In(?: by .+)?$", re.IGNORECASE)
 SIGN_OUT_RE = re.compile(r"^Sign(?:ed)? Out(?: by .+)?$", re.IGNORECASE)
+SLEEP_RANGE_RE = re.compile(
+    r"Slept\s+from\s+(\d{1,2}:\d{2}\s*[APap][Mm])\s+to\s+(\d{1,2}:\d{2}\s*[APap][Mm])",
+    re.IGNORECASE,
+)
 
 _WEEKDAY_BY_NAME = {
     "mon": 0,
@@ -54,6 +58,43 @@ def _parse_time(value: str | None) -> time | None:
         return None
 
 
+def _parse_sleep_range(
+    title: str, anchor_iso: str | None
+) -> tuple[str, str] | None:
+    """Return (start_iso, end_iso) parsed from a 'Slept from X to Y' title.
+
+    Anchored to the date+timezone of the activity's timestamp. If the
+    upstream timestamp is missing or unparseable we fall back to UTC
+    "today" — which loses tz fidelity but keeps the entry chronological.
+
+    Returns None if the title doesn't match the expected pattern.
+    """
+    m = SLEEP_RANGE_RE.search(title or "")
+    if not m:
+        return None
+    try:
+        start_t = datetime.strptime(m.group(1).strip().upper(), "%I:%M %p").time()
+        end_t = datetime.strptime(m.group(2).strip().upper(), "%I:%M %p").time()
+    except ValueError:
+        return None
+    anchor: datetime | None = None
+    if anchor_iso:
+        try:
+            anchor = datetime.fromisoformat(anchor_iso)
+        except ValueError:
+            anchor = None
+    if anchor is None:
+        anchor = datetime.now(tz=timezone.utc)
+    tz = anchor.tzinfo or timezone.utc
+    base_date = anchor.astimezone(tz).date()
+    start_dt = datetime.combine(base_date, start_t).replace(tzinfo=tz)
+    end_dt = datetime.combine(base_date, end_t).replace(tzinfo=tz)
+    if end_dt < start_dt:
+        # Sleep spanned midnight — start was the previous local day.
+        start_dt -= timedelta(days=1)
+    return start_dt.isoformat(), end_dt.isoformat()
+
+
 def _seen_ids_for(baby: Baby, coordinator) -> set[str]:
     return {
         e.source_id
@@ -71,12 +112,13 @@ class ProcareImporter(BaseImporter):
         coordinator,
         baby: Baby,
         config: dict[str, Any],
+        mappings: list[dict[str, Any]] | None = None,
     ) -> None:
         self.hass = hass
         self.coordinator = coordinator
         self.baby = baby
         self.config = dict(config)
-        self.mappings = load_mappings()
+        self.mappings = mappings or []
         self._unsub_state = None
         self._unsub_close_time = None
 
@@ -86,6 +128,8 @@ class ProcareImporter(BaseImporter):
 
     # ------------------------------------------------------------------
     async def async_setup(self) -> None:
+        if not self.mappings:
+            self.mappings = await async_load_mappings(self.hass)
         self._unsub_state = async_track_state_change_event(
             self.hass, [self.sensor_entity_id], self._handle_state_change
         )
@@ -175,23 +219,31 @@ class ProcareImporter(BaseImporter):
         if not title:
             return
         timestamp = activity.get("timestamp") or _now_iso()
-        # Sign in/out (§15 #17) — do NOT create entries
+        # Sign in/out (§15 #17) — set presence AND log as an "other" entry so
+        # the check-in/out shows up in the activity log. The presence side
+        # effect runs regardless of import_types; the log entry is created
+        # inline via the standard pipeline below by treating sign-in/out as
+        # synthetic "other"-type mappings.
+        synthetic_mapping: dict[str, Any] | None = None
         if SIGN_IN_RE.match(title):
             await self._set_at_daycare(True, source="title_events")
-            return
-        if SIGN_OUT_RE.match(title):
+            synthetic_mapping = {"type": "other"}
+        elif SIGN_OUT_RE.match(title):
             await self._set_at_daycare(False, source="title_events")
-            return
+            synthetic_mapping = {"type": "other"}
 
-        mapping = match_title(self.mappings, title)
-        if mapping is None:
-            _LOGGER.warning(
-                "babytracker: unmapped Procare title %r on %s",
-                title,
-                self.sensor_entity_id,
-            )
-            self.coordinator.record_unmapped_procare_title(title)
-            return
+        if synthetic_mapping is not None:
+            mapping = synthetic_mapping
+        else:
+            mapping = match_title(self.mappings, title)
+            if mapping is None:
+                _LOGGER.warning(
+                    "babytracker: unmapped Procare title %r on %s",
+                    title,
+                    self.sensor_entity_id,
+                )
+                self.coordinator.record_unmapped_procare_title(title)
+                return
 
         entry_type = mapping["type"]
         if entry_type not in (self.config.get("import_types") or []):
@@ -205,6 +257,7 @@ class ProcareImporter(BaseImporter):
         photo_url = activity.get("photo_url")
         staff = activity.get("staff")
         data = self._derive_data(entry_type, activity, mapping)
+        timestamp = data.pop("__timestamp_override", None) or timestamp
 
         entry = Entry(
             id=str(uuid.uuid4()),
@@ -251,11 +304,32 @@ class ProcareImporter(BaseImporter):
             elif method == "solids":
                 if details:
                     data["food"] = details
+            # Procare feeding events are point-in-time logs, not session
+            # start/end pairs — close the entry at the same timestamp so it
+            # doesn't show up as an ongoing feeding in OpenSessionBinary.
+            data["__ended_at"] = activity.get("timestamp") or _now_iso()
             return data
         if entry_type == "sleep":
             data = {"location": self.config.get("daycare_location_label", "daycare")}
-            if mapping.get("session") == "end":
+            session = mapping.get("session")
+            if session == "end":
                 data["__ended_at"] = activity.get("timestamp") or _now_iso()
+            elif session == "range":
+                parsed = _parse_sleep_range(
+                    activity.get("title") or "", activity.get("timestamp")
+                )
+                if parsed is not None:
+                    start_iso, end_iso = parsed
+                    data["__timestamp_override"] = start_iso
+                    data["__ended_at"] = end_iso
+            return data
+        if entry_type == "other":
+            # Free-form entries (sign-in/out, Learning, …). Surface the
+            # Procare title as the activity name and stash the detail line
+            # in `details` for the recent-entries view.
+            data: dict[str, Any] = {"name": activity.get("title") or "Other"}
+            if details:
+                data["details"] = details
             return data
         return {}
 

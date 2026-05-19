@@ -260,29 +260,19 @@ function bottleForm(
         const data = new FormData(form);
         const amountStr = String(data.get("amount") ?? "");
         const amount = amountStr === "" ? undefined : Number(amountStr);
-        const startedAt = _localInputToIso(String(data.get("started") ?? ""));
-        const endedAt = _localInputToIso(String(data.get("ended") ?? ""));
+        const at = _localInputToIso(String(data.get("at") ?? ""));
         const unit = String(data.get("unit") ?? defaultUnit);
         const notes = String(data.get("notes") ?? "") || undefined;
-        // No end time → open a live feeding session at started_at. Amount is
-        // recorded on the session entry but the session stays open until the
-        // user taps End on the active-session banner.
-        if (!endedAt) {
-            submit("start_feeding", {
-                baby,
-                method: "bottle",
-                started_at: startedAt
-            });
-            return;
-        }
-        // Both ends → completed feeding entry (the historical/single-entry path).
+        // Bottle is a point-in-time event, not a session. Send both started_at
+        // and ended_at at the same instant so the entry is closed and doesn't
+        // appear as an ongoing feeding in OpenSessionBinary.
         submit("log_feeding", {
             baby,
             method: "bottle",
             amount,
             unit,
-            started_at: startedAt,
-            ended_at: endedAt,
+            started_at: at,
+            ended_at: at,
             notes
         });
     };
@@ -305,20 +295,13 @@ function bottleForm(
                 <option value="oz" ?selected=${defaultUnit === "oz"}>oz</option>
                 <option value="ml" ?selected=${defaultUnit === "ml"}>ml</option>
             </select>
-            <label for="started">Started</label>
+            <label for="at">Time</label>
             <input
-                id="started"
-                name="started"
+                id="at"
+                name="at"
                 type="datetime-local"
                 .value=${_nowLocalForInput()}
                 required
-            />
-            <label for="ended">Ended <span class="muted">(optional)</span></label>
-            <input
-                id="ended"
-                name="ended"
-                type="datetime-local"
-                placeholder="leave blank for an open session"
             />
             <label for="notes">Notes</label>
             <input id="notes" name="notes" type="text" placeholder="optional" />

@@ -145,6 +145,24 @@ export class BabytrackerCard extends LitElement {
             padding: 6px 0;
             border-bottom: 1px solid var(--divider-color);
         }
+        button.icon {
+            background: transparent;
+            border: none;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            line-height: 1;
+            font-size: 1.1rem;
+            color: var(--secondary-text-color);
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        button.icon:hover {
+            color: var(--primary-text-color);
+            background: var(--secondary-background-color);
+        }
         .muted {
             color: var(--secondary-text-color);
             font-size: 0.85rem;
