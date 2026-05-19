@@ -2,9 +2,13 @@
 // `/config/media/babytracker/<uuid>.<ext>` and exposes the resulting
 // `media-source://` path on the element's `.value` property. Form submit
 // handlers read it via `form.querySelector("bt-photo-button")?.value`.
+//
+// When a value is set we embed `<bt-entry-thumbnail>` so the user sees
+// the actual photo (with click-to-lightbox) instead of a generic icon.
 import { LitElement, html, css, type TemplateResult } from "lit";
 import { customElement, property, state, query } from "lit/decorators.js";
 import { uploadPhoto, PhotoUploadError } from "../lib/photo-upload";
+import "./entry-thumbnail";
 
 @customElement("bt-photo-button")
 export class PhotoButton extends LitElement {
@@ -75,12 +79,11 @@ export class PhotoButton extends LitElement {
             <div class="row">
                 ${this.value
                     ? html`
-                          <span class="thumb" aria-label="Photo attached"
-                              >📷</span
-                          >
-                          <span class="path muted" title=${this.value}
-                              >Photo attached</span
-                          >
+                          <bt-entry-thumbnail
+                              .hass=${this.hass}
+                              .photoPath=${this.value}
+                              .size=${64}
+                          ></bt-entry-thumbnail>
                           <button
                               type="button"
                               class="remove"
@@ -143,15 +146,6 @@ export class PhotoButton extends LitElement {
         button[disabled] {
             opacity: 0.7;
             cursor: progress;
-        }
-        .thumb {
-            font-size: 1.1rem;
-        }
-        .path {
-            font-size: 0.85rem;
-        }
-        .muted {
-            color: var(--secondary-text-color);
         }
         .error {
             color: var(--error-color, #d33);

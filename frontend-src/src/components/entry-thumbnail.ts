@@ -1,12 +1,15 @@
-// Inline photo thumbnail for entry rows. Resolves the entry's
-// `media-source://` URL via HA's `media_source/resolve_media` WS
-// command (the underlying file is served by HA's media_source
-// integration with a short-lived signed token), renders a small
-// thumbnail, and pops a click-to-close lightbox on tap.
+// Inline photo thumbnail for entry rows and the photo-attach button.
+// Resolves the entry's `media-source://` URL via HA's
+// `media_source/resolve_media` WS command (the underlying file is
+// served by HA's media_source integration with a short-lived signed
+// token), renders a thumbnail at `size` px, and pops a click-to-close
+// lightbox on tap.
 //
 // Falls back to the existing 📷 emoji indicator when resolution
 // fails or the image itself fails to load, so a temporarily missing
-// CDN photo never leaves the row blank.
+// CDN photo never leaves the row blank. Failures are logged via
+// `console.warn("babytracker: …")` so users hitting the fallback can
+// diagnose from devtools.
 import { LitElement, html, css, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
@@ -15,6 +18,11 @@ export class EntryThumbnail extends LitElement {
     @property({ attribute: false }) hass?: any;
 
     @property() photoPath = "";
+
+    /** Edge length in pixels for the inline thumbnail. The edit modal
+     * passes a larger value so the user gets a real preview; rows in
+     * the card use the compact default. The lightbox is unaffected. */
+    @property({ type: Number }) size = 32;
 
     @state() private _url = "";
     @state() private _failed = false;
@@ -56,11 +64,20 @@ export class EntryThumbnail extends LitElement {
                 this._url = url;
                 this._failed = false;
             } else {
+                console.warn(
+                    "babytracker: resolve photo returned no url",
+                    this.photoPath,
+                    result
+                );
                 this._failed = true;
             }
         } catch (err) {
             if (token !== this._resolveToken) return;
-            console.warn("babytracker: resolve photo failed", err);
+            console.warn(
+                "babytracker: resolve photo failed",
+                this.photoPath,
+                err
+            );
             this._failed = true;
         }
     }
@@ -99,6 +116,11 @@ export class EntryThumbnail extends LitElement {
     };
 
     private _onImgError = (): void => {
+        console.warn(
+            "babytracker: thumbnail img failed to load",
+            this.photoPath,
+            this._url
+        );
         this._failed = true;
     };
 
@@ -110,6 +132,7 @@ export class EntryThumbnail extends LitElement {
             // produce a row that visually loses its "has photo" cue.
             return html`<span aria-label="Has photo">📷</span>`;
         }
+        const sizePx = `${this.size}px`;
         return html`
             <button
                 class="thumb-btn"
@@ -124,6 +147,7 @@ export class EntryThumbnail extends LitElement {
                     alt=""
                     loading="lazy"
                     decoding="async"
+                    style="width:${sizePx};height:${sizePx}"
                     @error=${this._onImgError}
                 />
             </button>
@@ -169,8 +193,8 @@ export class EntryThumbnail extends LitElement {
             line-height: 0;
         }
         .thumb {
-            width: 32px;
-            height: 32px;
+            /* Width/height come from an inline style attribute so each
+             * instance can pick its own size without a CSS variable. */
             object-fit: cover;
             border-radius: 4px;
             border: 1px solid var(--divider-color);
