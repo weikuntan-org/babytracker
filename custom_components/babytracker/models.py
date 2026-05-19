@@ -1,13 +1,15 @@
 """Dataclasses for babytracker (§5)."""
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
 try:
-    from .const import ALL_ACTIVITIES, ALL_FEEDING_METHODS
+    from .const import ALL_ACTIVITIES, ALL_FEEDING_METHODS, ENTRY_SOURCE_USER
 except ImportError:  # pragma: no cover — supports bare-module loading in tests
-    from const import ALL_ACTIVITIES, ALL_FEEDING_METHODS  # type: ignore[no-redef]
+    from const import ALL_ACTIVITIES, ALL_FEEDING_METHODS, ENTRY_SOURCE_USER  # type: ignore[no-redef]
 
 
 @dataclass
@@ -145,3 +147,72 @@ class Entry:
             photo_url=data.get("photo_url"),
             staff=data.get("staff"),
         )
+
+    @classmethod
+    def new(
+        cls,
+        *,
+        type_: str,
+        baby_id: str | None,
+        timestamp: str | None = None,
+        ended_at: str | None = None,
+        notes: str | None = None,
+        photo_path: str | None = None,
+        data: dict[str, Any] | None = None,
+        source: str = ENTRY_SOURCE_USER,
+    ) -> Entry:
+        """Build a user-flow Entry with a fresh UUID and defaulted timestamp.
+
+        Importer flows (Procare) construct `Entry(...)` directly because
+        they need to set importer-only fields (`source_entity_id`,
+        `source_id`, `imported_at`, `readonly`, `photo_url`, `staff`)
+        that don't apply to user-initiated entries.
+
+        Photo-path validation lives at the service boundary, not here —
+        a malformed `photo_path` passed in by an importer is the
+        importer's responsibility to catch.
+        """
+        return cls(
+            id=str(uuid.uuid4()),
+            type=type_,
+            baby_id=baby_id,
+            timestamp=timestamp or datetime.now(tz=timezone.utc).isoformat(),
+            ended_at=ended_at,
+            source=source,
+            photo_path=photo_path,
+            notes=notes or None,
+            data=dict(data or {}),
+        )
+
+
+def entry_to_card_dict(entry: Entry, *, include_baby_id: bool = False) -> dict[str, Any]:
+    """Card-facing serialization of an `Entry`.
+
+    Used by the WS `list_entries_in_range` payload and the
+    `RecentEntriesSensor` attribute. Distinct from `Entry.to_dict()`
+    (the store-shape serialization) in two ways:
+
+    * Always emits the importer-only fields (`readonly`, `photo_url`,
+      `staff`) so the JS card can render imported entries without
+      having to branch on `source != "user"`.
+    * Omits `baby_id` and `revised_at` by default — the WS payload is
+      already scoped to a single baby, and the card doesn't read
+      `revised_at`. Set `include_baby_id=True` for the
+      `GlobalRecentEntriesSensor` shape.
+    """
+    out: dict[str, Any] = {
+        "id": entry.id,
+        "type": entry.type,
+        "timestamp": entry.timestamp,
+        "ended_at": entry.ended_at,
+        "source": entry.source,
+        "readonly": entry.readonly,
+        "data": dict(entry.data),
+        "photo_path": entry.photo_path,
+        "photo_url": entry.photo_url,
+        "staff": entry.staff,
+        "notes": entry.notes,
+    }
+    if include_baby_id:
+        out["baby_id"] = entry.baby_id
+    return out

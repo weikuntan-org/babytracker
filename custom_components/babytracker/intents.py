@@ -13,7 +13,6 @@ from .const import (
     ALL_DIAPER_KINDS,
     ALL_FEEDING_METHODS,
     ALL_VOLUME_UNITS,
-    DOMAIN,
     ENTRY_SOURCE_USER,
 )
 from .eligibility import (
@@ -23,20 +22,13 @@ from .eligibility import (
     find_baby_by_slug,
 )
 from .models import Entry
-import uuid
+from .runtime import get_coordinator, now_iso
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def _coordinator(hass: HomeAssistant):
-    runtimes = hass.data.get(DOMAIN, {})
-    if not runtimes:
-        return None
-    return next(iter(runtimes.values()))["coordinator"]
-
-
 def _resolve(hass: HomeAssistant, slug: str):
-    coord = _coordinator(hass)
+    coord = get_coordinator(hass)
     if coord is None:
         raise intent.IntentHandleError("babytracker not configured")
     return coord, find_baby_by_slug(coord.babies, slug)
@@ -45,10 +37,6 @@ def _resolve(hass: HomeAssistant, slug: str):
 def _ensure(coord, baby, activity):
     ensure_local_not_locked_out(baby, coord.at_daycare(baby), ENTRY_SOURCE_USER)
     ensure_activity_enabled(baby, activity)
-
-
-def _now_iso() -> str:
-    return datetime.now(tz=timezone.utc).isoformat()
 
 
 def _speak(response: intent.IntentResponse, text: str) -> intent.IntentResponse:
@@ -99,13 +87,7 @@ class LogDiaperIntent(_BaseHandler):
             return _speak(response, f"{kind} is not a recognised diaper kind")
         coord, baby = _resolve(intent_obj.hass, baby_slug)
         _ensure(coord, baby, "diaper")
-        entry = Entry(
-            id=str(uuid.uuid4()),
-            type="diaper",
-            baby_id=baby.id,
-            timestamp=_now_iso(),
-            data={"kind": kind},
-        )
+        entry = Entry.new(type_="diaper", baby_id=baby.id, data={"kind": kind})
         await coord.add_entry(entry)
         return _speak(response, f"Logged a {kind} diaper for {baby.name}")
 
@@ -122,13 +104,7 @@ class StartSleepIntent(_BaseHandler):
         if coord.open_session(baby.id, "sleep") is not None:
             return _speak(response, f"{baby.name} is already asleep")
         await coord.add_entry(
-            Entry(
-                id=str(uuid.uuid4()),
-                type="sleep",
-                baby_id=baby.id,
-                timestamp=_now_iso(),
-                data={"location": location},
-            )
+            Entry.new(type_="sleep", baby_id=baby.id, data={"location": location})
         )
         return _speak(response, f"{baby.name} is now sleeping ({location})")
 
@@ -144,7 +120,7 @@ class EndSleepIntent(_BaseHandler):
         entry = coord.open_session(baby.id, "sleep")
         if entry is None:
             return _speak(response, f"{baby.name} doesn't have an open sleep session")
-        await coord.close_session(entry.id, ended_at=_now_iso())
+        await coord.close_session(entry.id, ended_at=now_iso())
         return _speak(response, f"Ended {baby.name}'s sleep session")
 
 
@@ -163,13 +139,7 @@ class StartFeedingIntent(_BaseHandler):
         if coord.open_session(baby.id, "feeding") is not None:
             return _speak(response, f"{baby.name} already has an open feeding")
         await coord.add_entry(
-            Entry(
-                id=str(uuid.uuid4()),
-                type="feeding",
-                baby_id=baby.id,
-                timestamp=_now_iso(),
-                data={"method": method},
-            )
+            Entry.new(type_="feeding", baby_id=baby.id, data={"method": method})
         )
         return _speak(response, f"Started a {method.replace('_', ' ')} feeding for {baby.name}")
 
@@ -195,7 +165,7 @@ class EndFeedingIntent(_BaseHandler):
                 pass
         if unit in ALL_VOLUME_UNITS:
             updates["unit"] = unit
-        await coord.close_session(entry.id, ended_at=_now_iso(), data_updates=updates)
+        await coord.close_session(entry.id, ended_at=now_iso(), data_updates=updates)
         return _speak(response, f"Ended feeding for {baby.name}")
 
 
@@ -222,13 +192,7 @@ class LogFeedingIntent(_BaseHandler):
         if unit in ALL_VOLUME_UNITS:
             data["unit"] = unit
         await coord.add_entry(
-            Entry(
-                id=str(uuid.uuid4()),
-                type="feeding",
-                baby_id=baby.id,
-                timestamp=_now_iso(),
-                data=data,
-            )
+            Entry.new(type_="feeding", baby_id=baby.id, data=data)
         )
         return _speak(response, f"Logged a {method.replace('_', ' ')} for {baby.name}")
 
@@ -245,9 +209,8 @@ class LogTummyTimeIntent(_BaseHandler):
         now = datetime.now(tz=timezone.utc)
         start = now - timedelta(minutes=minutes)
         await coord.add_entry(
-            Entry(
-                id=str(uuid.uuid4()),
-                type="tummy_time",
+            Entry.new(
+                type_="tummy_time",
                 baby_id=baby.id,
                 timestamp=start.isoformat(),
                 ended_at=now.isoformat(),
