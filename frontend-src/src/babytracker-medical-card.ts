@@ -9,7 +9,9 @@
 import { LitElement, html, css, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
+import { exportSheetTemplate } from "./components/export-sheet";
 import { growthChartTemplate } from "./components/growth-chart";
+import { trendsTemplate } from "./components/trends";
 import { vaccinesDueTemplate } from "./components/vaccines-due";
 import { subscribeIntegrationOptions } from "./lib/ha-helpers";
 
@@ -18,9 +20,10 @@ export interface BabytrackerMedicalCardConfig {
     baby: string;
     sections?: string[];
     units?: { volume?: string; weight?: string; length?: string };
+    trend_days?: number;
 }
 
-const DEFAULT_SECTIONS = ["vaccines", "growth"];
+const DEFAULT_SECTIONS = ["vaccines", "growth", "trends", "export"];
 
 @customElement("babytracker-medical-card")
 export class BabytrackerMedicalCard extends LitElement {
@@ -68,9 +71,27 @@ export class BabytrackerMedicalCard extends LitElement {
             font-size: 0.85rem;
             color: var(--secondary-text-color);
         }
+        button {
+            background: var(--secondary-background-color);
+            color: var(--primary-text-color);
+            border: 1px solid var(--divider-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        button.primary {
+            background: var(--primary-color);
+            color: var(--text-primary-color, #fff);
+            border-color: transparent;
+            padding: 8px 14px;
+        }
         svg {
             width: 100%;
             height: 120px;
+            margin-top: 8px;
+        }
+        .trend + .trend {
             margin-top: 8px;
         }
     `;
@@ -133,6 +154,16 @@ export class BabytrackerMedicalCard extends LitElement {
                           this._options,
                           this._config.units
                       )
+                    : ""}
+                ${sections.includes("trends")
+                    ? trendsTemplate(
+                          this.hass,
+                          this._config.baby,
+                          this._config.trend_days ?? 7
+                      )
+                    : ""}
+                ${sections.includes("export")
+                    ? exportSheetTemplate(this.hass, this._config.baby)
                     : ""}
             </ha-card>
         `;
