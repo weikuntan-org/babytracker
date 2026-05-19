@@ -523,15 +523,25 @@ function editEntryForm(
         submit("edit_entry", { entry_id: entry.id, fields });
     };
     const onDelete = () => {
-        if (requestDelete) {
-            requestDelete({
-                id: entry.id,
-                type: entry.type,
-                source: entry.source,
-                staff: entry.staff
-            });
+        if (!requestDelete) {
+            close();
+            return;
         }
-        close();
+        const isImported = !!entry.source && entry.source !== "user";
+        // For user-authored entries `requestDelete` fires `delete_entry`
+        // immediately and doesn't touch the modal state — close it here so
+        // the form doesn't linger over a now-deleted entry.
+        // For imported entries `requestDelete` replaces `_modal` with the
+        // "confirm delete imported" dialog; closing here would clobber
+        // that swap (both updates land in the same microtask), so leave
+        // the modal stack to the host.
+        if (!isImported) close();
+        requestDelete({
+            id: entry.id,
+            type: entry.type,
+            source: entry.source,
+            staff: entry.staff
+        });
     };
     const heading = _editHeading(entry);
     return html`

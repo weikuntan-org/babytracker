@@ -1407,12 +1407,16 @@ function Pe(e, t, i, s) {
     }
     Object.keys(g).length && (f.data = g), t("edit_entry", { entry_id: e.id, fields: f });
   }, c = () => {
-    s && s({
+    if (!s) {
+      i();
+      return;
+    }
+    !!e.source && e.source !== "user" || i(), s({
       id: e.id,
       type: e.type,
       source: e.source,
       staff: e.staff
-    }), i();
+    });
   }, d = Ne(e);
   return u`
         <form @submit=${a}>
