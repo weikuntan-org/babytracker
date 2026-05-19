@@ -464,6 +464,8 @@ class VaccinesDueSensor(_BabyEntity):
         return _load_schedule(schedule_id) or {}
 
     def _next_due(self):
+        from .vaccines import canonical_vaccine
+
         schedule = self._schedule()
         doses = schedule.get("doses") or []
         if not doses:
@@ -473,13 +475,21 @@ class VaccinesDueSensor(_BabyEntity):
         except ValueError:
             return None
         coord = self._coord
-        prior = [
-            (e.data.get("name"), e.data.get("dose_number"))
+        # Canonicalize both sides so legacy short-form ("HepB") and new
+        # canonical-form ("Hepatitis B (HepB)") entries — plus the
+        # schedule's own variant ("Hepatitis B" or "Rotavirus (RV1)") —
+        # all collapse to the same dose slot.
+        prior_set = {
+            (canonical_vaccine(e.data.get("name")), e.data.get("dose_number"))
             for e in coord.entries_by_baby(self.baby.id)
             if e.type == "vaccine" and not e.readonly
+        }
+        prior_set = {(name, dose) for name, dose in prior_set if name and dose}
+        undosed = [
+            d
+            for d in doses
+            if (canonical_vaccine(d["name"]), d.get("dose_number")) not in prior_set
         ]
-        prior_set = {(name, dose) for name, dose in prior if name and dose}
-        undosed = [d for d in doses if (d["name"], d.get("dose_number")) not in prior_set]
         if not undosed:
             return None
         undosed.sort(key=lambda d: d["target_age_days"])
@@ -492,13 +502,19 @@ class VaccinesDueSensor(_BabyEntity):
 
     @property
     def native_value(self):
+        from .vaccines import canonical_vaccine
+
         nxt = self._next_due()
         if nxt is None:
             return "none"
-        return nxt["dose"]["name"]
+        # Surface the canonical "Full (abbr)" label so the chip on the
+        # summary card and the vaccine-log dropdown agree on naming.
+        return canonical_vaccine(nxt["dose"]["name"])
 
     @property
     def extra_state_attributes(self):
+        from .vaccines import canonical_vaccine
+
         nxt = self._next_due()
         if nxt is None:
             return {"dose_number": None, "due_on": None, "overdue_days": 0, "upcoming": []}
@@ -510,7 +526,7 @@ class VaccinesDueSensor(_BabyEntity):
         for d in nxt["undosed"][:5]:
             upcoming.append(
                 {
-                    "name": d["name"],
+                    "name": canonical_vaccine(d["name"]),
                     "dose_number": d.get("dose_number"),
                     "due_on": (bd + _days(d["target_age_days"])).isoformat() if bd else None,
                 }

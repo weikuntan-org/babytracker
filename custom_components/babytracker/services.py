@@ -622,39 +622,9 @@ LOG_VACCINE_SCHEMA = vol.Schema(
 )
 
 
-_VACCINE_ALIASES = {
-    "HepA": "Hepatitis A (HepA)",
-    "Hepatitis A": "Hepatitis A (HepA)",
-    "HepB": "Hepatitis B (HepB)",
-    "Hepatitis B": "Hepatitis B (HepB)",
-    "IPV": "Polio (IPV)",
-    "Polio": "Polio (IPV)",
-    "RV": "Rotavirus (RV)",
-    "RV1": "Rotavirus (RV)",
-    "RV5": "Rotavirus (RV)",
-    "Rotavirus": "Rotavirus (RV)",
-    "Rotavirus (RV1)": "Rotavirus (RV)",
-    "Rotavirus (RV5)": "Rotavirus (RV)",
-    "VAR": "Varicella (VAR)",
-    "Varicella": "Varicella (VAR)",
-    "PCV13": "Pneumococcal (PCV13)",
-    "PCV15": "Pneumococcal (PCV15)",
-    "PCV20": "Pneumococcal (PCV20)",
-}
-
-
-def _canonical_vaccine(name: str | None) -> str | None:
-    """Mirror the frontend `_canonicalVaccine` so dose-number auto-count
-    treats e.g. legacy "HepB" and new "Hepatitis B (HepB)" entries as the
-    same vaccine. Keep this list in sync with the table in
-    `frontend-src/src/components/modal.ts`.
-    """
-    if name is None:
-        return None
-    return _VACCINE_ALIASES.get(name, name)
-
-
 async def _handle_log_vaccine(call: ServiceCall) -> None:
+    from .vaccines import canonical_vaccine
+
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
     await _ensure_can_log(hass, baby, "vaccine", ENTRY_SOURCE_USER)
@@ -662,13 +632,13 @@ async def _handle_log_vaccine(call: ServiceCall) -> None:
     name = call.data["name"]
     dose_number = call.data.get("dose_number")
     if dose_number is None:
-        canonical_new = _canonical_vaccine(name)
+        canonical_new = canonical_vaccine(name)
         prior = [
             e
             for e in coord.entries_by_baby(baby.id)
             if e.type == "vaccine"
             and not e.readonly
-            and _canonical_vaccine(e.data.get("name")) == canonical_new
+            and canonical_vaccine(e.data.get("name")) == canonical_new
         ]
         dose_number = len(prior) + 1
     ts = call.data.get("timestamp")
