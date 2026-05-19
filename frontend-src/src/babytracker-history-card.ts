@@ -183,6 +183,10 @@ export class BabytrackerHistoryCard extends LitElement {
             overflow: visible;
             text-overflow: clip;
         }
+        ul.entries li .entry-photo {
+            margin-top: 4px;
+            line-height: 0;
+        }
         ul.entries li.clickable {
             cursor: pointer;
             border-radius: 4px;

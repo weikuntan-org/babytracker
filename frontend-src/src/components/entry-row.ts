@@ -35,12 +35,6 @@ export function entryRowTemplate(
             <div class="entry-row">
                 <span aria-label="Entry type">${_label(entry)}</span>
                 ${_renderTime(entry)}
-                ${entry.photo_path
-                    ? html`<bt-entry-thumbnail
-                          .hass=${hass}
-                          .photoPath=${entry.photo_path}
-                      ></bt-entry-thumbnail>`
-                    : ""}
                 ${entry.staff
                     ? html`<span
                           class="muted"
@@ -73,6 +67,14 @@ export function entryRowTemplate(
                           }
                       }}
                   >${entry.notes}</div>`
+                : ""}
+            ${entry.photo_path
+                ? html`<div class="entry-photo">
+                      <bt-entry-thumbnail
+                          .hass=${hass}
+                          .photoPath=${entry.photo_path}
+                      ></bt-entry-thumbnail>
+                  </div>`
                 : ""}
         </li>
     `;

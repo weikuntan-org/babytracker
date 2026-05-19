@@ -146,8 +146,30 @@ export class BabytrackerSummaryCard extends LitElement {
         .trend + .trend {
             margin-top: 8px;
         }
-        .trend svg rect {
-            fill: var(--primary-color);
+        .trend .label-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 4px 12px;
+            justify-content: space-between;
+        }
+        .trend .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.75rem;
+            color: var(--secondary-text-color);
+        }
+        .trend .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .trend .swatch {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
         }
         .muted {
             color: var(--secondary-text-color);
