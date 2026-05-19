@@ -691,7 +691,9 @@ async def _handle_edit_entry(call: ServiceCall) -> None:
     # so the merged write that `coord.edit_entry` performs reflects the
     # new age/value pair instead of leaving stale percentile data behind.
     entry = coord.entry_by_id(call.data["entry_id"])
-    if entry is not None and entry.type == "growth" and "data" in fields:
+    if entry is not None and entry.type == "growth" and (
+        "data" in fields or "timestamp" in fields
+    ):
         baby = coord.baby_by_id(entry.baby_id) if entry.baby_id else None
         if baby is not None:
             patch = fields.get("data") or {}
