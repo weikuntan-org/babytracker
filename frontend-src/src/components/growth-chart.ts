@@ -3,6 +3,7 @@
 import { html, svg, type TemplateResult } from "lit";
 
 import { babyEntityId } from "../lib/ha-helpers";
+import "./chart-lightbox";
 
 interface PercentileSeries {
     key: "weight" | "height" | "head";
@@ -177,8 +178,25 @@ export function growthChartTemplate(
                     </div>
                 </div>
             </div>
-            ${percentileOverTimeChart(growthEntries)}
+            ${percentileOverTimeWrapper(growthEntries)}
         </div>
+    `;
+}
+
+/** Wrap the percentile-over-time chart in a click-to-expand lightbox.
+ *  Skips entirely when the underlying chart would render nothing — the
+ *  lightbox wrapper would otherwise show an empty zoom affordance.
+ */
+function percentileOverTimeWrapper(
+    entries: any[] | undefined
+): TemplateResult | "" {
+    const inline = percentileOverTimeChart(entries);
+    if (inline === "") return "";
+    return html`
+        <bt-chart-lightbox
+            label="Percentile over time"
+            .renderChart=${() => percentileOverTimeChart(entries)}
+        ></bt-chart-lightbox>
     `;
 }
 

@@ -8,6 +8,7 @@
 import { html, svg, type TemplateResult } from "lit";
 
 import { babyEntityId } from "../lib/ha-helpers";
+import "./chart-lightbox";
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const ML_PER_OZ = 29.5735;
@@ -139,43 +140,70 @@ export function trendsTemplate(
         return ""; // nothing to show
     }
 
+    const sleepBars = buckets.map(b => ({
+        label: b.label,
+        value: b.sleepMinutes
+    }));
+    const feedingStacks = buckets.map(b => ({
+        label: b.label,
+        parts: FEEDING_SEGMENTS.map(s => ({
+            ...s,
+            value: b.feedingByCategory[s.key]
+        }))
+    }));
+    const bottleBars = buckets.map(b => ({
+        label: b.label,
+        value: b.bottleMl
+    }));
+    const diaperStacks = buckets.map(b => ({
+        label: b.label,
+        parts: DIAPER_SEGMENTS.map(s => ({
+            ...s,
+            value: b.diaperByCategory[s.key]
+        }))
+    }));
+
     return html`
         <div class="section" role="region" aria-label="Trends">
             <h2>Trends · last ${days} days</h2>
-            ${barChart(
-                buckets.map(b => ({ label: b.label, value: b.sleepMinutes })),
-                "Sleep (min/day)",
-                v => `${Math.round(v)}`
-            )}
-            ${stackedBarChart(
-                buckets.map(b => ({
-                    label: b.label,
-                    parts: FEEDING_SEGMENTS.map(s => ({
-                        ...s,
-                        value: b.feedingByCategory[s.key]
-                    }))
-                })),
-                "Feedings/day",
-                FEEDING_SEGMENTS,
-                v => `${v}`
-            )}
-            ${barChart(
-                buckets.map(b => ({ label: b.label, value: b.bottleMl })),
-                "Bottle (oz/day)",
-                v => (v / ML_PER_OZ).toFixed(1)
-            )}
-            ${stackedBarChart(
-                buckets.map(b => ({
-                    label: b.label,
-                    parts: DIAPER_SEGMENTS.map(s => ({
-                        ...s,
-                        value: b.diaperByCategory[s.key]
-                    }))
-                })),
-                "Diapers/day",
-                DIAPER_SEGMENTS,
-                v => `${v}`
-            )}
+            <bt-chart-lightbox
+                label="Sleep (min/day)"
+                .renderChart=${() =>
+                    barChart(
+                        sleepBars,
+                        "Sleep (min/day)",
+                        v => `${Math.round(v)}`
+                    )}
+            ></bt-chart-lightbox>
+            <bt-chart-lightbox
+                label="Feedings/day"
+                .renderChart=${() =>
+                    stackedBarChart(
+                        feedingStacks,
+                        "Feedings/day",
+                        FEEDING_SEGMENTS,
+                        v => `${v}`
+                    )}
+            ></bt-chart-lightbox>
+            <bt-chart-lightbox
+                label="Bottle (oz/day)"
+                .renderChart=${() =>
+                    barChart(
+                        bottleBars,
+                        "Bottle (oz/day)",
+                        v => (v / ML_PER_OZ).toFixed(1)
+                    )}
+            ></bt-chart-lightbox>
+            <bt-chart-lightbox
+                label="Diapers/day"
+                .renderChart=${() =>
+                    stackedBarChart(
+                        diaperStacks,
+                        "Diapers/day",
+                        DIAPER_SEGMENTS,
+                        v => `${v}`
+                    )}
+            ></bt-chart-lightbox>
         </div>
     `;
 }
