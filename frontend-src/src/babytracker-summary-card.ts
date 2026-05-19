@@ -118,6 +118,9 @@ export class BabytrackerSummaryCard extends LitElement {
         .trend + .trend {
             margin-top: 8px;
         }
+        .trend svg rect {
+            fill: var(--primary-color);
+        }
         .muted {
             color: var(--secondary-text-color);
             font-size: 0.85rem;

@@ -1445,7 +1445,7 @@ function Be(e) {
 function je(e, t, i, r, n = /* @__PURE__ */ new Set(), s = () => {
 }) {
   var d;
-  const o = e.states[w(t, "recent_entries")], a = ((d = o == null ? void 0 : o.attributes) == null ? void 0 : d.entries) ?? [], c = Re(a).slice(0, Math.min(r, 50));
+  const o = e.states[w(t, "recent_entries")], a = ((d = o == null ? void 0 : o.attributes) == null ? void 0 : d.entries) ?? [], c = Re(a).slice(0, Math.min(r, 120));
   return u`
         <div class="section" role="region" aria-label="Last 24 hours">
             <h2>Last 24 hours</h2>
@@ -2936,6 +2936,9 @@ A.styles = ut`
         .trend + .trend {
             margin-top: 8px;
         }
+        .trend svg rect {
+            fill: var(--primary-color);
+        }
         .muted {
             color: var(--secondary-text-color);
             font-size: 0.85rem;
@@ -3890,7 +3893,7 @@ let z = class extends P {
                 id="recent_limit"
                 type="number"
                 min="1"
-                max="50"
+                max="120"
                 aria-label="Recent entries to show"
                 .value=${String(this._config.recent_limit ?? 10)}
                 @change=${(e) => this._valueChanged(
