@@ -2,6 +2,7 @@
 import { html, type TemplateResult, nothing } from "lit";
 import { displayBabyName } from "../lib/ha-helpers";
 import "./mic-button";
+import "./photo-button";
 
 /**
  * Notes input + mic button row. Used by every dialog that has a
@@ -32,6 +33,28 @@ function notesInputRow(
             <bt-mic-button .hass=${hass}></bt-mic-button>
         </div>
     `;
+}
+
+/**
+ * Photo-attach row. `bt-photo-button` exposes the resulting media-source
+ * URL on its `.value` property; form submit handlers read it via
+ * `_readPhotoPath(form)` instead of `FormData` because custom elements
+ * don't participate in `FormData` by default.
+ */
+function photoRow(hass: any, currentValue?: string): TemplateResult {
+    return html`
+        <label>Photo</label>
+        <bt-photo-button
+            .hass=${hass}
+            .value=${currentValue ?? ""}
+        ></bt-photo-button>
+    `;
+}
+
+function _readPhotoPath(form: HTMLFormElement): string | undefined {
+    const el = form.querySelector("bt-photo-button") as any;
+    const v = el?.value;
+    return typeof v === "string" && v.length > 0 ? v : undefined;
 }
 
 /**
@@ -328,7 +351,8 @@ function diaperForm(
             baby,
             kind: String(data.get("kind") ?? "wet"),
             timestamp: _localInputToIso(String(data.get("when") ?? "")),
-            notes: String(data.get("notes") ?? "") || undefined
+            notes: String(data.get("notes") ?? "") || undefined,
+            photo_path: _readPhotoPath(form)
         });
     };
     return html`
@@ -343,6 +367,7 @@ function diaperForm(
             />
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
+            ${photoRow(hass)}
             <div
                 style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"
             >
@@ -416,7 +441,8 @@ function bottleForm(
             unit,
             started_at: at,
             ended_at: at,
-            notes
+            notes,
+            photo_path: _readPhotoPath(form)
         });
     };
     return html`
@@ -448,6 +474,7 @@ function bottleForm(
             />
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
+            ${photoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -475,7 +502,8 @@ function solidsForm(
             method: "solids",
             started_at: at,
             ended_at: at,
-            notes: String(data.get("notes") ?? "") || undefined
+            notes: String(data.get("notes") ?? "") || undefined,
+            photo_path: _readPhotoPath(form)
         });
     };
     return html`
@@ -495,6 +523,7 @@ function solidsForm(
                 type="datetime-local"
                 .value=${_nowLocalForInput()}
             />
+            ${photoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -517,7 +546,8 @@ function otherForm(
             baby,
             name: String(data.get("name") ?? ""),
             timestamp: _localInputToIso(String(data.get("when") ?? "")),
-            notes: String(data.get("notes") ?? "") || undefined
+            notes: String(data.get("notes") ?? "") || undefined,
+            photo_path: _readPhotoPath(form)
         });
     };
     return html`
@@ -541,6 +571,7 @@ function otherForm(
             />
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
+            ${photoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -652,6 +683,11 @@ function editEntryForm(
             );
         }
         if (Object.keys(dataPatch).length) fields.data = dataPatch;
+        // Photo path: the bt-photo-button reports "" when the user
+        // removes an attached photo, so pass null in that case to clear
+        // the field server-side.
+        const photo = _readPhotoPath(form);
+        fields.photo_path = photo ?? null;
         submit("edit_entry", { entry_id: entry.id, fields });
     };
     const onDelete = () => {
@@ -864,6 +900,7 @@ function editEntryForm(
             ${notesInputRow(hass, {
                 value: String(entry.notes ?? "")
             })}
+            ${photoRow(hass, entry.photo_path ?? "")}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button
@@ -910,13 +947,15 @@ function sessionForm(
         const startedAt = _localInputToIso(String(data.get("started") ?? ""));
         const endedAt = _localInputToIso(String(data.get("ended") ?? ""));
         const notes = String(data.get("notes") ?? "") || undefined;
+        const photoPath = _readPhotoPath(form);
 
         // No end → open a live session at started_at (start_*).
         // Both ends supplied → retroactive completed entry (log_*).
         if (!endedAt) {
             const payload: Record<string, unknown> = {
                 baby,
-                started_at: startedAt
+                started_at: startedAt,
+                photo_path: photoPath
             };
             let service: string;
             switch (activity) {
@@ -942,7 +981,8 @@ function sessionForm(
             baby,
             started_at: startedAt,
             ended_at: endedAt,
-            notes
+            notes,
+            photo_path: photoPath
         };
         let service: string;
         switch (activity) {
@@ -983,6 +1023,7 @@ function sessionForm(
             />
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
+            ${photoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -1021,7 +1062,8 @@ function growthLogForm(
             weight_unit: String(f.get("weight_unit") ?? weightUnit),
             length_unit: String(f.get("length_unit") ?? lengthUnit),
             timestamp: _dateInputToIso(String(f.get("when") ?? "")),
-            notes: String(f.get("notes") ?? "") || undefined
+            notes: String(f.get("notes") ?? "") || undefined,
+            photo_path: _readPhotoPath(form)
         });
     };
     return html`
@@ -1097,6 +1139,7 @@ function growthLogForm(
             />
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
+            ${photoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -1206,7 +1249,8 @@ function vaccineLogForm(
             lot_number,
             provider,
             timestamp: _dateInputToIso(String(f.get("when") ?? "")),
-            notes: String(f.get("notes") ?? "") || undefined
+            notes: String(f.get("notes") ?? "") || undefined,
+            photo_path: _readPhotoPath(form)
         });
     };
     // Build the dropdown list: common vaccines + anything the configured
@@ -1333,6 +1377,7 @@ function vaccineLogForm(
             />
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
+            ${photoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
