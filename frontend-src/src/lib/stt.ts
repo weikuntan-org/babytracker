@@ -226,6 +226,13 @@ export async function startAssistStt(hass: any): Promise<SttController> {
 
     return {
         stop: async () => {
+            // Race: user stopped before `run-start` delivered the handler id.
+            // No way to send EOF, so the pipeline will never emit `stt-end`
+            // and `done` would hang. Tear down and resolve with empty text.
+            if (handlerId == null && !finished) {
+                finish("");
+                return done;
+            }
             if (handlerId != null && !finished) {
                 try {
                     hass.connection.socket?.send(new Uint8Array([handlerId]));
