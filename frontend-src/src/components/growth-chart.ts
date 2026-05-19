@@ -31,12 +31,26 @@ function _fmtPercentile(state: string | number | null | undefined): string {
     return `p${Math.round(n)}`;
 }
 
+/** Format an ISO timestamp as a local short date ("May 12, 2026"). */
+function _fmtDate(iso?: string | null): string {
+    if (!iso) return "";
+    const t = Date.parse(iso);
+    if (Number.isNaN(t)) return "";
+    return new Date(t).toLocaleDateString([], {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+    });
+}
+
 export function growthChartTemplate(
     hass: any,
     baby: string,
     options: any,
     units?: UnitOverrides,
-    onLog?: () => void
+    onLog?: () => void,
+    latestEntry?: any,
+    onEdit?: (entry: any) => void
 ): TemplateResult {
     const weightUnit = units?.weight ?? options?.weight_unit ?? "kg";
     const lengthUnit = units?.length ?? options?.length_unit ?? "cm";
@@ -47,6 +61,11 @@ export function growthChartTemplate(
         hass.states[babyEntityId(baby, "weight_percentile")]?.state;
     const heightP =
         hass.states[babyEntityId(baby, "height_percentile")]?.state;
+    const measuredOn = _fmtDate(latestEntry?.timestamp);
+    const clickable = !!(latestEntry && onEdit);
+    const triggerEdit = clickable
+        ? () => onEdit!(latestEntry)
+        : undefined;
     return html`
         <div class="section" role="region" aria-label="Growth">
             <div
@@ -65,18 +84,41 @@ export function growthChartTemplate(
                       </button>`
                     : ""}
             </div>
-            <div class="growth-grid">
-                <div>
-                    <div class="label">Weight</div>
-                    <div>${_fmtValue(weight)} ${weightUnit} · ${_fmtPercentile(weightP)}</div>
-                </div>
-                <div>
-                    <div class="label">Height</div>
-                    <div>${_fmtValue(height)} ${lengthUnit} · ${_fmtPercentile(heightP)}</div>
-                </div>
-                <div>
-                    <div class="label">Head</div>
-                    <div>${_fmtValue(head)} ${lengthUnit}</div>
+            <div
+                class=${clickable ? "growth-summary clickable" : "growth-summary"}
+                role=${clickable ? "button" : "group"}
+                tabindex=${clickable ? "0" : "-1"}
+                aria-label=${clickable
+                    ? "Edit latest growth measurement"
+                    : "Latest growth measurement"}
+                @click=${triggerEdit}
+                @keydown=${clickable
+                    ? (e: KeyboardEvent) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              triggerEdit?.();
+                          }
+                      }
+                    : undefined}
+            >
+                ${measuredOn
+                    ? html`<div class="growth-date muted">
+                          Measured ${measuredOn}
+                      </div>`
+                    : ""}
+                <div class="growth-grid">
+                    <div>
+                        <div class="label">Weight</div>
+                        <div>${_fmtValue(weight)} ${weightUnit} · ${_fmtPercentile(weightP)}</div>
+                    </div>
+                    <div>
+                        <div class="label">Height</div>
+                        <div>${_fmtValue(height)} ${lengthUnit} · ${_fmtPercentile(heightP)}</div>
+                    </div>
+                    <div>
+                        <div class="label">Head</div>
+                        <div>${_fmtValue(head)} ${lengthUnit}</div>
+                    </div>
                 </div>
             </div>
             ${_inlineChart(hass, baby)}

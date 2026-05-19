@@ -13,6 +13,7 @@ import { vaccineHistoryTemplate } from "./components/vaccine-history";
 import { vaccinesDueTemplate } from "./components/vaccines-due";
 import {
     babyEntityId,
+    subscribeGrowth,
     subscribeIntegrationOptions,
     subscribeVaccines
 } from "./lib/ha-helpers";
@@ -34,8 +35,10 @@ export class BabytrackerSummaryCard extends LitElement {
     @state() private _options?: any;
     @state() private _modal: ModalKind | null = null;
     @state() private _vaccines: any[] = [];
+    @state() private _growth: any[] = [];
     private _unsubOptions?: () => void;
     private _unsubVaccines?: () => void;
+    private _unsubGrowth?: () => void;
 
     static styles = css`
         :host {
@@ -71,6 +74,22 @@ export class BabytrackerSummaryCard extends LitElement {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
+        }
+        .growth-summary {
+            padding: 6px 8px;
+            margin: 0 -8px;
+            border-radius: 6px;
+        }
+        .growth-summary.clickable {
+            cursor: pointer;
+        }
+        .growth-summary.clickable:hover,
+        .growth-summary.clickable:focus-visible {
+            background: var(--secondary-background-color);
+            outline: none;
+        }
+        .growth-date {
+            margin-bottom: 4px;
         }
         .label {
             font-size: 0.85rem;
@@ -201,6 +220,8 @@ export class BabytrackerSummaryCard extends LitElement {
         this._unsubOptions = undefined;
         this._unsubVaccines?.();
         this._unsubVaccines = undefined;
+        this._unsubGrowth?.();
+        this._unsubGrowth = undefined;
         super.disconnectedCallback();
     }
 
@@ -319,6 +340,19 @@ export class BabytrackerSummaryCard extends LitElement {
                 }
             );
         }
+        if (
+            !this._unsubGrowth &&
+            this._sections.includes("growth") &&
+            this._config?.baby
+        ) {
+            this._unsubGrowth = subscribeGrowth(
+                this.hass,
+                this._config.baby,
+                (entries) => {
+                    this._growth = Array.isArray(entries) ? entries : [];
+                }
+            );
+        }
     }
 
     private get _sections(): string[] {
@@ -349,7 +383,9 @@ export class BabytrackerSummaryCard extends LitElement {
                           this._config.baby,
                           this._options,
                           this._config.units,
-                          this._requestLogGrowth
+                          this._requestLogGrowth,
+                          this._growth[0],
+                          this._requestEditEntry
                       )
                     : ""}
                 ${sections.includes("trends")

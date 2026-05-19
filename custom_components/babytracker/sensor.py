@@ -327,6 +327,17 @@ class LastDiaperKindSensor(_BabyEntity):
 class GrowthValueSensor(_BabyEntity):
     _attr_state_class = SensorStateClass.MEASUREMENT
 
+    # Map each growth field to (data-dict unit-key, conversion category).
+    # category drives which percentile helper converts the value to the
+    # sensor's declared unit at read time. bmi and head_circumference are
+    # both length-derived; bmi has no unit conversion (kg/m² is canonical).
+    _FIELD_CONVERSION = {
+        "weight": ("weight_unit", "weight"),
+        "height": ("length_unit", "length"),
+        "head_circumference": ("length_unit", "length"),
+        "bmi": (None, None),
+    }
+
     def __init__(
         self,
         coord,
@@ -346,7 +357,36 @@ class GrowthValueSensor(_BabyEntity):
     @property
     def native_value(self):
         data = self._coord.latest_growth_data(self.baby.id)
-        return data.get(self._field)
+        value = data.get(self._field)
+        if value is None:
+            return None
+        # The stored entry may use a different unit than this sensor was
+        # configured with (the integration's global default at startup).
+        # Convert so the value matches `_attr_native_unit_of_measurement`,
+        # otherwise HA's unit-conversion layer treats the value as the
+        # declared unit and re-converts it on display — the classic
+        # "logged 60 cm, sensor declared 'in', sees 60 in → 152.4 cm" bug.
+        unit_key, category = self._FIELD_CONVERSION.get(self._field, (None, None))
+        target_unit = self._attr_native_unit_of_measurement
+        stored_unit = data.get(unit_key) if unit_key else None
+        if (
+            category is not None
+            and target_unit is not None
+            and stored_unit is not None
+            and stored_unit != target_unit
+        ):
+            from . import percentiles
+
+            try:
+                value = float(value)
+            except (TypeError, ValueError):
+                return value
+            if category == "weight":
+                value = percentiles.convert_weight(value, stored_unit, target_unit)
+            elif category == "length":
+                value = percentiles.convert_length(value, stored_unit, target_unit)
+            value = round(value, 2)
+        return value
 
 
 class PercentileSensor(_BabyEntity):
