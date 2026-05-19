@@ -27,9 +27,11 @@ loads, so there is **no separate HACS plugin to install**.
 - **Pediatrician-friendly export.** `babytracker.export_report` writes
   a printable HTML and CSV under `/config/www/babytracker/`.
 - **Bundled Lovelace cards** — `type: custom:babytracker-card` for the
-  main per-baby card, and `type: custom:babytracker-growth-card` for a
-  standalone growth panel. Both ship in the same JS bundle and register
-  themselves when the integration loads.
+  main per-baby card (status, today's counts, quick-log, last 24 hours,
+  exports), and `type: custom:babytracker-medical-card` for a separate
+  vaccines + growth panel. Both ship in the same JS bundle and register
+  themselves when the integration loads. The old name
+  `custom:babytracker-growth-card` continues to work as an alias.
 
 ## Installation
 
@@ -47,8 +49,9 @@ loads, so there is **no separate HACS plugin to install**.
    cache-busted with the bundle's mtime, so subsequent updates pick
    up cleanly without manual Resource edits.
 5. Add a `type: custom:babytracker-card` card to your dashboard. Add a
-   `type: custom:babytracker-growth-card` card separately if you want a
-   dedicated growth panel.
+   `type: custom:babytracker-medical-card` card separately for a
+   vaccines + growth panel (the older `babytracker-growth-card` type
+   keeps working as an alias).
 
 ### Manual
 
