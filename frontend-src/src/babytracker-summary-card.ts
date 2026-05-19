@@ -1,11 +1,11 @@
-// Standalone medical/summary card — surfaces a baby's vaccine status and
-// growth values. Bundled into the same babytracker-card.js artefact as the
-// main card, registered as a separate Lovelace custom element so users
-// place it independently on their dashboard.
+// Standalone baby summary card — surfaces vaccines, growth, trend charts,
+// and the pediatrician export for one baby. Bundled into the same
+// babytracker-card.js artefact as the main card, registered as a separate
+// Lovelace custom element so users place it independently on their dashboard.
 //
-// Backward compat: the old `babytracker-growth-card` element name is kept
-// as an alias so existing dashboard YAMLs keep working — both registrations
-// resolve to this class.
+// Backward compat: the older `babytracker-medical-card` and
+// `babytracker-growth-card` element names are kept as aliases so existing
+// dashboard YAMLs keep working — all three names resolve to this class.
 import { LitElement, html, css, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
@@ -15,7 +15,7 @@ import { trendsTemplate } from "./components/trends";
 import { vaccinesDueTemplate } from "./components/vaccines-due";
 import { subscribeIntegrationOptions } from "./lib/ha-helpers";
 
-export interface BabytrackerMedicalCardConfig {
+export interface BabytrackerSummaryCardConfig {
     type: string;
     baby: string;
     sections?: string[];
@@ -25,10 +25,10 @@ export interface BabytrackerMedicalCardConfig {
 
 const DEFAULT_SECTIONS = ["vaccines", "growth", "trends", "export"];
 
-@customElement("babytracker-medical-card")
-export class BabytrackerMedicalCard extends LitElement {
+@customElement("babytracker-summary-card")
+export class BabytrackerSummaryCard extends LitElement {
     @property({ attribute: false }) public hass?: any;
-    @state() private _config?: BabytrackerMedicalCardConfig;
+    @state() private _config?: BabytrackerSummaryCardConfig;
     @state() private _options?: any;
     private _unsubOptions?: () => void;
 
@@ -96,9 +96,9 @@ export class BabytrackerMedicalCard extends LitElement {
         }
     `;
 
-    public setConfig(config: BabytrackerMedicalCardConfig): void {
+    public setConfig(config: BabytrackerSummaryCardConfig): void {
         if (!config?.baby)
-            throw new Error("babytracker-medical-card: 'baby' is required");
+            throw new Error("babytracker-summary-card: 'baby' is required");
         this._config = { ...config };
     }
 
@@ -169,8 +169,8 @@ export class BabytrackerMedicalCard extends LitElement {
         `;
     }
 
-    static getStubConfig(): BabytrackerMedicalCardConfig {
-        return { type: "custom:babytracker-medical-card", baby: "ava" };
+    static getStubConfig(): BabytrackerSummaryCardConfig {
+        return { type: "custom:babytracker-summary-card", baby: "ava" };
     }
 }
 
@@ -184,20 +184,26 @@ declare global {
     }
 }
 
-// Backward-compat alias: the card used to be registered as
-// `babytracker-growth-card`. Existing dashboard YAMLs using that type
-// keep working — both names resolve to BabytrackerMedicalCard.
-if (!customElements.get("babytracker-growth-card")) {
-    customElements.define(
-        "babytracker-growth-card",
-        class extends BabytrackerMedicalCard {} as any
-    );
+// Backward-compat aliases. Old dashboard YAMLs using
+// `babytracker-medical-card` (the previous name) or
+// `babytracker-growth-card` (the original name) keep working — all three
+// element registrations resolve to the same rendering.
+for (const aliasName of [
+    "babytracker-medical-card",
+    "babytracker-growth-card"
+]) {
+    if (!customElements.get(aliasName)) {
+        customElements.define(
+            aliasName,
+            class extends BabytrackerSummaryCard {} as any
+        );
+    }
 }
 
 window.customCards = window.customCards ?? [];
 window.customCards.push({
-    type: "babytracker-medical-card",
-    name: "babytracker — medical",
+    type: "babytracker-summary-card",
+    name: "babytracker — summary",
     description:
-        "Vaccines due and growth values/percentiles for one baby."
+        "Vaccines, growth, 7-day trend charts, and pediatrician export for one baby."
 });
