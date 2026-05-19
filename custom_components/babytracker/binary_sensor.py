@@ -98,6 +98,8 @@ class VaccinesOverdueBinary(_BabyBinary):
 
     @property
     def is_on(self) -> bool:
+        from .vaccines import canonical_vaccine
+
         baby = self._baby
         if baby is None:
             return False
@@ -106,14 +108,16 @@ class VaccinesOverdueBinary(_BabyBinary):
         except ValueError:
             return False
         grace_days = int(self._options().get(OPT_VACCINE_GRACE_DAYS, 14))
+        # Canonicalize stored + schedule names so a logged "Hepatitis B
+        # (HepB)" satisfies the schedule's "Hepatitis B" dose slot.
         prior = {
-            (e.data.get("name"), e.data.get("dose_number"))
+            (canonical_vaccine(e.data.get("name")), e.data.get("dose_number"))
             for e in self._coord.entries_by_baby(baby.id)
             if e.type == "vaccine" and not e.readonly
         }
         today = dt_util.now().date()
         for dose in (self._schedule().get("doses") or []):
-            if (dose["name"], dose.get("dose_number")) in prior:
+            if (canonical_vaccine(dose["name"]), dose.get("dose_number")) in prior:
                 continue
             due_on = bd + timedelta(days=int(dose["target_age_days"]))
             if today > due_on + timedelta(days=grace_days):
