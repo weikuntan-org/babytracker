@@ -3,7 +3,11 @@ import { html, type TemplateResult } from "lit";
 
 import { babyEntityId } from "../lib/ha-helpers";
 
-export function vaccinesDueTemplate(hass: any, baby: string): TemplateResult | "" {
+export function vaccinesDueTemplate(
+    hass: any,
+    baby: string,
+    onLog?: () => void
+): TemplateResult | "" {
     const due = hass.states[babyEntityId(baby, "vaccines_due")];
     if (!due || due.state === "unknown") return "";
     const overdue =
@@ -21,6 +25,17 @@ export function vaccinesDueTemplate(hass: any, baby: string): TemplateResult | "
                 ? html`<span>(${due.attributes.due_on})</span>`
                 : ""}
             ${overdue ? html`<span aria-label="Overdue">⚠️ overdue</span>` : ""}
+            ${onLog
+                ? html`<span class="spacer"></span>
+                      <button
+                          type="button"
+                          class="primary"
+                          aria-label="Log a vaccine"
+                          @click=${onLog}
+                      >
+                          Log vaccine
+                      </button>`
+                : ""}
         </div>
     `;
 }

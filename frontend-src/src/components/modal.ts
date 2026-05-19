@@ -86,6 +86,19 @@ export type ModalKind =
     | {
           kind: "edit_entry";
           entry: any;
+      }
+    | {
+          kind: "log_growth";
+          baby: string;
+      }
+    | {
+          kind: "log_vaccine";
+          baby: string;
+          /** Pre-fill name + dose from `sensor.<baby>_vaccines_due`. */
+          defaultName?: string;
+          defaultDose?: number;
+          /** Names suggested by the configured vaccine schedule. */
+          scheduleNames?: string[];
       };
 
 type Submit = (service: string, data: Record<string, unknown>) => Promise<void>;
@@ -162,6 +175,19 @@ export function modalTemplate(
                     submit,
                     close,
                     requestDelete
+                );
+                break;
+            case "log_growth":
+                body = growthLogForm(modal.baby, options, submit, close);
+                break;
+            case "log_vaccine":
+                body = vaccineLogForm(
+                    modal.baby,
+                    modal.defaultName ?? "",
+                    modal.defaultDose,
+                    modal.scheduleNames ?? [],
+                    submit,
+                    close
                 );
                 break;
         }
@@ -753,6 +779,226 @@ function sessionForm(
                 name="ended"
                 type="datetime-local"
                 placeholder="leave blank for an open session"
+            />
+            <label for="notes">Notes</label>
+            <input id="notes" name="notes" type="text" placeholder="optional" />
+            <div class="actions">
+                <button type="button" @click=${close}>Cancel</button>
+                <button type="submit" class="primary">Log</button>
+            </div>
+        </form>
+    `;
+}
+
+function growthLogForm(
+    baby: string,
+    options: any,
+    submit: Submit,
+    close: Close
+): TemplateResult {
+    const weightUnit = options?.weight_unit ?? "kg";
+    const lengthUnit = options?.length_unit ?? "cm";
+    const onSubmit = (e: SubmitEvent) => {
+        e.preventDefault();
+        const form = e.currentTarget as HTMLFormElement;
+        const f = new FormData(form);
+        const num = (key: string): number | undefined => {
+            const v = String(f.get(key) ?? "").trim();
+            if (!v) return undefined;
+            const n = Number(v);
+            return Number.isFinite(n) ? n : undefined;
+        };
+        // Backend rejects the call if all three measurements are blank
+        // (log_growth requires at least one). The error surfaces in the
+        // HA frontend toast — no client-side pre-check.
+        submit("log_growth", {
+            baby,
+            weight: num("weight"),
+            height: num("height"),
+            head_circumference: num("head"),
+            weight_unit: String(f.get("weight_unit") ?? weightUnit),
+            length_unit: String(f.get("length_unit") ?? lengthUnit),
+            notes: String(f.get("notes") ?? "") || undefined
+        });
+    };
+    return html`
+        <form @submit=${onSubmit}>
+            <h2>Log growth measurement</h2>
+            <div
+                style="display:grid;grid-template-columns:2fr 1fr;gap:8px;align-items:end;"
+            >
+                <div>
+                    <label for="weight">Weight</label>
+                    <input
+                        id="weight"
+                        name="weight"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputmode="decimal"
+                        autofocus
+                    />
+                </div>
+                <div>
+                    <label for="weight_unit">Unit</label>
+                    <select id="weight_unit" name="weight_unit">
+                        <option value="kg" ?selected=${weightUnit === "kg"}>
+                            kg
+                        </option>
+                        <option value="lb" ?selected=${weightUnit === "lb"}>
+                            lb
+                        </option>
+                    </select>
+                </div>
+                <div>
+                    <label for="height">Height</label>
+                    <input
+                        id="height"
+                        name="height"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        inputmode="decimal"
+                    />
+                </div>
+                <div>
+                    <label for="length_unit">Unit</label>
+                    <select id="length_unit" name="length_unit">
+                        <option value="cm" ?selected=${lengthUnit === "cm"}>
+                            cm
+                        </option>
+                        <option value="in" ?selected=${lengthUnit === "in"}>
+                            in
+                        </option>
+                    </select>
+                </div>
+                <div style="grid-column: span 2;">
+                    <label for="head">Head circumference</label>
+                    <input
+                        id="head"
+                        name="head"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        inputmode="decimal"
+                    />
+                    <span class="muted">(uses the length unit above)</span>
+                </div>
+            </div>
+            <label for="notes">Notes</label>
+            <input id="notes" name="notes" type="text" placeholder="optional" />
+            <div class="actions">
+                <button type="button" @click=${close}>Cancel</button>
+                <button type="submit" class="primary">Log</button>
+            </div>
+        </form>
+    `;
+}
+
+function vaccineLogForm(
+    baby: string,
+    defaultName: string,
+    defaultDose: number | undefined,
+    scheduleNames: string[],
+    submit: Submit,
+    close: Close
+): TemplateResult {
+    const sites = [
+        "left_thigh",
+        "right_thigh",
+        "left_arm",
+        "right_arm",
+        "oral",
+        "nasal"
+    ];
+    const onSubmit = (e: SubmitEvent) => {
+        e.preventDefault();
+        const form = e.currentTarget as HTMLFormElement;
+        const f = new FormData(form);
+        const name = String(f.get("name") ?? "").trim();
+        if (!name) return;
+        const doseStr = String(f.get("dose_number") ?? "").trim();
+        const dose_number = doseStr === "" ? undefined : Number(doseStr);
+        const site = String(f.get("site") ?? "").trim() || undefined;
+        const lot_number = String(f.get("lot_number") ?? "").trim() || undefined;
+        const provider = String(f.get("provider") ?? "").trim() || undefined;
+        submit("log_vaccine", {
+            baby,
+            name,
+            dose_number,
+            site,
+            lot_number,
+            provider,
+            timestamp: _localInputToIso(String(f.get("when") ?? "")),
+            notes: String(f.get("notes") ?? "") || undefined
+        });
+    };
+    const dedupedNames = Array.from(
+        new Set(
+            [defaultName, ...scheduleNames].filter(
+                (n): n is string => Boolean(n) && n !== "none"
+            )
+        )
+    );
+    return html`
+        <form @submit=${onSubmit}>
+            <h2>Log vaccine</h2>
+            <label for="vaccine_name">Vaccine</label>
+            <input
+                id="vaccine_name"
+                name="name"
+                type="text"
+                list="vaccine_names"
+                .value=${defaultName && defaultName !== "none" ? defaultName : ""}
+                placeholder="e.g. DTaP"
+                required
+                autofocus
+            />
+            <datalist id="vaccine_names">
+                ${dedupedNames.map(
+                    (n) => html`<option value=${n}></option>`
+                )}
+            </datalist>
+            <label for="dose_number"
+                >Dose number <span class="muted">(auto if blank)</span></label
+            >
+            <input
+                id="dose_number"
+                name="dose_number"
+                type="number"
+                min="1"
+                max="20"
+                step="1"
+                inputmode="numeric"
+                .value=${defaultDose != null ? String(defaultDose) : ""}
+            />
+            <label for="site">Site</label>
+            <select id="site" name="site">
+                <option value="">(unspecified)</option>
+                ${sites.map(
+                    (s) => html`<option value=${s}>${s.replace("_", " ")}</option>`
+                )}
+            </select>
+            <label for="lot_number">Lot number</label>
+            <input
+                id="lot_number"
+                name="lot_number"
+                type="text"
+                placeholder="optional"
+            />
+            <label for="provider">Provider</label>
+            <input
+                id="provider"
+                name="provider"
+                type="text"
+                placeholder="optional"
+            />
+            <label for="when">When</label>
+            <input
+                id="when"
+                name="when"
+                type="datetime-local"
+                .value=${_nowLocalForInput()}
             />
             <label for="notes">Notes</label>
             <input id="notes" name="notes" type="text" placeholder="optional" />

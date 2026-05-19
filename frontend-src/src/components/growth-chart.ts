@@ -14,7 +14,8 @@ export function growthChartTemplate(
     hass: any,
     baby: string,
     options: any,
-    units?: UnitOverrides
+    units?: UnitOverrides,
+    onLog?: () => void
 ): TemplateResult {
     const weightUnit = units?.weight ?? options?.weight_unit ?? "kg";
     const lengthUnit = units?.length ?? options?.length_unit ?? "cm";
@@ -28,7 +29,22 @@ export function growthChartTemplate(
         hass.states[babyEntityId(baby, "height_percentile")]?.state ?? "—";
     return html`
         <div class="section" role="region" aria-label="Growth">
-            <h2>Growth</h2>
+            <div
+                style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"
+            >
+                <h2 style="margin:0;">Growth</h2>
+                <span style="flex:1;"></span>
+                ${onLog
+                    ? html`<button
+                          type="button"
+                          class="primary"
+                          aria-label="Log a growth measurement"
+                          @click=${onLog}
+                      >
+                          Log measurement
+                      </button>`
+                    : ""}
+            </div>
             <div class="growth-grid">
                 <div>
                     <div class="label">Weight</div>
