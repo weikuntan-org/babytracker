@@ -109,6 +109,10 @@ log_diaper:
             - wet
             - dirty
             - both
+    timestamp:
+      description: When this happened; defaults to now if omitted.
+      selector:
+        datetime:
     notes:
       selector:
         text:
@@ -235,6 +239,10 @@ log_other:
       description: Short label that appears in the 24h list (e.g. "bath", "first smile").
       selector:
         text:
+    timestamp:
+      description: When this happened; defaults to now if omitted.
+      selector:
+        datetime:
     notes:
       selector:
         text:
