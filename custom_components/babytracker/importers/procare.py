@@ -246,15 +246,22 @@ class ProcareImporter(BaseImporter):
         """Re-read the source sensor's current state and re-process every
         activity. New activities are created; previously-imported ones
         are checked against their current upstream state and patched
-        in place if anything changed (see `_process_activity`). Returns
-        the number of new entries created — updates don't count toward
-        the total but are logged separately.
+        in place if anything changed (see `_process_activity`). Also
+        runs a photo-backfill pass for our own Procare-sourced entries
+        that have a `photo_url` but no local `photo_path` yet — the
+        activity-iteration pass only sees activities currently in the
+        source sensor's cache, so entries whose source has aged out
+        (or whose first download attempt failed) are unreachable from
+        that path.
 
-        Important limitation: the source sensor only exposes whatever the
-        upstream Procare integration has cached (typically the most recent
-        ~N activities). Resync cannot recover deleted babytracker entries
-        whose corresponding source activity has aged out of that cache —
-        the data isn't reachable from here.
+        Returns the number of newly-created entries — updates and
+        photo backfills are logged separately rather than rolled into
+        the return value.
+
+        Important limitation: the source sensor only exposes whatever
+        the upstream Procare integration has cached. Resync cannot
+        recover deleted babytracker entries whose corresponding source
+        activity has aged out of that cache.
         """
         state = self.hass.states.get(self.sensor_entity_id)
         if state is None:
@@ -275,15 +282,59 @@ class ProcareImporter(BaseImporter):
             await self._process_activity(activity, existing)
         after = len(self.coordinator.entries_by_baby(self.baby.id))
         imported = max(0, after - before)
+        backfilled = await self._backfill_photo_paths()
         _LOGGER.info(
             "babytracker: resync %s — source has %d activities; "
-            "%d already imported, %d newly imported",
+            "%d already imported, %d newly imported, %d photos backfilled",
             self.baby.slug,
             len(activities),
             already_seen,
             imported,
+            backfilled,
         )
         return imported
+
+    async def _backfill_photo_paths(self) -> int:
+        """Retry photo downloads for our own Procare-sourced entries
+        that have a `photo_url` set but no local `photo_path` yet.
+
+        This is the only path that backfills entries whose source
+        activity has aged out of the upstream sensor's cache — the
+        per-activity loop in `async_resync` can't see them. We
+        snapshot the candidates before iterating because
+        `update_imported_entry` mutates the coordinator's entry list.
+
+        Returns the number of entries that gained a local copy. A
+        failed download leaves the entry alone (its `photo_url` is
+        preserved as the upstream pointer) and we'll retry on the
+        next resync.
+        """
+        candidates = [
+            e
+            for e in self.coordinator.entries_by_baby(self.baby.id)
+            if e.source == ENTRY_SOURCE_PROCARE
+            and e.photo_url
+            and not e.photo_path
+        ]
+        backfilled = 0
+        for entry in candidates:
+            photo_path = await _download_procare_photo(
+                self.hass, entry.photo_url
+            )
+            if photo_path is None:
+                continue
+            await self.coordinator.update_imported_entry(
+                entry.id,
+                timestamp=entry.timestamp,
+                ended_at=entry.ended_at,
+                notes=entry.notes,
+                photo_path=photo_path,
+                photo_url=entry.photo_url,
+                staff=entry.staff,
+                data=entry.data,
+            )
+            backfilled += 1
+        return backfilled
 
     async def _process_activity(
         self, activity: dict[str, Any], existing: dict[str, Entry]

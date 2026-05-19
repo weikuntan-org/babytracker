@@ -19,13 +19,14 @@ from __future__ import annotations
 import pytest
 from homeassistant.core import HomeAssistant
 
+from custom_components.babytracker.const import ENTRY_SOURCE_PROCARE
 from custom_components.babytracker.coordinator import BabytrackerCoordinator
 from custom_components.babytracker.importers import procare as procare_module
 from custom_components.babytracker.importers.procare import (
     ProcareImporter,
     _existing_by_source_id,
 )
-from custom_components.babytracker.models import Baby
+from custom_components.babytracker.models import Baby, Entry
 from custom_components.babytracker.store import BabytrackerStore
 
 
@@ -353,3 +354,133 @@ async def test_download_failure_preserves_photo_url_pointer(
     # photo_url is preserved so users / diagnostics still see the
     # upstream pointer even though we couldn't grab a local copy.
     assert entry.photo_url == "https://cdn.procare.example/photo/broken.jpg"
+
+
+@pytest.mark.asyncio
+async def test_resync_backfills_photos_for_orphan_entries(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Procare entries with `photo_url` but no `photo_path` get their
+    photos downloaded on resync — even when the corresponding source
+    activity is no longer in the upstream sensor's cache (i.e. it
+    aged out before our photo-download feature could grab it on the
+    first import).
+    """
+    importer, coord, baby = await _make_importer(hass)
+
+    # Pre-existing entry whose source activity is no longer in the
+    # sensor's `activities` attribute (the most common reason a
+    # photo_url ends up stranded without a photo_path).
+    orphan = Entry(
+        id="orphan-1",
+        type="diaper",
+        baby_id=baby.id,
+        timestamp="2026-05-01T10:00:00+00:00",
+        source=ENTRY_SOURCE_PROCARE,
+        source_entity_id="sensor.ava_activities",
+        source_id="aged-out-activity",
+        imported_at="2026-05-01T10:00:01+00:00",
+        readonly=True,
+        photo_path=None,
+        photo_url="https://cdn.procare.example/photo/orphan.jpg",
+        staff=None,
+        notes=None,
+        data={"kind": "wet"},
+    )
+    coord._entries.append(orphan)
+
+    stub = _PhotoStub()
+    monkeypatch.setattr(procare_module, "_download_procare_photo", stub)
+
+    # Source sensor exists but exposes no activities — the orphan's
+    # source has aged out of the upstream cache.
+    hass.states.async_set("sensor.ava_activities", "ok", {"activities": []})
+
+    imported = await importer.async_resync()
+    assert imported == 0, "no new entries should be created"
+    assert stub.calls == ["https://cdn.procare.example/photo/orphan.jpg"]
+
+    updated = coord.entry_by_id("orphan-1")
+    assert updated is not None
+    assert updated.photo_path is not None
+    assert updated.photo_path.startswith(
+        "media-source://media_source/local/babytracker/"
+    )
+    # Upstream pointer preserved.
+    assert updated.photo_url == "https://cdn.procare.example/photo/orphan.jpg"
+
+
+@pytest.mark.asyncio
+async def test_backfill_skips_entries_with_local_copy(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Backfill must not re-download photos that already have a local
+    copy — that's the whole point of the `not photo_path` guard.
+    """
+    importer, coord, baby = await _make_importer(hass)
+    existing_path = "media-source://media_source/local/babytracker/already.jpg"
+    coord._entries.append(
+        Entry(
+            id="settled-1",
+            type="diaper",
+            baby_id=baby.id,
+            timestamp="2026-05-01T10:00:00+00:00",
+            source=ENTRY_SOURCE_PROCARE,
+            source_entity_id="sensor.ava_activities",
+            source_id="settled-activity",
+            imported_at="2026-05-01T10:00:01+00:00",
+            readonly=True,
+            photo_path=existing_path,
+            photo_url="https://cdn.procare.example/photo/settled.jpg",
+            staff=None,
+            notes=None,
+            data={"kind": "wet"},
+        )
+    )
+
+    stub = _PhotoStub()
+    monkeypatch.setattr(procare_module, "_download_procare_photo", stub)
+    hass.states.async_set("sensor.ava_activities", "ok", {"activities": []})
+
+    await importer.async_resync()
+    assert stub.calls == [], "no re-download should fire for settled entries"
+    assert coord.entry_by_id("settled-1").photo_path == existing_path
+
+
+@pytest.mark.asyncio
+async def test_backfill_failure_leaves_entry_alone(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When the backfill download fails (e.g. expired signed URL),
+    the entry stays untouched — `photo_path` is still null, `photo_url`
+    is still set, ready to be retried on the next resync.
+    """
+    importer, coord, baby = await _make_importer(hass)
+    coord._entries.append(
+        Entry(
+            id="stale-1",
+            type="diaper",
+            baby_id=baby.id,
+            timestamp="2026-05-01T10:00:00+00:00",
+            source=ENTRY_SOURCE_PROCARE,
+            source_entity_id="sensor.ava_activities",
+            source_id="stale-activity",
+            imported_at="2026-05-01T10:00:01+00:00",
+            readonly=True,
+            photo_path=None,
+            photo_url="https://cdn.procare.example/photo/stale.jpg",
+            staff=None,
+            notes=None,
+            data={"kind": "wet"},
+        )
+    )
+
+    stub = _PhotoStub(fail=True)
+    monkeypatch.setattr(procare_module, "_download_procare_photo", stub)
+    hass.states.async_set("sensor.ava_activities", "ok", {"activities": []})
+
+    await importer.async_resync()
+    assert stub.calls == ["https://cdn.procare.example/photo/stale.jpg"]
+    entry = coord.entry_by_id("stale-1")
+    assert entry.photo_path is None
+    assert entry.photo_url == "https://cdn.procare.example/photo/stale.jpg"
