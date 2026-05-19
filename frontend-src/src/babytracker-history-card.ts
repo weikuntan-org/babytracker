@@ -402,6 +402,7 @@ export class BabytrackerHistoryCard extends LitElement {
                       `}
             </ha-card>
             ${modalTemplate(
+                this.hass,
                 this._modal,
                 undefined,
                 this._submitModal,

@@ -1,6 +1,38 @@
 // Modal/lightbox forms for activities that need extra input on tap.
 import { html, type TemplateResult, nothing } from "lit";
 import { displayBabyName } from "../lib/ha-helpers";
+import "./mic-button";
+
+/**
+ * Notes input + mic button row. Used by every dialog that has a
+ * `<input name="notes">` field. The mic button transcribes speech and
+ * appends to the notes value (see `components/mic-button.ts`).
+ */
+function notesInputRow(
+    hass: any,
+    opts: {
+        placeholder?: string;
+        value?: string;
+        autofocus?: boolean;
+    } = {}
+): TemplateResult {
+    return html`
+        <div
+            style="display:flex;gap:6px;align-items:center;"
+        >
+            <input
+                id="notes"
+                name="notes"
+                type="text"
+                placeholder=${opts.placeholder ?? "optional"}
+                .value=${opts.value ?? ""}
+                ?autofocus=${opts.autofocus ?? false}
+                style="flex:1;min-width:0;"
+            />
+            <bt-mic-button .hass=${hass}></bt-mic-button>
+        </div>
+    `;
+}
 
 /**
  * Current local time as the `value` for an `<input type="datetime-local">`.
@@ -149,6 +181,7 @@ type RequestDelete = (entry: {
 }) => void;
 
 export function modalTemplate(
+    hass: any,
     modal: ModalKind | null,
     options: any,
     submit: Submit,
@@ -160,10 +193,11 @@ export function modalTemplate(
     if (modal !== null) {
         switch (modal.kind) {
             case "diaper":
-                body = diaperForm(modal.baby, submit, close);
+                body = diaperForm(hass, modal.baby, submit, close);
                 break;
             case "bottle":
                 body = bottleForm(
+                    hass,
                     modal.baby,
                     options,
                     modal.lastAmount,
@@ -173,13 +207,14 @@ export function modalTemplate(
                 );
                 break;
             case "solids":
-                body = solidsForm(modal.baby, submit, close);
+                body = solidsForm(hass, modal.baby, submit, close);
                 break;
             case "other":
-                body = otherForm(modal.baby, submit, close);
+                body = otherForm(hass, modal.baby, submit, close);
                 break;
             case "session":
                 body = sessionForm(
+                    hass,
                     modal.baby,
                     modal.activity,
                     modal.method,
@@ -209,6 +244,7 @@ export function modalTemplate(
                 break;
             case "edit_entry":
                 body = editEntryForm(
+                    hass,
                     modal.entry,
                     submit,
                     close,
@@ -216,10 +252,11 @@ export function modalTemplate(
                 );
                 break;
             case "log_growth":
-                body = growthLogForm(modal.baby, options, submit, close);
+                body = growthLogForm(hass, modal.baby, options, submit, close);
                 break;
             case "log_vaccine":
                 body = vaccineLogForm(
+                    hass,
                     modal.baby,
                     modal.defaultName ?? "",
                     modal.defaultDose,
@@ -278,6 +315,7 @@ function endSleepFirstForm(
 }
 
 function diaperForm(
+    hass: any,
     baby: string,
     submit: Submit,
     close: Close
@@ -304,12 +342,7 @@ function diaperForm(
                 .value=${_nowLocalForInput()}
             />
             <label for="notes">Notes</label>
-            <input
-                id="notes"
-                name="notes"
-                type="text"
-                placeholder="optional"
-            />
+            ${notesInputRow(hass)}
             <div
                 style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"
             >
@@ -349,6 +382,7 @@ function diaperForm(
 }
 
 function bottleForm(
+    hass: any,
     baby: string,
     options: any,
     lastAmount: number | undefined,
@@ -413,7 +447,7 @@ function bottleForm(
                 required
             />
             <label for="notes">Notes</label>
-            <input id="notes" name="notes" type="text" placeholder="optional" />
+            ${notesInputRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -423,6 +457,7 @@ function bottleForm(
 }
 
 function solidsForm(
+    hass: any,
     baby: string,
     submit: Submit,
     close: Close
@@ -449,13 +484,10 @@ function solidsForm(
             <label for="notes"
                 >What was fed <span class="muted">(optional)</span></label
             >
-            <input
-                id="notes"
-                name="notes"
-                type="text"
-                placeholder="e.g. banana, oatmeal"
-                autofocus
-            />
+            ${notesInputRow(hass, {
+                placeholder: "e.g. banana, oatmeal",
+                autofocus: true
+            })}
             <label for="when">When</label>
             <input
                 id="when"
@@ -472,6 +504,7 @@ function solidsForm(
 }
 
 function otherForm(
+    hass: any,
     baby: string,
     submit: Submit,
     close: Close
@@ -507,7 +540,7 @@ function otherForm(
                 .value=${_nowLocalForInput()}
             />
             <label for="notes">Notes</label>
-            <input id="notes" name="notes" type="text" placeholder="optional" />
+            ${notesInputRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -549,6 +582,7 @@ function confirmDeleteImportedForm(
 }
 
 function editEntryForm(
+    hass: any,
     entry: any,
     submit: Submit,
     close: Close,
@@ -827,13 +861,9 @@ function editEntryForm(
                   `
                 : ""}
             <label for="notes">Notes</label>
-            <input
-                id="notes"
-                name="notes"
-                type="text"
-                .value=${String(entry.notes ?? "")}
-                placeholder="optional"
-            />
+            ${notesInputRow(hass, {
+                value: String(entry.notes ?? "")
+            })}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button
@@ -858,6 +888,7 @@ function _editHeading(entry: any): string {
 }
 
 function sessionForm(
+    hass: any,
     baby: string,
     activity: SessionActivity,
     method: "breast_left" | "breast_right" | undefined,
@@ -951,7 +982,7 @@ function sessionForm(
                 placeholder="leave blank for an open session"
             />
             <label for="notes">Notes</label>
-            <input id="notes" name="notes" type="text" placeholder="optional" />
+            ${notesInputRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -961,6 +992,7 @@ function sessionForm(
 }
 
 function growthLogForm(
+    hass: any,
     baby: string,
     options: any,
     submit: Submit,
@@ -1064,7 +1096,7 @@ function growthLogForm(
                 .value=${_todayDateInput()}
             />
             <label for="notes">Notes</label>
-            <input id="notes" name="notes" type="text" placeholder="optional" />
+            ${notesInputRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -1137,6 +1169,7 @@ function _canonicalVaccine(name: string): string {
 }
 
 function vaccineLogForm(
+    hass: any,
     baby: string,
     defaultName: string,
     defaultDose: number | undefined,
@@ -1299,7 +1332,7 @@ function vaccineLogForm(
                 .value=${_todayDateInput()}
             />
             <label for="notes">Notes</label>
-            <input id="notes" name="notes" type="text" placeholder="optional" />
+            ${notesInputRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="submit" class="primary">Log</button>

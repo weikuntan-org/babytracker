@@ -596,6 +596,7 @@ export class BabytrackerCard extends LitElement {
                     : ""}
             </ha-card>
             ${modalTemplate(
+                this.hass,
                 this._modal,
                 this._options,
                 this._submitModal,

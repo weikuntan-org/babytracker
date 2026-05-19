@@ -637,6 +637,269 @@ const Ee = [
 function Wn(e) {
   return typeof e == "string" && e.length ? e.charAt(0).toUpperCase() + e.slice(1) : e;
 }
+// --- speech-to-text helpers (dual-path: Web Speech, then assist_pipeline) ---
+function btCanUseWebSpeech() {
+  return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+function btCanUseAssistStt(hass) {
+  return Boolean(
+    hass && hass.connection &&
+    typeof navigator !== "undefined" &&
+    navigator.mediaDevices && navigator.mediaDevices.getUserMedia &&
+    window.AudioWorkletNode
+  );
+}
+async function btStartWebSpeech() {
+  const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Ctor) throw new Error("SpeechRecognition not supported");
+  const rec = new Ctor();
+  rec.continuous = false;
+  rec.interimResults = false;
+  rec.lang = navigator.language || "en-US";
+  let resolveFn, rejectFn;
+  const done = new Promise((res, rej) => { resolveFn = res; rejectFn = rej; });
+  let finished = false;
+  rec.onresult = (e) => {
+    if (finished) return;
+    finished = true;
+    const text = Array.from(e.results || [])
+      .map((r) => (r && r[0] && r[0].transcript) || "")
+      .join(" ")
+      .trim();
+    resolveFn({ text });
+  };
+  rec.onerror = (e) => {
+    if (finished) return;
+    finished = true;
+    rejectFn(new Error((e && e.error) || "speech-recognition error"));
+  };
+  rec.onend = () => {
+    if (finished) return;
+    finished = true;
+    resolveFn({ text: "" });
+  };
+  rec.start();
+  return {
+    stop: async () => { try { rec.stop(); } catch {} return done; },
+    abort: () => { try { rec.abort(); } catch {} }
+  };
+}
+const BT_PCM_WORKLET_SRC = `
+class PcmWorklet extends AudioWorkletProcessor {
+  process(inputs) {
+    const input = inputs[0];
+    if (input && input[0] && input[0].length) {
+      const samples = input[0];
+      const pcm = new Int16Array(samples.length);
+      for (let i = 0; i < samples.length; i++) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+      this.port.postMessage(pcm.buffer, [pcm.buffer]);
+    }
+    return true;
+  }
+}
+registerProcessor("bt-pcm-worklet", PcmWorklet);
+`;
+async function btStartAssistStt(hass) {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AudioCtor({ sampleRate: 16000 });
+  const url = URL.createObjectURL(new Blob([BT_PCM_WORKLET_SRC], { type: "text/javascript" }));
+  try { await ctx.audioWorklet.addModule(url); } finally { URL.revokeObjectURL(url); }
+  const source = ctx.createMediaStreamSource(stream);
+  const worklet = new AudioWorkletNode(ctx, "bt-pcm-worklet");
+  source.connect(worklet);
+  let handlerId;
+  let unsub;
+  let resolveFn, rejectFn;
+  const done = new Promise((res, rej) => { resolveFn = res; rejectFn = rej; });
+  let finished = false;
+  const cleanup = () => {
+    try { worklet.port.onmessage = null; } catch {}
+    try { worklet.disconnect(); } catch {}
+    try { source.disconnect(); } catch {}
+    try { stream.getTracks().forEach((t) => t.stop()); } catch {}
+    try { ctx.close(); } catch {}
+    try { unsub && unsub(); } catch {}
+  };
+  const finish = (text) => {
+    if (finished) return;
+    finished = true;
+    cleanup();
+    resolveFn({ text });
+  };
+  const fail = (err) => {
+    if (finished) return;
+    finished = true;
+    cleanup();
+    rejectFn(err);
+  };
+  try {
+    unsub = await hass.connection.subscribeMessage(
+      (event) => {
+        const type = event && event.type;
+        if (type === "run-start") {
+          handlerId = event.data && event.data.runner_data && event.data.runner_data.stt_binary_handler_id;
+          worklet.port.onmessage = (msg) => {
+            if (handlerId == null || finished) return;
+            const bytes = new Uint8Array(msg.data);
+            const frame = new Uint8Array(bytes.length + 1);
+            frame[0] = handlerId;
+            frame.set(bytes, 1);
+            try { hass.connection.socket && hass.connection.socket.send(frame); } catch {}
+          };
+        } else if (type === "stt-end") {
+          const text = (event.data && event.data.stt_output && event.data.stt_output.text) || "";
+          finish(text);
+        } else if (type === "error") {
+          fail(new Error((event.data && event.data.message) || "assist_pipeline error"));
+        }
+      },
+      { type: "assist_pipeline/run", start_stage: "stt", end_stage: "stt", input: { sample_rate: 16000 } }
+    );
+  } catch (err) {
+    cleanup();
+    throw err;
+  }
+  return {
+    stop: async () => {
+      // Race: user stopped before `run-start` delivered the handler id. No
+      // way to send EOF, so the pipeline will never emit `stt-end` and
+      // `done` would hang. Tear down and resolve with empty text.
+      if (handlerId == null && !finished) {
+        finish("");
+        return done;
+      }
+      if (handlerId != null && !finished) {
+        try { hass.connection.socket && hass.connection.socket.send(new Uint8Array([handlerId])); } catch {}
+      }
+      try { worklet.port.onmessage = null; } catch {}
+      try { stream.getTracks().forEach((t) => t.stop()); } catch {}
+      return done;
+    },
+    abort: () => {
+      if (finished) return;
+      finished = true;
+      cleanup();
+      resolveFn({ text: "" });
+    }
+  };
+}
+// --- mic button (custom element bt-mic-button) ---
+let Wm = class extends P {
+  constructor() {
+    super(...arguments);
+    this._state = "idle";
+    this._onClick = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (this._state === "idle") {
+        this._state = "listening";
+        try {
+          this._controller = btCanUseWebSpeech()
+            ? await btStartWebSpeech()
+            : await btStartAssistStt(this.hass);
+        } catch (err) {
+          console.warn("babytracker: mic start failed", err);
+          this._controller = void 0;
+          this._state = "idle";
+        }
+      } else if (this._state === "listening") {
+        const controller = this._controller;
+        this._controller = void 0;
+        if (!controller) { this._state = "idle"; return; }
+        this._state = "transcribing";
+        let text = "";
+        try {
+          const res = await controller.stop();
+          text = (res && res.text) || "";
+        } catch (err) {
+          console.warn("babytracker: mic stop failed", err);
+        }
+        if (text.trim()) {
+          const form = this.closest("form");
+          const input = form && form.querySelector('input[name="notes"]');
+          if (input) {
+            const existing = String(input.value || "").trim();
+            input.value = existing ? existing + " " + text.trim() : text.trim();
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+        }
+        this._state = "idle";
+      }
+    };
+  }
+  disconnectedCallback() {
+    try { this._controller && this._controller.abort(); } catch {}
+    this._controller = void 0;
+    super.disconnectedCallback();
+  }
+  render() {
+    const supported = btCanUseWebSpeech() || btCanUseAssistStt(this.hass);
+    if (!supported) return u``;
+    const labels = { idle: "Voice input", listening: "Stop recording", transcribing: "Transcribing" };
+    const icons = { idle: "🎤", listening: "■", transcribing: "…" };
+    const label = labels[this._state];
+    return u`
+      <button
+        type="button"
+        class="mic ${this._state}"
+        aria-label=${label}
+        title=${label}
+        ?disabled=${this._state === "transcribing"}
+        @click=${this._onClick}
+      >${icons[this._state]}</button>
+    `;
+  }
+};
+Wm.styles = ut`
+  :host { display: inline-flex; }
+  .mic {
+    background: var(--secondary-background-color);
+    color: var(--primary-text-color);
+    border: 1px solid var(--divider-color);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    min-width: 36px;
+  }
+  .mic.listening {
+    background: var(--error-color, #d33);
+    color: var(--text-primary-color, #fff);
+    border-color: transparent;
+    animation: bt-mic-pulse 1s ease-in-out infinite;
+  }
+  .mic.transcribing { opacity: 0.7; cursor: progress; }
+  @keyframes bt-mic-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+`;
+F([Z({ attribute: !1 })], Wm.prototype, "hass", 2);
+F([x()], Wm.prototype, "_state", 2);
+Wm = F([ht("bt-mic-button")], Wm);
+// Notes-input row with adjacent mic button. Used by every dialog that has a
+// `<input name="notes">` field.
+function btNotesRow(hass, opts) {
+  const o = opts || {};
+  return u`
+        <div style="display:flex;gap:6px;align-items:center;">
+            <input
+                id="notes"
+                name="notes"
+                type="text"
+                placeholder=${o.placeholder ?? "optional"}
+                .value=${o.value ?? ""}
+                ?autofocus=${o.autofocus ?? false}
+                style="flex:1;min-width:0;"
+            />
+            <bt-mic-button .hass=${hass}></bt-mic-button>
+        </div>
+    `;
+}
 function Pe(e, t, i, r) {
   const n = (e == null ? void 0 : e.enabled_activities) ?? Ee, s = (e == null ? void 0 : e.enabled_feeding_methods) ?? Ne, o = (c) => c.charAt(0).toUpperCase() + c.slice(1), a = [], T = Wn((e == null ? void 0 : e.name) ?? t);
   if (n.includes("diaper") && a.push(
@@ -1194,15 +1457,16 @@ const Ke = /* @__PURE__ */ new Set([
   "tummy_time",
   "walk"
 ]);
-function Et(e, t, i, r, n, s) {
+function Et(hass, e, t, i, r, n, s) {
   let o = $;
   if (e !== null)
     switch (e.kind) {
       case "diaper":
-        o = Je(e.baby, i, n);
+        o = Je(hass, e.baby, i, n);
         break;
       case "bottle":
         o = Qe(
+          hass,
           e.baby,
           t,
           e.lastAmount,
@@ -1212,13 +1476,14 @@ function Et(e, t, i, r, n, s) {
         );
         break;
       case "solids":
-        o = ti(e.baby, i, n);
+        o = ti(hass, e.baby, i, n);
         break;
       case "other":
-        o = ei(e.baby, i, n);
+        o = ei(hass, e.baby, i, n);
         break;
       case "session":
         o = si(
+          hass,
           e.baby,
           e.activity,
           e.method,
@@ -1248,6 +1513,7 @@ function Et(e, t, i, r, n, s) {
         break;
       case "edit_entry":
         o = ni(
+          hass,
           e.entry,
           i,
           n,
@@ -1255,10 +1521,11 @@ function Et(e, t, i, r, n, s) {
         );
         break;
       case "log_growth":
-        o = oi(e.baby, t, i, n);
+        o = oi(hass, e.baby, t, i, n);
         break;
       case "log_vaccine":
         o = ci(
+          hass,
           e.baby,
           e.defaultName ?? "",
           e.defaultDose,
@@ -1302,7 +1569,7 @@ function Xe(e, t, i, r, n, s) {
         </form>
     `;
 }
-function Je(e, t, i) {
+function Je(hass, e, t, i) {
   return u`
         <form @submit=${(n) => {
     n.preventDefault();
@@ -1323,12 +1590,7 @@ function Je(e, t, i) {
                 .value=${st()}
             />
             <label for="notes">Notes</label>
-            <input
-                id="notes"
-                name="notes"
-                type="text"
-                placeholder="optional"
-            />
+            ${btNotesRow(hass)}
             <div
                 style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"
             >
@@ -1366,7 +1628,7 @@ function Je(e, t, i) {
         </form>
     `;
 }
-function Qe(e, t, i, r, n, s) {
+function Qe(hass, e, t, i, r, n, s) {
   const o = (t == null ? void 0 : t.volume_unit) ?? r ?? "oz", a = typeof i == "number" && Number.isFinite(i) ? String(i) : "";
   return u`
         <form @submit=${(d) => {
@@ -1408,7 +1670,7 @@ function Qe(e, t, i, r, n, s) {
                 required
             />
             <label for="notes">Notes</label>
-            <input id="notes" name="notes" type="text" placeholder="optional" />
+            ${btNotesRow(hass)}
             <div class="actions">
                 <button type="button" @click=${s}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -1416,7 +1678,7 @@ function Qe(e, t, i, r, n, s) {
         </form>
     `;
 }
-function ti(e, t, i) {
+function ti(hass, e, t, i) {
   return u`
         <form @submit=${(n) => {
     n.preventDefault();
@@ -1433,13 +1695,7 @@ function ti(e, t, i) {
             <label for="notes"
                 >What was fed <span class="muted">(optional)</span></label
             >
-            <input
-                id="notes"
-                name="notes"
-                type="text"
-                placeholder="e.g. banana, oatmeal"
-                autofocus
-            />
+            ${btNotesRow(hass, { placeholder: "e.g. banana, oatmeal", autofocus: true })}
             <label for="when">When</label>
             <input
                 id="when"
@@ -1454,7 +1710,7 @@ function ti(e, t, i) {
         </form>
     `;
 }
-function ei(e, t, i) {
+function ei(hass, e, t, i) {
   return u`
         <form @submit=${(n) => {
     n.preventDefault();
@@ -1484,7 +1740,7 @@ function ei(e, t, i) {
                 .value=${st()}
             />
             <label for="notes">Notes</label>
-            <input id="notes" name="notes" type="text" placeholder="optional" />
+            ${btNotesRow(hass)}
             <div class="actions">
                 <button type="button" @click=${i}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -1514,7 +1770,7 @@ function ii(e, t, i, r, n, s) {
         </form>
     `;
 }
-function ni(e, t, i, r) {
+function ni(hass, e, t, i, r) {
   const n = String((e == null ? void 0 : e.type) ?? ""), s = (e == null ? void 0 : e.data) ?? {}, o = n === "feeding" && (s.method === "bottle" || s.method === "solids"), a = n === "vaccine" || n === "growth", c = Ke.has(n) && !o, d = (h) => {
     h.preventDefault();
     const g = h.currentTarget, l = new FormData(g), m = {}, v = a ? Ct(String(l.get("started") ?? "")) : T(String(l.get("started") ?? ""));
@@ -1728,13 +1984,7 @@ function ni(e, t, i, r) {
                       </div>
                   ` : ""}
             <label for="notes">Notes</label>
-            <input
-                id="notes"
-                name="notes"
-                type="text"
-                .value=${String(e.notes ?? "")}
-                placeholder="optional"
-            />
+            ${btNotesRow(hass, { value: String(e.notes ?? "") })}
             <div class="actions">
                 <button type="button" @click=${i}>Cancel</button>
                 <button
@@ -1754,7 +2004,7 @@ function ri(e) {
   const t = String((e == null ? void 0 : e.type) ?? "entry"), i = (e == null ? void 0 : e.data) ?? {}, r = i.name ?? i.method ?? i.kind;
   return r ? `Edit ${t} (${r})` : `Edit ${t}`;
 }
-function si(e, t, i, r, n) {
+function si(hass, e, t, i, r, n) {
   const s = {
     sleep: "Log sleep",
     tummy_time: "Log tummy time",
@@ -1828,7 +2078,7 @@ function si(e, t, i, r, n) {
                 placeholder="leave blank for an open session"
             />
             <label for="notes">Notes</label>
-            <input id="notes" name="notes" type="text" placeholder="optional" />
+            ${btNotesRow(hass)}
             <div class="actions">
                 <button type="button" @click=${n}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -1836,7 +2086,7 @@ function si(e, t, i, r, n) {
         </form>
     `;
 }
-function oi(e, t, i, r) {
+function oi(hass, e, t, i, r) {
   const n = (t == null ? void 0 : t.weight_unit) ?? "kg", s = (t == null ? void 0 : t.length_unit) ?? "cm";
   return u`
         <form @submit=${(a) => {
@@ -1928,7 +2178,7 @@ function oi(e, t, i, r) {
                 .value=${se()}
             />
             <label for="notes">Notes</label>
-            <input id="notes" name="notes" type="text" placeholder="optional" />
+            ${btNotesRow(hass)}
             <div class="actions">
                 <button type="button" @click=${r}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -1977,7 +2227,7 @@ const ai = [
 function Bt(e) {
   return li[e] ?? e;
 }
-function ci(e, t, i, r, n, s) {
+function ci(hass, e, t, i, r, n, s) {
   const o = [
     "left_thigh",
     "right_thigh",
@@ -2089,7 +2339,7 @@ function ci(e, t, i, r, n, s) {
                 .value=${se()}
             />
             <label for="notes">Notes</label>
-            <input id="notes" name="notes" type="text" placeholder="optional" />
+            ${btNotesRow(hass)}
             <div class="actions">
                 <button type="button" @click=${s}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -2408,6 +2658,7 @@ let A = class extends P {
                 ${e.includes("export") ? re(this.hass, this._config.baby) : ""}
             </ha-card>
             ${Et(
+      this.hass,
       this._modal,
       this._options,
       this._submitModal,
@@ -2772,6 +3023,7 @@ let D = class extends P {
                       `}
             </ha-card>
             ${Et(
+      this.hass,
       this._modal,
       void 0,
       this._submitModal,
@@ -3175,6 +3427,7 @@ let S = class extends P {
                 ${e.includes("export") ? re(this.hass, this._baby()) : ""}
             </ha-card>
             ${Et(
+      this.hass,
       this._modal,
       this._options,
       this._submitModal,
