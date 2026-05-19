@@ -37,8 +37,7 @@ const DEFAULT_SECTIONS = [
     "active_session",
     "quick_log",
     "recent",
-    "importer_sync",
-    "export"
+    "importer_sync"
 ];
 
 @customElement("babytracker-card")
