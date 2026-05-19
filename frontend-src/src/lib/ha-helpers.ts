@@ -92,3 +92,23 @@ export function subscribeEntriesInRange(
     })();
     return () => unsub.current?.();
 }
+
+export function subscribeVaccines(
+    hass: any,
+    baby: string,
+    cb: (entries: any[]) => void
+): () => void {
+    const unsub: { current?: () => void } = {};
+    (async () => {
+        try {
+            const unsubscribe = await hass.connection.subscribeMessage(
+                cb,
+                { type: "babytracker/list_vaccines", baby, subscribe: true }
+            );
+            unsub.current = unsubscribe;
+        } catch (err) {
+            console.warn("babytracker: subscribeVaccines failed", err);
+        }
+    })();
+    return () => unsub.current?.();
+}
