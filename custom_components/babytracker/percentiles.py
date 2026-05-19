@@ -119,6 +119,36 @@ def to_cm(value: float, unit: str) -> float:
     return value if unit == "cm" else in_to_cm(value)
 
 
+def kg_to_lb(value: float) -> float:
+    return value / LB_TO_KG
+
+
+def cm_to_in(value: float) -> float:
+    return value / IN_TO_CM
+
+
+def convert_weight(value: float, from_unit: str, to_unit: str) -> float:
+    """Convert between weight units (kg ↔ lb). Unknown units pass through."""
+    if from_unit == to_unit:
+        return value
+    if from_unit == "lb" and to_unit == "kg":
+        return lb_to_kg(value)
+    if from_unit == "kg" and to_unit == "lb":
+        return kg_to_lb(value)
+    return value
+
+
+def convert_length(value: float, from_unit: str, to_unit: str) -> float:
+    """Convert between length units (cm ↔ in). Unknown units pass through."""
+    if from_unit == to_unit:
+        return value
+    if from_unit == "in" and to_unit == "cm":
+        return in_to_cm(value)
+    if from_unit == "cm" and to_unit == "in":
+        return cm_to_in(value)
+    return value
+
+
 def bmi(weight_kg: float, height_cm: float) -> float:
     if height_cm <= 0:
         return 0.0
