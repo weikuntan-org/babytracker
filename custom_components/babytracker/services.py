@@ -674,7 +674,7 @@ _PERCENTILE_FIELDS = (
     "height_percentile",
     "height_z",
     "height_percentile_source",
-    "head_circumference_percentile",
+    "head_percentile",
     "head_z",
     "head_percentile_source",
     "bmi",

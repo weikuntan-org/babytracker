@@ -79,6 +79,12 @@ export function growthChartTemplate(
     const heightP =
         entryData.height_percentile ??
         hass.states[babyEntityId(baby, "height_percentile")]?.state;
+    // The entry data key is `head_percentile` (see `percentiles.py`); the
+    // sensor's suffix is `head_circumference_percentile`. Read from
+    // whichever resolves first.
+    const headP =
+        entryData.head_percentile ??
+        hass.states[babyEntityId(baby, "head_circumference_percentile")]?.state;
     const measuredOn = _fmtDate(latestEntry?.timestamp);
     const clickable = !!(latestEntry && onEdit);
     const triggerEdit = clickable
@@ -135,40 +141,10 @@ export function growthChartTemplate(
                     </div>
                     <div>
                         <div class="label">Head</div>
-                        <div>${_fmtValue(head)} ${lengthUnit}</div>
+                        <div>${_fmtValue(head)} ${lengthUnit} · ${_fmtPercentile(headP)}</div>
                     </div>
                 </div>
             </div>
-            ${_inlineChart(hass, baby)}
         </div>
-    `;
-}
-
-function _inlineChart(_hass: any, _baby: string): TemplateResult {
-    const bands = [3, 15, 50, 85, 97];
-    return html`
-        <svg viewBox="0 0 300 120" role="img" aria-label="Growth chart placeholder">
-            ${bands.map(
-                (b, i) => html`
-                    <line
-                        x1="0"
-                        x2="300"
-                        y1="${20 + i * 20}"
-                        y2="${20 + i * 20}"
-                        stroke="var(--divider-color)"
-                        stroke-dasharray="4 4"
-                    />
-                    <text
-                        x="290"
-                        y="${20 + i * 20 - 4}"
-                        font-size="9"
-                        fill="var(--secondary-text-color)"
-                        text-anchor="end"
-                    >
-                        p${b}
-                    </text>
-                `
-            )}
-        </svg>
     `;
 }
