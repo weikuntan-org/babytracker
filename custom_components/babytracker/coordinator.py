@@ -15,6 +15,7 @@ from homeassistant.util import slugify
 from .const import (
     ALL_ACTIVITIES,
     ALL_FEEDING_METHODS,
+    CURRENT_BABY_SCHEMA_VERSION,
     DOMAIN,
     RECENT_ENTRIES_CAP,
     RESERVED_SLUGS,
@@ -51,6 +52,37 @@ class BabytrackerCoordinator:
         # Bring at_daycare back from importer config if any
         for baby in self._babies:
             self._at_daycare.setdefault(baby.slug, False)
+        if self._migrate_babies():
+            # Migration touched at least one baby — persist so the change
+            # survives a restart and we don't re-run the migration next time.
+            await self._async_persist()
+
+    def _migrate_babies(self) -> bool:
+        """Bring older babies up to CURRENT_BABY_SCHEMA_VERSION.
+
+        Per-baby: union enabled_activities with the current ALL_ACTIVITIES
+        list. New activity types added in later releases (walk in v0.x,
+        other in v0.y) end up enabled on existing babies that were
+        configured before those types existed. Users can disable them via
+        the options flow; once schema_version reaches the current version
+        the migration won't run again.
+        """
+        changed = False
+        for baby in self._babies:
+            if baby.schema_version >= CURRENT_BABY_SCHEMA_VERSION:
+                continue
+            existing = set(baby.enabled_activities)
+            additions = [a for a in ALL_ACTIVITIES if a not in existing]
+            if additions:
+                baby.enabled_activities = list(baby.enabled_activities) + additions
+                _LOGGER.info(
+                    "babytracker: migrated %s enabled_activities += %s",
+                    baby.slug,
+                    additions,
+                )
+            baby.schema_version = CURRENT_BABY_SCHEMA_VERSION
+            changed = True
+        return changed
 
     @property
     def babies(self) -> list[Baby]:

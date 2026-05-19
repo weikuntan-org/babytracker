@@ -346,6 +346,25 @@ export class BabytrackerCard extends LitElement {
         );
     }
 
+    private _lastBottle():
+        | { amount: number; unit: "ml" | "oz" }
+        | undefined {
+        const sensor =
+            this.hass?.states?.[this._entityId("recent_entries")];
+        const entries: any[] = sensor?.attributes?.entries ?? [];
+        for (const e of entries) {
+            if (
+                e?.type === "feeding" &&
+                e?.data?.method === "bottle" &&
+                typeof e?.data?.amount === "number" &&
+                (e?.data?.unit === "ml" || e?.data?.unit === "oz")
+            ) {
+                return { amount: e.data.amount, unit: e.data.unit };
+            }
+        }
+        return undefined;
+    }
+
     private _interceptIfSleeping(
         label: string,
         action: () => void | Promise<void>
@@ -379,7 +398,17 @@ export class BabytrackerCard extends LitElement {
                 other: "logging this"
             };
             this._interceptIfSleeping(labels[target], () => {
-                this._modal = { kind: target, baby };
+                if (target === "bottle") {
+                    const last = this._lastBottle();
+                    this._modal = {
+                        kind: "bottle",
+                        baby,
+                        lastAmount: last?.amount,
+                        lastUnit: last?.unit
+                    };
+                } else {
+                    this._modal = { kind: target, baby };
+                }
             });
             return;
         }
