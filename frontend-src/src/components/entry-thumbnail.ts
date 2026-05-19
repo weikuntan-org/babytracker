@@ -21,6 +21,10 @@ export class EntryThumbnail extends LitElement {
     @state() private _open = false;
 
     private _lastResolved = "";
+    // Bumped on every `_maybeResolve` call. The async callback drops its
+    // result if the token has moved on, so a slow resolve for an
+    // already-replaced `photoPath` can't overwrite the newer `_url`.
+    private _resolveToken = 0;
 
     public updated(changed: Map<string, unknown>): void {
         if (changed.has("hass") || changed.has("photoPath")) {
@@ -28,15 +32,25 @@ export class EntryThumbnail extends LitElement {
         }
     }
 
+    public disconnectedCallback(): void {
+        // The keydown listener is only attached while the lightbox is
+        // open, but tearing down on disconnect avoids a stale listener
+        // if the row is removed mid-view (e.g. an entries refresh).
+        this._detachKeyHandler();
+        super.disconnectedCallback();
+    }
+
     private async _maybeResolve(): Promise<void> {
         if (!this.hass?.connection || !this.photoPath) return;
         if (this._lastResolved === this.photoPath && this._url) return;
         this._lastResolved = this.photoPath;
+        const token = ++this._resolveToken;
         try {
             const result = await this.hass.callWS({
                 type: "media_source/resolve_media",
                 media_content_id: this.photoPath
             });
+            if (token !== this._resolveToken) return;
             const url = (result as any)?.url;
             if (typeof url === "string" && url.length > 0) {
                 this._url = url;
@@ -45,16 +59,33 @@ export class EntryThumbnail extends LitElement {
                 this._failed = true;
             }
         } catch (err) {
+            if (token !== this._resolveToken) return;
             console.warn("babytracker: resolve photo failed", err);
             this._failed = true;
         }
     }
 
+    private _onKeydown = (e: KeyboardEvent): void => {
+        if (e.key === "Escape") {
+            e.preventDefault();
+            this._close_lightbox();
+        }
+    };
+
+    private _attachKeyHandler(): void {
+        window.addEventListener("keydown", this._onKeydown);
+    }
+
+    private _detachKeyHandler(): void {
+        window.removeEventListener("keydown", this._onKeydown);
+    }
+
     private _open_lightbox = (e: MouseEvent): void => {
         e.preventDefault();
         e.stopPropagation();
-        if (!this._url) return;
+        if (!this._url || this._open) return;
         this._open = true;
+        this._attachKeyHandler();
     };
 
     private _close_lightbox = (e?: Event): void => {
@@ -62,7 +93,9 @@ export class EntryThumbnail extends LitElement {
             e.preventDefault();
             e.stopPropagation();
         }
+        if (!this._open) return;
         this._open = false;
+        this._detachKeyHandler();
     };
 
     private _onImgError = (): void => {

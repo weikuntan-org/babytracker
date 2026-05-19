@@ -1051,22 +1051,40 @@ let Wb = class extends P {
     this._failed = false;
     this._open = false;
     this._lastResolved = "";
+    // Bumped on every `_maybeResolve` call. The async callback drops its
+    // result if the token has moved on, so a slow resolve for an
+    // already-replaced `photoPath` can't overwrite the newer `_url`.
+    this._resolveToken = 0;
+    this._onKeydown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        this._closeLightbox();
+      }
+    };
     this._openLightbox = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!this._url) return;
+      if (!this._url || this._open) return;
       this._open = true;
+      window.addEventListener("keydown", this._onKeydown);
     };
     this._closeLightbox = (e) => {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
       }
+      if (!this._open) return;
       this._open = false;
+      window.removeEventListener("keydown", this._onKeydown);
     };
     this._onImgError = () => {
       this._failed = true;
     };
+  }
+  disconnectedCallback() {
+    // Tear down the keydown listener if the row is removed mid-view.
+    window.removeEventListener("keydown", this._onKeydown);
+    super.disconnectedCallback();
   }
   updated(changed) {
     if (changed.has("hass") || changed.has("photoPath")) {
@@ -1077,11 +1095,13 @@ let Wb = class extends P {
     if (!(this.hass && this.hass.connection) || !this.photoPath) return;
     if (this._lastResolved === this.photoPath && this._url) return;
     this._lastResolved = this.photoPath;
+    const token = ++this._resolveToken;
     try {
       const result = await this.hass.callWS({
         type: "media_source/resolve_media",
         media_content_id: this.photoPath
       });
+      if (token !== this._resolveToken) return;
       const url = result && result.url;
       if (typeof url === "string" && url.length > 0) {
         this._url = url;
@@ -1090,6 +1110,7 @@ let Wb = class extends P {
         this._failed = true;
       }
     } catch (err) {
+      if (token !== this._resolveToken) return;
       console.warn("babytracker: resolve photo failed", err);
       this._failed = true;
     }
