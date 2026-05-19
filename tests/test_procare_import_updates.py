@@ -416,12 +416,19 @@ async def test_resync_backfills_photos_for_orphan_entries(
 
 @pytest.mark.asyncio
 async def test_backfill_skips_entries_with_local_copy(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
-    """Backfill must not re-download photos that already have a local
-    copy — that's the whole point of the `not photo_path` guard.
+    """Backfill must not re-download photos whose local copy exists on
+    disk — re-downloading every settled entry on each resync would be
+    wasteful and would also churn through the upstream's signed-URL
+    expiry budget unnecessarily.
     """
     importer, coord, baby = await _make_importer(hass)
+    # Point the `local` media_dir at tmp_path and create the file the
+    # entry references, so the backfill sees it on disk and skips.
+    hass.config.media_dirs = {"local": str(tmp_path)}
+    (tmp_path / "babytracker").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "babytracker" / "already.jpg").write_bytes(b"\x00")
     existing_path = "media-source://media_source/local/babytracker/already.jpg"
     coord._entries.append(
         Entry(
@@ -449,6 +456,53 @@ async def test_backfill_skips_entries_with_local_copy(
     await importer.async_resync()
     assert stub.calls == [], "no re-download should fire for settled entries"
     assert coord.entry_by_id("settled-1").photo_path == existing_path
+
+
+@pytest.mark.asyncio
+async def test_backfill_retries_entries_with_missing_on_disk_file(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """An entry whose `photo_path` is set but whose file is missing on
+    disk (typical cause: prior build wrote to `<config>/media` while
+    this install's `media_dirs.local` points elsewhere, so the
+    `media_source/resolve_media` URL 404s) gets re-downloaded on
+    resync so the card stops showing the fallback icon.
+    """
+    importer, coord, baby = await _make_importer(hass)
+    hass.config.media_dirs = {"local": str(tmp_path)}
+    # photo_path is set but no file exists under tmp_path/babytracker/.
+    coord._entries.append(
+        Entry(
+            id="broken-1",
+            type="diaper",
+            baby_id=baby.id,
+            timestamp="2026-05-01T10:00:00+00:00",
+            source=ENTRY_SOURCE_PROCARE,
+            source_entity_id="sensor.ava_activities",
+            source_id="broken-activity",
+            imported_at="2026-05-01T10:00:01+00:00",
+            readonly=True,
+            photo_path="media-source://media_source/local/babytracker/missing.jpg",
+            photo_url="https://cdn.procare.example/photo/broken.jpg",
+            staff=None,
+            notes=None,
+            data={"kind": "wet"},
+        )
+    )
+
+    stub = _PhotoStub()
+    monkeypatch.setattr(procare_module, "_download_procare_photo", stub)
+    hass.states.async_set("sensor.ava_activities", "ok", {"activities": []})
+
+    await importer.async_resync()
+    assert stub.calls == ["https://cdn.procare.example/photo/broken.jpg"]
+    updated = coord.entry_by_id("broken-1")
+    assert updated is not None
+    # New photo_path points to a fresh download (the stub returns a
+    # deterministic hash-derived URL); the broken one is replaced.
+    assert updated.photo_path is not None
+    assert updated.photo_path != "media-source://media_source/local/babytracker/missing.jpg"
+    assert updated.photo_url == "https://cdn.procare.example/photo/broken.jpg"
 
 
 @pytest.mark.asyncio
@@ -573,7 +627,7 @@ async def test_download_procare_photo_sniffs_octet_stream_jpeg(
     them. With sniffing in place the JPEG magic bytes win and the photo
     is written.
     """
-    monkeypatch.setattr(hass.config, "path", lambda *parts: str(tmp_path.joinpath(*parts)))
+    hass.config.media_dirs = {"local": str(tmp_path)}
     session = _FakeSession(
         _FakeResponse(content_type="application/octet-stream", payload=_JPEG_HEAD)
     )
@@ -597,7 +651,7 @@ async def test_download_procare_photo_drops_octet_stream_with_unknown_payload(
     """If the header is generic AND the payload isn't a recognisable
     image, we drop it — we never write bytes whose format we can't name.
     """
-    monkeypatch.setattr(hass.config, "path", lambda *parts: str(tmp_path.joinpath(*parts)))
+    hass.config.media_dirs = {"local": str(tmp_path)}
     session = _FakeSession(
         _FakeResponse(
             content_type="application/octet-stream",

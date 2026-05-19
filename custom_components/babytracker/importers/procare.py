@@ -32,6 +32,7 @@ from ..models import Baby, Entry
 from ..photo_storage import (
     PHOTO_MAX_BYTES,
     PHOTO_MIME_TO_EXT,
+    local_path_for,
     sniff_image_mime,
     write_photo,
 )
@@ -320,27 +321,39 @@ class ProcareImporter(BaseImporter):
         return imported
 
     async def _backfill_photo_paths(self) -> int:
-        """Retry photo downloads for our own Procare-sourced entries
-        that have a `photo_url` set but no local `photo_path` yet.
+        """Retry photo downloads for Procare-sourced entries whose
+        `photo_url` is set and whose locally-stored copy is either
+        absent or no longer on disk.
 
-        This is the only path that backfills entries whose source
-        activity has aged out of the upstream sensor's cache — the
-        per-activity loop in `async_resync` can't see them. We
-        snapshot the candidates before iterating because
-        `update_imported_entry` mutates the coordinator's entry list.
+        Two cases are covered:
+        - `photo_path` was never set (initial download failed, or the
+          first import predated the photo-download feature). Source
+          activities that aged out of the upstream sensor's cache are
+          only reachable through this path.
+        - `photo_path` is set but the file is missing on disk (most
+          commonly: an earlier build wrote under `<config>/media` but
+          this install's `media_dirs.local` points elsewhere, so the
+          resolver 404s).
 
-        Returns the number of entries that gained a local copy. A
-        failed download leaves the entry alone (its `photo_url` is
-        preserved as the upstream pointer) and we'll retry on the
-        next resync.
+        Returns the number of entries that gained (or regained) a local
+        copy. A failed download leaves the entry alone — its existing
+        fields are preserved and we'll retry on the next resync.
         """
-        candidates = [
-            e
-            for e in self.coordinator.entries_by_baby(self.baby.id)
-            if e.source == ENTRY_SOURCE_PROCARE
-            and e.photo_url
-            and not e.photo_path
-        ]
+        candidates: list[Entry] = []
+        for entry in self.coordinator.entries_by_baby(self.baby.id):
+            if entry.source != ENTRY_SOURCE_PROCARE or not entry.photo_url:
+                continue
+            if not entry.photo_path:
+                candidates.append(entry)
+                continue
+            target = local_path_for(self.hass, entry.photo_path)
+            if target is None:
+                # photo_path doesn't fit our `media-source://media_source/local/…`
+                # shape — leave it for the user to manage.
+                continue
+            exists = await self.hass.async_add_executor_job(target.exists)
+            if not exists:
+                candidates.append(entry)
         backfilled = 0
         for entry in candidates:
             photo_path = await _download_procare_photo(
