@@ -725,7 +725,7 @@ function fe(e, t, i, n) {
         </div>
     `;
 }
-function y(e, t, i = "sensor") {
+function v(e, t, i = "sensor") {
   return `${i}.babytracker_${e}_${t}`;
 }
 async function _e(e, t, i, n) {
@@ -796,11 +796,11 @@ function ve(e, t, i, n, s) {
 }
 function $e(e, t, i) {
   var c, d, h, p, b, m;
-  const n = ((c = e.states[y(t, "sleeping", "binary_sensor")]) == null ? void 0 : c.state) === "on", s = ((d = e.states[y(t, "feeding", "binary_sensor")]) == null ? void 0 : d.state) === "on", r = ((h = e.states[y(t, "tummy_time", "binary_sensor")]) == null ? void 0 : h.state) === "on", o = ((p = e.states[y(t, "walking", "binary_sensor")]) == null ? void 0 : p.state) === "on";
+  const n = ((c = e.states[v(t, "sleeping", "binary_sensor")]) == null ? void 0 : c.state) === "on", s = ((d = e.states[v(t, "feeding", "binary_sensor")]) == null ? void 0 : d.state) === "on", r = ((h = e.states[v(t, "tummy_time", "binary_sensor")]) == null ? void 0 : h.state) === "on", o = ((p = e.states[v(t, "walking", "binary_sensor")]) == null ? void 0 : p.state) === "on";
   if (!n && !s && !r && !o) return "";
   const a = [];
   if (n) {
-    const l = (b = e.states[y(t, "last_sleep_start")]) == null ? void 0 : b.state;
+    const l = (b = e.states[v(t, "last_sleep_start")]) == null ? void 0 : b.state;
     a.push(
       u`
                 <div class="chip warning" role="status">
@@ -840,7 +840,7 @@ function $e(e, t, i) {
                 </div>
             `
   ), o) {
-    const l = (m = e.states[y(t, "last_walk_start")]) == null ? void 0 : m.state;
+    const l = (m = e.states[v(t, "last_walk_start")]) == null ? void 0 : m.state;
     a.push(
       u`
                 <div class="chip warning" role="status">
@@ -884,8 +884,8 @@ function xe(e, t = Date.now(), i = Ft) {
     if (b.type === "sleep") {
       const l = m, g = b.ended_at != null && b.ended_at !== "" ? H(b.ended_at) : t;
       if (l > 0 && g > l && g > n) {
-        const f = Math.max(l, n), v = Math.min(g, t);
-        v > f && (c += (v - f) / 6e4);
+        const f = Math.max(l, n), $ = Math.min(g, t);
+        $ > f && (c += ($ - f) / 6e4);
       }
       continue;
     }
@@ -956,9 +956,7 @@ function Bt(e, t, i, n) {
                       @keydown=${(s) => {
     (s.key === "Enter" || s.key === " ") && (s.preventDefault(), s.stopPropagation(), n(e.id));
   }}
-                  >
-                      ${e.notes}
-                  </div>` : ""}
+                  >${e.notes}</div>` : ""}
         </li>
     `;
 }
@@ -975,7 +973,7 @@ function Ce(e) {
 function De(e, t, i, n, s = /* @__PURE__ */ new Set(), r = () => {
 }) {
   var d;
-  const o = e.states[y(t, "recent_entries")], a = ((d = o == null ? void 0 : o.attributes) == null ? void 0 : d.entries) ?? [], c = we(a).slice(0, Math.min(n, 50));
+  const o = e.states[v(t, "recent_entries")], a = ((d = o == null ? void 0 : o.attributes) == null ? void 0 : d.entries) ?? [], c = we(a).slice(0, Math.min(n, 50));
   return u`
         <div class="section" role="region" aria-label="Last 24 hours">
             <h2>Last 24 hours</h2>
@@ -996,7 +994,7 @@ function De(e, t, i, n, s = /* @__PURE__ */ new Set(), r = () => {
 }
 function jt(e, t, i, n, s) {
   var b, m, l, g, f;
-  const r = (n == null ? void 0 : n.weight) ?? (i == null ? void 0 : i.weight_unit) ?? "kg", o = (n == null ? void 0 : n.length) ?? (i == null ? void 0 : i.length_unit) ?? "cm", a = ((b = e.states[y(t, "weight")]) == null ? void 0 : b.state) ?? "—", c = ((m = e.states[y(t, "height")]) == null ? void 0 : m.state) ?? "—", d = ((l = e.states[y(t, "head_circumference")]) == null ? void 0 : l.state) ?? "—", h = ((g = e.states[y(t, "weight_percentile")]) == null ? void 0 : g.state) ?? "—", p = ((f = e.states[y(t, "height_percentile")]) == null ? void 0 : f.state) ?? "—";
+  const r = (n == null ? void 0 : n.weight) ?? (i == null ? void 0 : i.weight_unit) ?? "kg", o = (n == null ? void 0 : n.length) ?? (i == null ? void 0 : i.length_unit) ?? "cm", a = ((b = e.states[v(t, "weight")]) == null ? void 0 : b.state) ?? "—", c = ((m = e.states[v(t, "height")]) == null ? void 0 : m.state) ?? "—", d = ((l = e.states[v(t, "head_circumference")]) == null ? void 0 : l.state) ?? "—", h = ((g = e.states[v(t, "weight_percentile")]) == null ? void 0 : g.state) ?? "—", p = ((f = e.states[v(t, "height_percentile")]) == null ? void 0 : f.state) ?? "—";
   return u`
         <div class="section" role="region" aria-label="Growth">
             <div
@@ -1099,7 +1097,7 @@ function Ne(e, t, i) {
 }
 function Me(e, t, i) {
   var o, a;
-  const n = (o = e.states) == null ? void 0 : o[y(t, "recent_entries")], s = ((a = n == null ? void 0 : n.attributes) == null ? void 0 : a.entries) ?? [], r = xe(s);
+  const n = (o = e.states) == null ? void 0 : o[v(t, "recent_entries")], s = ((a = n == null ? void 0 : n.attributes) == null ? void 0 : a.entries) ?? [], r = xe(s);
   return u`
         <div class="chips" role="list" aria-label="Last 24 hours summary">
             <div class="chip" role="listitem">${r.feedings} feedings</div>
@@ -1460,22 +1458,22 @@ function Re(e, t, i, n) {
     p.preventDefault();
     const b = p.currentTarget, m = new FormData(b), l = {}, g = x(String(m.get("started") ?? ""));
     if (g && (l.timestamp = g), a) {
-      const $ = x(String(m.get("ended") ?? ""));
-      l.ended_at = $ ?? null;
+      const y = x(String(m.get("ended") ?? ""));
+      l.ended_at = y ?? null;
     } else o && g && (l.ended_at = g);
     const f = String(m.get("notes") ?? "");
     l.notes = f || null;
-    const v = {};
+    const $ = {};
     if (s === "diaper")
-      v.kind = String(m.get("kind") ?? r.kind ?? "wet");
+      $.kind = String(m.get("kind") ?? r.kind ?? "wet");
     else if (s === "feeding" && r.method === "bottle") {
-      const $ = String(m.get("amount") ?? ""), J = $ === "" ? null : Number($);
-      v.amount = J, v.unit = String(m.get("unit") ?? r.unit ?? "oz");
+      const y = String(m.get("amount") ?? ""), J = y === "" ? null : Number(y);
+      $.amount = J, $.unit = String(m.get("unit") ?? r.unit ?? "oz");
     } else if (s === "other" || s === "medication") {
-      const $ = String(m.get("name") ?? "");
-      $ && (v.name = $);
+      const y = String(m.get("name") ?? "");
+      y && ($.name = y);
     }
-    Object.keys(v).length && (l.data = v), t("edit_entry", { entry_id: e.id, fields: l });
+    Object.keys($).length && (l.data = $), t("edit_entry", { entry_id: e.id, fields: l });
   }, d = () => {
     if (!n) {
       i();
@@ -1783,28 +1781,32 @@ function je(e, t, i, n, s, r) {
     "right_arm",
     "oral",
     "nasal"
-  ], a = (d) => {
-    d.preventDefault();
-    const h = d.currentTarget, p = new FormData(h), b = String(p.get("name") ?? "").trim();
-    if (!b) return;
-    const m = String(p.get("dose_number") ?? "").trim(), l = m === "" ? void 0 : Number(m), g = String(p.get("site") ?? "").trim() || void 0, f = String(p.get("lot_number") ?? "").trim() || void 0, v = String(p.get("provider") ?? "").trim() || void 0;
+  ], a = (h) => {
+    h.preventDefault();
+    const p = h.currentTarget, b = new FormData(p), m = String(b.get("name") ?? "").trim();
+    if (!m) return;
+    const l = String(b.get("dose_number") ?? "").trim(), g = l === "" ? void 0 : Number(l), f = String(b.get("site") ?? "").trim() || void 0, $ = String(b.get("lot_number") ?? "").trim() || void 0, y = String(b.get("provider") ?? "").trim() || void 0;
     s("log_vaccine", {
       baby: e,
-      name: b,
-      dose_number: l,
-      site: g,
-      lot_number: f,
-      provider: v,
-      timestamp: x(String(p.get("when") ?? "")),
-      notes: String(p.get("notes") ?? "") || void 0
+      name: m,
+      dose_number: g,
+      site: f,
+      lot_number: $,
+      provider: y,
+      timestamp: x(String(b.get("when") ?? "")),
+      notes: String(b.get("notes") ?? "") || void 0
     });
   }, c = Array.from(
     new Set(
       [t, ...n].filter(
-        (d) => !!d && d !== "none"
+        (h) => !!h && h !== "none"
       )
     )
-  );
+  ), d = (h) => (p) => {
+    var m;
+    const b = (m = p.currentTarget.closest("form")) == null ? void 0 : m.querySelector("#vaccine_name");
+    b && (b.value = h, b.focus());
+  };
   return u`
         <form @submit=${a}>
             <h2>Log vaccine</h2>
@@ -1813,17 +1815,22 @@ function je(e, t, i, n, s, r) {
                 id="vaccine_name"
                 name="name"
                 type="text"
-                list="vaccine_names"
                 .value=${t && t !== "none" ? t : ""}
                 placeholder="e.g. DTaP"
                 required
                 autofocus
             />
-            <datalist id="vaccine_names">
-                ${c.map(
-    (d) => u`<option value=${d}></option>`
+            ${c.length > 0 ? u`<div class="suggest-row" role="group" aria-label="Suggested vaccines">
+                      ${c.map(
+    (h) => u`<button
+                              type="button"
+                              class="suggest-chip"
+                              @click=${d(h)}
+                          >
+                              ${h}
+                          </button>`
   )}
-            </datalist>
+                  </div>` : ""}
             <label for="dose_number"
                 >Dose number <span class="muted">(auto if blank)</span></label
             >
@@ -1841,7 +1848,7 @@ function je(e, t, i, n, s, r) {
             <select id="site" name="site">
                 <option value="">(unspecified)</option>
                 ${o.map(
-    (d) => u`<option value=${d}>${d.replace("_", " ")}</option>`
+    (h) => u`<option value=${h}>${h.replace("_", " ")}</option>`
   )}
             </select>
             <label for="lot_number">Lot number</label>
@@ -1877,7 +1884,7 @@ function je(e, t, i, n, s, r) {
 const pt = 24 * 60 * 60 * 1e3, Mt = 29.5735;
 function We(e, t, i = 7) {
   var h, p, b, m;
-  const n = (h = e == null ? void 0 : e.states) == null ? void 0 : h[y(t, "recent_entries")], s = ((p = n == null ? void 0 : n.attributes) == null ? void 0 : p.entries) ?? [], r = Date.now(), o = new Date(r);
+  const n = (h = e == null ? void 0 : e.states) == null ? void 0 : h[v(t, "recent_entries")], s = ((p = n == null ? void 0 : n.attributes) == null ? void 0 : p.entries) ?? [], r = Date.now(), o = new Date(r);
   o.setHours(0, 0, 0, 0);
   const a = [], c = (l) => l.toLocaleDateString([], { weekday: "short" });
   for (let l = i - 1; l >= 0; l--) {
@@ -1896,16 +1903,16 @@ function We(e, t, i = 7) {
     if (!Number.isFinite(g)) continue;
     const f = Math.floor((g - d) / pt);
     if (f < 0 || f >= i) continue;
-    const v = a[f];
+    const $ = a[f];
     if (l.type === "feeding") {
-      v.feedings += 1;
-      const $ = Number(((b = l == null ? void 0 : l.data) == null ? void 0 : b.amount) ?? 0), J = String(((m = l == null ? void 0 : l.data) == null ? void 0 : m.unit) ?? "");
-      $ > 0 && J === "oz" ? v.bottleMl += $ * Mt : $ > 0 && J === "ml" && (v.bottleMl += $);
+      $.feedings += 1;
+      const y = Number(((b = l == null ? void 0 : l.data) == null ? void 0 : b.amount) ?? 0), J = String(((m = l == null ? void 0 : l.data) == null ? void 0 : m.unit) ?? "");
+      y > 0 && J === "oz" ? $.bottleMl += y * Mt : y > 0 && J === "ml" && ($.bottleMl += y);
     } else if (l.type === "diaper")
-      v.diapers += 1;
+      $.diapers += 1;
     else if (l.type === "sleep") {
-      const $ = l != null && l.ended_at && l.ended_at !== "" ? Date.parse(l.ended_at) : r;
-      Number.isFinite($) && $ > g && (v.sleepMinutes += ($ - g) / 6e4);
+      const y = l != null && l.ended_at && l.ended_at !== "" ? Date.parse(l.ended_at) : r;
+      Number.isFinite(y) && y > g && ($.sleepMinutes += (y - g) / 6e4);
     }
   }
   return a.every((l) => l.sleepMinutes === 0 && l.feedings === 0 && l.diapers === 0) ? "" : u`
@@ -1985,9 +1992,9 @@ function Q(e, t, i) {
 }
 function Ve(e, t, i) {
   var r, o;
-  const n = e.states[y(t, "vaccines_due")];
+  const n = e.states[v(t, "vaccines_due")];
   if (!n || n.state === "unknown") return "";
-  const s = ((r = e.states[y(t, "vaccines_overdue", "binary_sensor")]) == null ? void 0 : r.state) === "on";
+  const s = ((r = e.states[v(t, "vaccines_overdue", "binary_sensor")]) == null ? void 0 : r.state) === "on";
   return u`
         <div
             class="section chip ${s ? "warning" : ""}"
@@ -2028,7 +2035,7 @@ let O = class extends C {
     }, this._requestLogVaccine = () => {
       var o, a, c, d, h;
       if (!((o = this._config) != null && o.baby)) return;
-      const e = (c = (a = this.hass) == null ? void 0 : a.states) == null ? void 0 : c[y(this._config.baby, "vaccines_due")], t = e != null && e.state && e.state !== "none" && e.state !== "unknown" ? String(e.state) : "", i = (d = e == null ? void 0 : e.attributes) == null ? void 0 : d.dose_number, n = typeof i == "number" ? i : void 0, r = (Array.isArray((h = e == null ? void 0 : e.attributes) == null ? void 0 : h.upcoming) ? e.attributes.upcoming : []).map((p) => p && typeof p.name == "string" ? p.name : null).filter((p) => !!p);
+      const e = (c = (a = this.hass) == null ? void 0 : a.states) == null ? void 0 : c[v(this._config.baby, "vaccines_due")], t = e != null && e.state && e.state !== "none" && e.state !== "unknown" ? String(e.state) : "", i = (d = e == null ? void 0 : e.attributes) == null ? void 0 : d.dose_number, n = typeof i == "number" ? i : void 0, r = (Array.isArray((h = e == null ? void 0 : e.attributes) == null ? void 0 : h.upcoming) ? e.attributes.upcoming : []).map((p) => p && typeof p.name == "string" ? p.name : null).filter((p) => !!p);
       this._modal = {
         kind: "log_vaccine",
         baby: this._config.baby,
@@ -2209,6 +2216,28 @@ O.styles = st`
         }
         .chip .spacer {
             flex: 1;
+        }
+        dialog .suggest-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: -4px;
+        }
+        dialog .suggest-chip {
+            background: var(--secondary-background-color);
+            color: var(--primary-text-color);
+            border: 1px solid var(--divider-color);
+            border-radius: 14px;
+            padding: 4px 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        dialog .suggest-chip:hover,
+        dialog .suggest-chip:focus-visible {
+            background: var(--primary-color);
+            color: var(--text-primary-color, #fff);
+            border-color: transparent;
+            outline: none;
         }
     `;
 K([
@@ -2484,8 +2513,10 @@ S.styles = st`
         }
         ul.entries li .entry-row {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            flex-wrap: wrap;
+            align-items: baseline;
+            column-gap: 8px;
+            row-gap: 2px;
         }
         ul.entries li .entry-notes {
             font-size: 0.85rem;
@@ -2705,7 +2736,7 @@ let k = class extends C {
     return this._config.baby;
   }
   _entityId(e, t = "sensor") {
-    return y(this._baby(), e, t);
+    return v(this._baby(), e, t);
   }
   _renderStatus() {
     var o, a, c, d, h, p, b, m, l, g;
@@ -2902,8 +2933,10 @@ k.styles = st`
         }
         ul.entries li .entry-row {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            flex-wrap: wrap;
+            align-items: baseline;
+            column-gap: 8px;
+            row-gap: 2px;
         }
         ul.entries li .entry-notes {
             font-size: 0.85rem;

@@ -954,6 +954,19 @@ function vaccineLogForm(
             )
         )
     );
+    const pickName = (name: string) => (e: Event) => {
+        // Native <datalist> dropdowns are invisible until the user types
+        // and don't render reliably inside Shadow DOM. Render the schedule
+        // names as tappable chips that fill the input directly — single
+        // click, no typing required.
+        const input = (e.currentTarget as HTMLElement)
+            .closest("form")
+            ?.querySelector("#vaccine_name") as HTMLInputElement | null;
+        if (input) {
+            input.value = name;
+            input.focus();
+        }
+    };
     return html`
         <form @submit=${onSubmit}>
             <h2>Log vaccine</h2>
@@ -962,17 +975,24 @@ function vaccineLogForm(
                 id="vaccine_name"
                 name="name"
                 type="text"
-                list="vaccine_names"
                 .value=${defaultName && defaultName !== "none" ? defaultName : ""}
                 placeholder="e.g. DTaP"
                 required
                 autofocus
             />
-            <datalist id="vaccine_names">
-                ${dedupedNames.map(
-                    (n) => html`<option value=${n}></option>`
-                )}
-            </datalist>
+            ${dedupedNames.length > 0
+                ? html`<div class="suggest-row" role="group" aria-label="Suggested vaccines">
+                      ${dedupedNames.map(
+                          (n) => html`<button
+                              type="button"
+                              class="suggest-chip"
+                              @click=${pickName(n)}
+                          >
+                              ${n}
+                          </button>`
+                      )}
+                  </div>`
+                : ""}
             <label for="dose_number"
                 >Dose number <span class="muted">(auto if blank)</span></label
             >
