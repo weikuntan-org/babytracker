@@ -129,19 +129,43 @@ class ProcareImporter(BaseImporter):
         entries created (activities already imported are skipped via
         the existing `(source, source_id)` dedup, so this is safe to
         call repeatedly).
+
+        Important limitation: the source sensor only exposes whatever the
+        upstream Procare integration has cached (typically the most recent
+        ~N activities). Resync cannot recover deleted babytracker entries
+        whose corresponding source activity has aged out of that cache —
+        the data isn't reachable from here. The INFO log line below makes
+        the boundary visible so users can confirm whether their missing
+        entries are still in the source.
         """
         state = self.hass.states.get(self.sensor_entity_id)
         if state is None:
+            _LOGGER.warning(
+                "babytracker: resync skipped, source sensor %s not found",
+                self.sensor_entity_id,
+            )
             return 0
         activities = state.attributes.get("activities") or []
-        if not activities:
-            return 0
         before = len(self.coordinator.entries_by_baby(self.baby.id))
         seen = _seen_ids_for(self.baby, self.coordinator)
+        already_seen = sum(
+            1
+            for a in activities
+            if str(a.get("id") or "") and str(a.get("id") or "") in seen
+        )
         for activity in activities:
             await self._process_activity(activity, seen)
         after = len(self.coordinator.entries_by_baby(self.baby.id))
-        return max(0, after - before)
+        imported = max(0, after - before)
+        _LOGGER.info(
+            "babytracker: resync %s — source has %d activities; "
+            "%d already imported, %d newly imported",
+            self.baby.slug,
+            len(activities),
+            already_seen,
+            imported,
+        )
+        return imported
 
     async def _process_activity(self, activity: dict[str, Any], seen: set[str]) -> None:
         source_id = str(activity.get("id") or "")
