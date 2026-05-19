@@ -176,6 +176,7 @@ START_FEEDING_SCHEMA = vol.Schema(
     {
         vol.Required("baby"): cv.string,
         vol.Required("method"): vol.In(list(ALL_FEEDING_METHODS)),
+        vol.Optional("started_at"): cv.datetime,
     }
 )
 END_FEEDING_SCHEMA = vol.Schema(
@@ -197,9 +198,11 @@ async def _handle_start_feeding(call: ServiceCall) -> None:
     coord = _coordinator(hass)
     if coord.open_session(baby.id, "feeding") is not None:
         raise ServiceValidationError("a feeding session is already open")
+    started = call.data.get("started_at")
     entry = _build_entry(
         type_="feeding",
         baby_id=baby.id,
+        timestamp=started.isoformat() if started else None,
         data={"method": method},
     )
     await coord.add_entry(entry)
@@ -258,6 +261,7 @@ async def _handle_log_diaper(call: ServiceCall) -> None:
 START_SLEEP_SCHEMA = vol.Schema(
     {
         vol.Required("baby"): cv.string,
+        vol.Optional("started_at"): cv.datetime,
         vol.Optional("location"): cv.string,
     }
 )
@@ -267,7 +271,21 @@ END_SLEEP_SCHEMA = vol.Schema(
         vol.Optional("notes"): cv.string,
     }
 )
-START_TUMMY_SCHEMA = vol.Schema({vol.Required("baby"): cv.string})
+LOG_SLEEP_SCHEMA = vol.Schema(
+    {
+        vol.Required("baby"): cv.string,
+        vol.Required("started_at"): cv.datetime,
+        vol.Required("ended_at"): cv.datetime,
+        vol.Optional("location"): cv.string,
+        vol.Optional("notes"): cv.string,
+    }
+)
+START_TUMMY_SCHEMA = vol.Schema(
+    {
+        vol.Required("baby"): cv.string,
+        vol.Optional("started_at"): cv.datetime,
+    }
+)
 END_TUMMY_SCHEMA = vol.Schema(
     {
         vol.Required("baby"): cv.string,
@@ -291,12 +309,29 @@ async def _handle_start_sleep(call: ServiceCall) -> None:
     coord = _coordinator(hass)
     if coord.open_session(baby.id, "sleep") is not None:
         raise ServiceValidationError("a sleep session is already open")
+    started = call.data.get("started_at")
     entry = _build_entry(
         type_="sleep",
         baby_id=baby.id,
+        timestamp=started.isoformat() if started else None,
         data={"location": call.data.get("location") or "home"},
     )
     await coord.add_entry(entry)
+
+
+async def _handle_log_sleep(call: ServiceCall) -> None:
+    hass = call.hass
+    baby = await _resolve_baby(hass, call.data["baby"])
+    await _ensure_can_log(hass, baby, "sleep", ENTRY_SOURCE_USER)
+    entry = _build_entry(
+        type_="sleep",
+        baby_id=baby.id,
+        timestamp=call.data["started_at"].isoformat(),
+        ended_at=call.data["ended_at"].isoformat(),
+        notes=call.data.get("notes"),
+        data={"location": call.data.get("location") or "home"},
+    )
+    await _coordinator(hass).add_entry(entry)
 
 
 async def _handle_end_sleep(call: ServiceCall) -> None:
@@ -319,7 +354,12 @@ async def _handle_start_tummy(call: ServiceCall) -> None:
     coord = _coordinator(hass)
     if coord.open_session(baby.id, "tummy_time") is not None:
         raise ServiceValidationError("a tummy_time session is already open")
-    entry = _build_entry(type_="tummy_time", baby_id=baby.id)
+    started = call.data.get("started_at")
+    entry = _build_entry(
+        type_="tummy_time",
+        baby_id=baby.id,
+        timestamp=started.isoformat() if started else None,
+    )
     await coord.add_entry(entry)
 
 
@@ -354,6 +394,7 @@ async def _handle_log_tummy(call: ServiceCall) -> None:
 START_WALK_SCHEMA = vol.Schema(
     {
         vol.Required("baby"): cv.string,
+        vol.Optional("started_at"): cv.datetime,
         vol.Optional("location"): cv.string,
     }
 )
@@ -384,7 +425,13 @@ async def _handle_start_walk(call: ServiceCall) -> None:
     data: dict[str, Any] = {}
     if call.data.get("location"):
         data["location"] = call.data["location"]
-    entry = _build_entry(type_="walk", baby_id=baby.id, data=data or None)
+    started = call.data.get("started_at")
+    entry = _build_entry(
+        type_="walk",
+        baby_id=baby.id,
+        timestamp=started.isoformat() if started else None,
+        data=data or None,
+    )
     await coord.add_entry(entry)
 
 
@@ -713,6 +760,7 @@ async def async_register_services(hass: HomeAssistant, entry: ConfigEntry) -> No
     _reg("log_diaper", _handle_log_diaper, LOG_DIAPER_SCHEMA)
     _reg("start_sleep", _handle_start_sleep, START_SLEEP_SCHEMA)
     _reg("end_sleep", _handle_end_sleep, END_SLEEP_SCHEMA)
+    _reg("log_sleep", _handle_log_sleep, LOG_SLEEP_SCHEMA)
     _reg("start_tummy_time", _handle_start_tummy, START_TUMMY_SCHEMA)
     _reg("end_tummy_time", _handle_end_tummy, END_TUMMY_SCHEMA)
     _reg("log_tummy_time", _handle_log_tummy, LOG_TUMMY_SCHEMA)

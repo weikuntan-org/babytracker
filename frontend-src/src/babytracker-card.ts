@@ -41,14 +41,6 @@ const DEFAULT_SECTIONS = [
     "export"
 ];
 
-const SLEEP_INTERCEPT_LABELS: Record<string, string> = {
-    log_diaper: "logging a diaper",
-    log_feeding: "logging the feeding",
-    start_feeding: "starting a feeding session",
-    start_tummy_time: "starting tummy time",
-    start_walk: "starting a walk"
-};
-
 @customElement("babytracker-card")
 export class BabytrackerCard extends LitElement {
     @property({ attribute: false }) public hass?: any;
@@ -365,16 +357,52 @@ export class BabytrackerCard extends LitElement {
         };
     }
 
-    private _requestModal: ModalRequester = (kind) => {
-        const labels: Record<typeof kind, string> = {
-            diaper: "logging a diaper",
-            bottle: "logging a bottle",
-            solids: "logging solids",
-            other: "logging this"
+    private _requestModal = (
+        target:
+            | "diaper"
+            | "bottle"
+            | "solids"
+            | "other"
+            | {
+                  activity: "sleep" | "tummy_time" | "walk" | "feeding";
+                  method?: "breast_left" | "breast_right";
+              }
+    ): void => {
+        const baby = this._baby();
+        if (typeof target === "string") {
+            const labels: Record<typeof target, string> = {
+                diaper: "logging a diaper",
+                bottle: "logging a bottle",
+                solids: "logging solids",
+                other: "logging this"
+            };
+            this._interceptIfSleeping(labels[target], () => {
+                this._modal = { kind: target, baby };
+            });
+            return;
+        }
+        // Session request. Don't intercept "log another sleep" — backend
+        // rejects that with a clearer error. For other sessions while sleep
+        // is open, intercept so the user can end sleep first.
+        const sessionLabels: Record<typeof target.activity, string> = {
+            sleep: "logging another sleep session",
+            tummy_time: "starting tummy time",
+            walk: "starting a walk",
+            feeding: "starting a feeding session"
         };
-        this._interceptIfSleeping(labels[kind], () => {
-            this._modal = { kind, baby: this._baby() };
-        });
+        const open = () => {
+            this._modal = {
+                kind: "session",
+                baby,
+                activity: target.activity,
+                method: target.method
+            };
+        };
+        if (target.activity === "sleep") {
+            open();
+            return;
+        }
+        this._interceptIfSleeping(sessionLabels[target.activity], open);
     };
 
     private _requestDelete = (entry: {
@@ -411,25 +439,6 @@ export class BabytrackerCard extends LitElement {
         this._closeModal();
     };
 
-    private _quickAction = async (
-        service: string,
-        data: Record<string, unknown>,
-        btn?: EventTarget | null
-    ): Promise<unknown> => {
-        const label = SLEEP_INTERCEPT_LABELS[service] ?? "logging this";
-        if (this._isSleeping()) {
-            this._modal = {
-                kind: "end_sleep_first",
-                baby: this._baby(),
-                label,
-                then: () =>
-                    this._handleService(service, data, btn).then(() => undefined)
-            };
-            return;
-        }
-        return this._handleService(service, data, btn);
-    };
-
     protected render(): TemplateResult {
         if (!this.hass || !this._config) return html``;
         const sections = this._sections;
@@ -451,7 +460,7 @@ export class BabytrackerCard extends LitElement {
                     ? quickLogTemplate(
                           this._babyConfig,
                           this._baby(),
-                          this._quickAction,
+                          this._handleService,
                           this._requestModal
                       )
                     : ""}
