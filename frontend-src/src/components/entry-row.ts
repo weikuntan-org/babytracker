@@ -67,9 +67,7 @@ export function entryRowTemplate(
                               toggleNotes(entry.id);
                           }
                       }}
-                  >
-                      ${entry.notes}
-                  </div>`
+                  >${entry.notes}</div>`
                 : ""}
         </li>
     `;

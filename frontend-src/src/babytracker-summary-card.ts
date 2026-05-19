@@ -130,6 +130,28 @@ export class BabytrackerSummaryCard extends LitElement {
         .chip .spacer {
             flex: 1;
         }
+        dialog .suggest-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: -4px;
+        }
+        dialog .suggest-chip {
+            background: var(--secondary-background-color);
+            color: var(--primary-text-color);
+            border: 1px solid var(--divider-color);
+            border-radius: 14px;
+            padding: 4px 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        dialog .suggest-chip:hover,
+        dialog .suggest-chip:focus-visible {
+            background: var(--primary-color);
+            color: var(--text-primary-color, #fff);
+            border-color: transparent;
+            outline: none;
+        }
     `;
 
     public setConfig(config: BabytrackerSummaryCardConfig): void {

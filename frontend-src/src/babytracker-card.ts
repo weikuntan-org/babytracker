@@ -148,8 +148,10 @@ export class BabytrackerCard extends LitElement {
         }
         ul.entries li .entry-row {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            flex-wrap: wrap;
+            align-items: baseline;
+            column-gap: 8px;
+            row-gap: 2px;
         }
         ul.entries li .entry-notes {
             font-size: 0.85rem;
