@@ -26,6 +26,12 @@ class Baby:
     )
     archived: bool = False
     importer: dict[str, Any] | None = None
+    # Bumped whenever the integration adds new activity types so an
+    # already-configured baby can be migrated to know about them. The
+    # coordinator runs the migration on load; user opt-outs after migration
+    # stick (next load already has the activity in the list, so the
+    # migration sees nothing missing).
+    schema_version: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -39,6 +45,7 @@ class Baby:
             "enabled_feeding_methods": list(self.enabled_feeding_methods),
             "archived": self.archived,
             "importer": dict(self.importer) if self.importer else None,
+            "schema_version": self.schema_version,
         }
 
     @classmethod
@@ -58,6 +65,7 @@ class Baby:
             ),
             archived=bool(data.get("archived", False)),
             importer=data.get("importer"),
+            schema_version=int(data.get("schema_version", 0)),
         )
 
 

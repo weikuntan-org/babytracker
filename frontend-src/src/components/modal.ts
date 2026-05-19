@@ -31,7 +31,14 @@ export type ActivityKind = "diaper" | "bottle" | "solids" | "other";
 export type SessionActivity = "sleep" | "tummy_time" | "walk" | "feeding";
 
 export type ModalKind =
-    | { kind: ActivityKind; baby: string }
+    | { kind: "diaper" | "solids" | "other"; baby: string }
+    | {
+          kind: "bottle";
+          baby: string;
+          /** Pre-fill values from the last bottle entry (if any). */
+          lastAmount?: number;
+          lastUnit?: "ml" | "oz";
+      }
     | {
           kind: "session";
           baby: string;
@@ -71,7 +78,14 @@ export function modalTemplate(
                 body = diaperForm(modal.baby, submit, close);
                 break;
             case "bottle":
-                body = bottleForm(modal.baby, options, submit, close);
+                body = bottleForm(
+                    modal.baby,
+                    options,
+                    modal.lastAmount,
+                    modal.lastUnit,
+                    submit,
+                    close
+                );
                 break;
             case "solids":
                 body = solidsForm(modal.baby, submit, close);
@@ -228,10 +242,18 @@ function diaperForm(
 function bottleForm(
     baby: string,
     options: any,
+    lastAmount: number | undefined,
+    lastUnit: "ml" | "oz" | undefined,
     submit: Submit,
     close: Close
 ): TemplateResult {
-    const defaultUnit = options?.volume_unit ?? "oz";
+    // Default unit prefers the integration option, falling back to whatever
+    // the previous bottle used, then oz.
+    const defaultUnit = options?.volume_unit ?? lastUnit ?? "oz";
+    const defaultAmount =
+        typeof lastAmount === "number" && Number.isFinite(lastAmount)
+            ? String(lastAmount)
+            : "";
     const onSubmit = (e: SubmitEvent) => {
         e.preventDefault();
         const form = e.currentTarget as HTMLFormElement;
@@ -275,6 +297,7 @@ function bottleForm(
                 min="0"
                 step="0.5"
                 inputmode="decimal"
+                .value=${defaultAmount}
                 autofocus
             />
             <label for="unit">Unit</label>

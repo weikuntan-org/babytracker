@@ -112,5 +112,11 @@ MAX_BIRTHDAY_AGE_YEARS: Final = 25
 # Recent-entries sensor cap (§4.3, §15 #26)
 RECENT_ENTRIES_CAP: Final = 50
 
+# Per-baby schema version. Bump whenever new activity types are added
+# upstream so existing babies pick them up via the coordinator's load-time
+# migration. v1 = knows about feeding/sleep/tummy_time/diaper/growth/
+# medication/vaccine/walk/other (current ALL_ACTIVITIES).
+CURRENT_BABY_SCHEMA_VERSION: Final = 1
+
 # Signals
 SIGNAL_DATA_UPDATED: Final = f"{DOMAIN}_data_updated"
