@@ -1,6 +1,9 @@
 // Quick-log grid — buttons filtered by eligibility (§4.10).
-// Some activities open a modal (diaper, bottle, solids, other) for extra
-// input; others fire directly (sleep, tummy time, walk, breast feeds).
+// Every button opens a modal so the user can confirm/pick the time:
+//  - Diaper, Bottle, Solids, Other: point-in-time entries with a single When.
+//  - Sleep, Tummy, Walk, Breast feeds: session entries with start + optional
+//    end. If End is left blank → starts an open session at Started. If filled
+//    → log_* retroactively with both bounds.
 import { html, type TemplateResult } from "lit";
 
 type ServiceCaller = (
@@ -9,8 +12,12 @@ type ServiceCaller = (
     sourceBtn?: EventTarget | null
 ) => Promise<unknown>;
 
+export type SessionRequest =
+    | { activity: "sleep" | "tummy_time" | "walk" }
+    | { activity: "feeding"; method: "breast_left" | "breast_right" };
+
 export type ModalRequester = (
-    kind: "diaper" | "bottle" | "solids" | "other"
+    target: "diaper" | "bottle" | "solids" | "other" | SessionRequest
 ) => void;
 
 const DEFAULT_ACTIVITIES = [
@@ -29,7 +36,7 @@ const DEFAULT_METHODS = ["bottle", "breast_left", "breast_right", "solids"];
 export function quickLogTemplate(
     babyConfig: any | undefined,
     baby: string,
-    call: ServiceCaller,
+    _call: ServiceCaller,
     requestModal: ModalRequester
 ): TemplateResult {
     const activities: string[] = babyConfig?.enabled_activities ?? DEFAULT_ACTIVITIES;
@@ -77,19 +84,14 @@ export function quickLogTemplate(
                         </button>
                     `
                 );
-            } else {
-                // breast_left / breast_right — start session, no modal.
+            } else if (method === "breast_left" || method === "breast_right") {
                 buttons.push(
                     html`
                         <button
                             class="quick"
-                            aria-label="Start ${method} feeding for ${baby}"
-                            @click=${(e: Event) =>
-                                call(
-                                    "start_feeding",
-                                    { baby, method },
-                                    e.currentTarget
-                                )}
+                            aria-label="Log ${method} feeding for ${baby}"
+                            @click=${() =>
+                                requestModal({ activity: "feeding", method })}
                         >
                             ${cap(method.replace("_", " "))}
                         </button>
@@ -103,11 +105,10 @@ export function quickLogTemplate(
             html`
                 <button
                     class="quick"
-                    aria-label="Start sleep for ${baby}"
-                    @click=${(e: Event) =>
-                        call("start_sleep", { baby }, e.currentTarget)}
+                    aria-label="Log sleep for ${baby}"
+                    @click=${() => requestModal({ activity: "sleep" })}
                 >
-                    Start sleep
+                    Sleep
                 </button>
             `
         );
@@ -117,9 +118,8 @@ export function quickLogTemplate(
             html`
                 <button
                     class="quick"
-                    aria-label="Start tummy time for ${baby}"
-                    @click=${(e: Event) =>
-                        call("start_tummy_time", { baby }, e.currentTarget)}
+                    aria-label="Log tummy time for ${baby}"
+                    @click=${() => requestModal({ activity: "tummy_time" })}
                 >
                     Tummy time
                 </button>
@@ -131,11 +131,10 @@ export function quickLogTemplate(
             html`
                 <button
                     class="quick"
-                    aria-label="Start walk for ${baby}"
-                    @click=${(e: Event) =>
-                        call("start_walk", { baby }, e.currentTarget)}
+                    aria-label="Log walk for ${baby}"
+                    @click=${() => requestModal({ activity: "walk" })}
                 >
-                    Start walk
+                    Walk
                 </button>
             `
         );

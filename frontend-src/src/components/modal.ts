@@ -28,8 +28,17 @@ function _localInputToIso(value: string): string | undefined {
 
 export type ActivityKind = "diaper" | "bottle" | "solids" | "other";
 
+export type SessionActivity = "sleep" | "tummy_time" | "walk" | "feeding";
+
 export type ModalKind =
     | { kind: ActivityKind; baby: string }
+    | {
+          kind: "session";
+          baby: string;
+          activity: SessionActivity;
+          /** Only set when activity = "feeding" — picks the feeding method. */
+          method?: "breast_left" | "breast_right";
+      }
     | {
           kind: "end_sleep_first";
           baby: string;
@@ -69,6 +78,15 @@ export function modalTemplate(
                 break;
             case "other":
                 body = otherForm(modal.baby, submit, close);
+                break;
+            case "session":
+                body = sessionForm(
+                    modal.baby,
+                    modal.activity,
+                    modal.method,
+                    submit,
+                    close
+                );
                 break;
             case "end_sleep_first":
                 body = endSleepFirstForm(
@@ -381,6 +399,109 @@ function confirmDeleteImportedForm(
                 <button type="button" class="primary" @click=${onConfirm}>
                     Delete anyway
                 </button>
+            </div>
+        </form>
+    `;
+}
+
+function sessionForm(
+    baby: string,
+    activity: SessionActivity,
+    method: "breast_left" | "breast_right" | undefined,
+    submit: Submit,
+    close: Close
+): TemplateResult {
+    const titleMap: Record<SessionActivity, string> = {
+        sleep: "Log sleep",
+        tummy_time: "Log tummy time",
+        walk: "Log walk",
+        feeding: method
+            ? `Log ${method.replace("_", " ")} feeding`
+            : "Log feeding"
+    };
+    const onSubmit = (e: SubmitEvent) => {
+        e.preventDefault();
+        const form = e.currentTarget as HTMLFormElement;
+        const data = new FormData(form);
+        const startedAt = _localInputToIso(String(data.get("started") ?? ""));
+        const endedAt = _localInputToIso(String(data.get("ended") ?? ""));
+        const notes = String(data.get("notes") ?? "") || undefined;
+
+        // No end → open a live session at started_at (start_*).
+        // Both ends supplied → retroactive completed entry (log_*).
+        if (!endedAt) {
+            const payload: Record<string, unknown> = {
+                baby,
+                started_at: startedAt
+            };
+            let service: string;
+            switch (activity) {
+                case "sleep":
+                    service = "start_sleep";
+                    break;
+                case "tummy_time":
+                    service = "start_tummy_time";
+                    break;
+                case "walk":
+                    service = "start_walk";
+                    break;
+                case "feeding":
+                    service = "start_feeding";
+                    payload.method = method!;
+                    break;
+            }
+            submit(service, payload);
+            return;
+        }
+
+        const payload: Record<string, unknown> = {
+            baby,
+            started_at: startedAt,
+            ended_at: endedAt,
+            notes
+        };
+        let service: string;
+        switch (activity) {
+            case "sleep":
+                service = "log_sleep";
+                break;
+            case "tummy_time":
+                service = "log_tummy_time";
+                break;
+            case "walk":
+                service = "log_walk";
+                break;
+            case "feeding":
+                service = "log_feeding";
+                payload.method = method!;
+                break;
+        }
+        submit(service, payload);
+    };
+
+    return html`
+        <form @submit=${onSubmit}>
+            <h2>${titleMap[activity]}</h2>
+            <label for="started">Started</label>
+            <input
+                id="started"
+                name="started"
+                type="datetime-local"
+                .value=${_nowLocalForInput()}
+                required
+            />
+            <label for="ended">Ended <span class="muted">(optional)</span></label>
+            <input
+                id="ended"
+                name="ended"
+                type="datetime-local"
+                placeholder="leave blank for an open session"
+            />
+            <label for="notes">Notes</label>
+            <input id="notes" name="notes" type="text" placeholder="optional" />
+            <div class="actions">
+                <button type="button" @click=${close}>Cancel</button>
+                <button type="submit" class="primary">Log</button>
             </div>
         </form>
     `;

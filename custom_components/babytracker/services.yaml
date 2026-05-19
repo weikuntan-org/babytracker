@@ -67,6 +67,10 @@ start_feeding:
             - breast_left
             - breast_right
             - solids
+    started_at:
+      description: When the session started; defaults to now if omitted.
+      selector:
+        datetime:
 
 end_feeding:
   name: End feeding
@@ -128,6 +132,10 @@ start_sleep:
       required: true
       selector:
         text:
+    started_at:
+      description: When the session started; defaults to now if omitted.
+      selector:
+        datetime:
     location:
       selector:
         text:
@@ -144,6 +152,29 @@ end_sleep:
       selector:
         text:
 
+log_sleep:
+  name: Log sleep (retroactive)
+  description: Log a completed sleep session with both start and end times.
+  fields:
+    baby:
+      required: true
+      selector:
+        text:
+    started_at:
+      required: true
+      selector:
+        datetime:
+    ended_at:
+      required: true
+      selector:
+        datetime:
+    location:
+      selector:
+        text:
+    notes:
+      selector:
+        text:
+
 start_tummy_time:
   name: Start tummy time
   fields:
@@ -151,6 +182,10 @@ start_tummy_time:
       required: true
       selector:
         text:
+    started_at:
+      description: When the session started; defaults to now if omitted.
+      selector:
+        datetime:
 
 end_tummy_time:
   name: End tummy time
@@ -189,6 +224,10 @@ start_walk:
       required: true
       selector:
         text:
+    started_at:
+      description: When the session started; defaults to now if omitted.
+      selector:
+        datetime:
     location:
       selector:
         text:
