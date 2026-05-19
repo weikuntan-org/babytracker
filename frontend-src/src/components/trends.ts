@@ -4,7 +4,7 @@
 // RECENT_ENTRIES_CAP (120) entries, so days at the far edge of the window
 // can underreport if the baby has more than ~17 events/day. Acceptable for
 // at-a-glance trends; a richer history would need a WS history command.
-import { html, type TemplateResult } from "lit";
+import { html, svg, type TemplateResult } from "lit";
 
 import { babyEntityId } from "../lib/ha-helpers";
 
@@ -137,7 +137,7 @@ function barChart(
                         (b.value / max) * (H - padTopBottom * 2)
                     );
                     const y = H - padTopBottom - h;
-                    return html`
+                    return svg`
                         <rect
                             x=${barX}
                             y=${y}
