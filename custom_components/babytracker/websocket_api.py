@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,15 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import DEFAULT_OPTIONS, DOMAIN, SIGNAL_DATA_UPDATED
+
+_LOGGER = logging.getLogger(__name__)
+
+# Vaccine schedule JSON cache. Keyed by schedule_id (e.g. "us_cdc").
+# Populated via `async_preload_schedule` during entry setup so the sensor
+# platform — which reads schedules synchronously from `native_value` — never
+# triggers blocking file I/O inside the event loop. Missing files are cached
+# as `None` so we don't repeatedly stat them.
+_SCHEDULE_CACHE: dict[str, dict[str, Any] | None] = {}
 
 
 def _runtime(hass: HomeAssistant):
@@ -63,7 +73,7 @@ def _get_baby_config_payload(coord, slug: str) -> dict[str, Any] | None:
     }
 
 
-def _load_schedule(schedule_id: str) -> dict[str, Any] | None:
+def _read_schedule_sync(schedule_id: str) -> dict[str, Any] | None:
     path = (
         Path(__file__).parent
         / "data"
@@ -73,6 +83,32 @@ def _load_schedule(schedule_id: str) -> dict[str, Any] | None:
     if not path.exists():
         return None
     return json.loads(path.read_text("utf-8"))
+
+
+def _load_schedule(schedule_id: str) -> dict[str, Any] | None:
+    """Return cached schedule. Synchronous, safe to call from the event loop.
+
+    If the schedule hasn't been pre-loaded via `async_preload_schedule`, this
+    returns None — callers fall back to an empty dose list, which is the
+    same behavior they had pre-cache when the file was simply missing. The
+    pre-load happens unconditionally during entry setup, so a cache miss
+    here should only occur for unknown schedule IDs.
+    """
+    if schedule_id in _SCHEDULE_CACHE:
+        return _SCHEDULE_CACHE[schedule_id]
+    return None
+
+
+async def async_preload_schedule(
+    hass: HomeAssistant, schedule_id: str
+) -> dict[str, Any] | None:
+    if schedule_id in _SCHEDULE_CACHE:
+        return _SCHEDULE_CACHE[schedule_id]
+    payload = await hass.async_add_executor_job(_read_schedule_sync, schedule_id)
+    _SCHEDULE_CACHE[schedule_id] = payload
+    if payload is None:
+        _LOGGER.warning("babytracker: vaccine schedule %r not found", schedule_id)
+    return payload
 
 
 # ---- Command handlers ----------------------------------------------------
@@ -181,14 +217,16 @@ def _ws_get_options(
         vol.Optional("subscribe"): bool,
     }
 )
-@callback
-def _ws_get_schedule(
+@websocket_api.async_response
+async def _ws_get_schedule(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
     schedule_id = _entry_options(hass).get("vaccine_schedule", "us_cdc")
     payload = _load_schedule(schedule_id)
+    if payload is None:
+        payload = await async_preload_schedule(hass, schedule_id)
     if payload is None:
         connection.send_error(msg["id"], "missing_schedule", schedule_id)
         return

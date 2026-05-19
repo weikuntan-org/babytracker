@@ -198,8 +198,12 @@ class LastFeedingMethodSensor(_BabyEntity):
 
 
 class LastFeedingAmountSensor(_BabyEntity):
+    # SensorDeviceClass.VOLUME only accepts state classes total / total_increasing
+    # (it's modeled as a cumulative meter). This sensor is a snapshot of the
+    # last feeding's volume, so it intentionally has no state class — that
+    # disables long-term statistics, which is correct for a "last value"
+    # reading.
     _attr_device_class = SensorDeviceClass.VOLUME
-    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coord, baby):
         super().__init__(coord, baby, "last_feeding_amount", "Last feeding amount")

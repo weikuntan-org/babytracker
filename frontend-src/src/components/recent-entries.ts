@@ -53,6 +53,8 @@ export function recentEntriesTemplate(
                                           : ""}
                                       <span class="spacer"></span>
                                       <button
+                                          class="icon"
+                                          title="Delete entry"
                                           aria-label="Delete entry"
                                           @click=${() =>
                                               requestDelete({
@@ -62,7 +64,7 @@ export function recentEntriesTemplate(
                                                   staff: entry.staff
                                               })}
                                       >
-                                          Delete
+                                          ×
                                       </button>
                                   </li>
                               `

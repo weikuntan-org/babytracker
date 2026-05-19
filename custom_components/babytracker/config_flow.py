@@ -55,7 +55,7 @@ def _validate_name(value: str) -> str:
     trimmed = (value or "").strip()
     if not trimmed or len(trimmed) > 40:
         raise vol.Invalid("name_length")
-    return trimmed
+    return trimmed[:1].upper() + trimmed[1:]
 
 
 def _add_baby_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
@@ -423,67 +423,81 @@ class BabytrackerOptionsFlow(OptionsFlow):
         if not baby:
             return self.async_abort(reason="unknown_baby")
         importer = baby.importer or {}
+        errors: dict[str, str] = {}
         if user_input is not None:
             sensor_id = (user_input.get("source_entity_id") or "").strip()
             new_importer = None
             if sensor_id:
-                new_importer = {
-                    "source_entity_id": sensor_id,
-                    "import_types": list(user_input["import_types"]),
-                    "mark_readonly": user_input["mark_readonly"],
-                    "daycare_location_label": user_input.get(
-                        "daycare_location_label", "daycare"
-                    )
-                    or "daycare",
-                    "daycare_open_time": user_input.get("daycare_open_time") or None,
-                    "daycare_close_time": user_input.get("daycare_close_time") or None,
-                    "daycare_days": list(user_input.get("daycare_days") or []),
-                    "block_local_while_checked_in": user_input[
-                        "block_local_while_checked_in"
-                    ],
-                    "presence_inference_window_minutes": user_input.get(
-                        "presence_inference_window_minutes", 60
-                    ),
-                    "mode": importer.get("mode", "inference_window"),
-                }
-            await coord.set_baby_importer(baby.id, new_importer)
-            return self.async_create_entry(title="", data=self._entry.options)
+                if not sensor_id.startswith("sensor."):
+                    errors["source_entity_id"] = "sensor_invalid_domain"
+                else:
+                    state = self.hass.states.get(sensor_id)
+                    if state is None:
+                        errors["source_entity_id"] = "sensor_not_found"
+                    elif "activities" not in (state.attributes or {}):
+                        errors["source_entity_id"] = "sensor_no_activities"
+                if not errors:
+                    new_importer = {
+                        "source_entity_id": sensor_id,
+                        "import_types": list(user_input["import_types"]),
+                        "mark_readonly": user_input["mark_readonly"],
+                        "daycare_location_label": user_input.get(
+                            "daycare_location_label", "daycare"
+                        )
+                        or "daycare",
+                        "daycare_open_time": user_input.get("daycare_open_time") or None,
+                        "daycare_close_time": user_input.get("daycare_close_time") or None,
+                        "daycare_days": list(user_input.get("daycare_days") or []),
+                        "block_local_while_checked_in": user_input[
+                            "block_local_while_checked_in"
+                        ],
+                        "presence_inference_window_minutes": user_input.get(
+                            "presence_inference_window_minutes", 60
+                        ),
+                        "mode": importer.get("mode", "inference_window"),
+                    }
+            if not errors:
+                await coord.set_baby_importer(baby.id, new_importer)
+                return self.async_create_entry(title="", data=self._entry.options)
+        defaults = user_input if user_input is not None else importer
         schema = vol.Schema(
             {
                 vol.Optional(
                     "source_entity_id",
-                    default=importer.get("source_entity_id", ""),
-                ): str,
+                    default=defaults.get("source_entity_id", ""),
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="sensor")
+                ),
                 vol.Required(
                     "import_types",
-                    default=importer.get(
-                        "import_types", ["feeding", "sleep", "diaper"]
+                    default=defaults.get(
+                        "import_types", ["feeding", "sleep", "diaper", "other"]
                     ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=["feeding", "sleep", "diaper", "photo", "note"],
+                        options=["feeding", "sleep", "diaper", "other", "photo", "note"],
                         multiple=True,
                     )
                 ),
                 vol.Required(
                     "mark_readonly",
-                    default=importer.get("mark_readonly", True),
+                    default=defaults.get("mark_readonly", True),
                 ): bool,
                 vol.Optional(
                     "daycare_location_label",
-                    default=importer.get("daycare_location_label", "daycare"),
+                    default=defaults.get("daycare_location_label", "daycare"),
                 ): str,
                 vol.Optional(
                     "daycare_open_time",
-                    default=importer.get("daycare_open_time", ""),
+                    default=defaults.get("daycare_open_time", ""),
                 ): str,
                 vol.Optional(
                     "daycare_close_time",
-                    default=importer.get("daycare_close_time", ""),
+                    default=defaults.get("daycare_close_time", ""),
                 ): str,
                 vol.Required(
                     "daycare_days",
-                    default=importer.get(
+                    default=defaults.get(
                         "daycare_days", ["mon", "tue", "wed", "thu", "fri"]
                     ),
                 ): selector.SelectSelector(
@@ -494,15 +508,17 @@ class BabytrackerOptionsFlow(OptionsFlow):
                 ),
                 vol.Required(
                     "block_local_while_checked_in",
-                    default=importer.get("block_local_while_checked_in", True),
+                    default=defaults.get("block_local_while_checked_in", True),
                 ): bool,
                 vol.Optional(
                     "presence_inference_window_minutes",
-                    default=importer.get("presence_inference_window_minutes", 60),
+                    default=defaults.get("presence_inference_window_minutes", 60),
                 ): vol.All(vol.Coerce(int), vol.Range(min=10, max=480)),
             }
         )
-        return self.async_show_form(step_id="importer_form", data_schema=schema)
+        return self.async_show_form(
+            step_id="importer_form", data_schema=schema, errors=errors
+        )
 
     # ---- Integration options ---------------------------------------
     async def async_step_integration_options(

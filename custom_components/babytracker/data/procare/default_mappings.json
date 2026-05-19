@@ -38,5 +38,14 @@
         "pattern": "^Nap\\s+Ended",
         "type": "sleep",
         "session": "end"
+    },
+    {
+        "pattern": "^Slept\\s+from\\s+.*\\s+to\\s+",
+        "type": "sleep",
+        "session": "range"
+    },
+    {
+        "pattern": "^Learning\\b",
+        "type": "other"
     }
 ]
