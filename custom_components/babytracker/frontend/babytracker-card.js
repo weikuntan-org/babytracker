@@ -1042,6 +1042,179 @@ F([Z()], Wp.prototype, "value", 2);
 F([x()], Wp.prototype, "_busy", 2);
 F([x()], Wp.prototype, "_error", 2);
 Wp = F([ht("bt-photo-button")], Wp);
+// --- inline entry-row thumbnail + lightbox (bt-entry-thumbnail) ---
+let Wb = class extends P {
+  constructor() {
+    super(...arguments);
+    this.photoPath = "";
+    this._url = "";
+    this._failed = false;
+    this._open = false;
+    this._lastResolved = "";
+    // Bumped on every `_maybeResolve` call. The async callback drops its
+    // result if the token has moved on, so a slow resolve for an
+    // already-replaced `photoPath` can't overwrite the newer `_url`.
+    this._resolveToken = 0;
+    this._onKeydown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        this._closeLightbox();
+      }
+    };
+    this._openLightbox = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!this._url || this._open) return;
+      this._open = true;
+      window.addEventListener("keydown", this._onKeydown);
+    };
+    this._closeLightbox = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      if (!this._open) return;
+      this._open = false;
+      window.removeEventListener("keydown", this._onKeydown);
+    };
+    this._onImgError = () => {
+      this._failed = true;
+    };
+  }
+  disconnectedCallback() {
+    // Tear down the keydown listener if the row is removed mid-view.
+    window.removeEventListener("keydown", this._onKeydown);
+    super.disconnectedCallback();
+  }
+  updated(changed) {
+    if (changed.has("hass") || changed.has("photoPath")) {
+      this._maybeResolve();
+    }
+  }
+  async _maybeResolve() {
+    if (!(this.hass && this.hass.connection) || !this.photoPath) return;
+    if (this._lastResolved === this.photoPath && this._url) return;
+    this._lastResolved = this.photoPath;
+    const token = ++this._resolveToken;
+    try {
+      const result = await this.hass.callWS({
+        type: "media_source/resolve_media",
+        media_content_id: this.photoPath
+      });
+      if (token !== this._resolveToken) return;
+      const url = result && result.url;
+      if (typeof url === "string" && url.length > 0) {
+        this._url = url;
+        this._failed = false;
+      } else {
+        this._failed = true;
+      }
+    } catch (err) {
+      if (token !== this._resolveToken) return;
+      console.warn("babytracker: resolve photo failed", err);
+      this._failed = true;
+    }
+  }
+  render() {
+    if (!this.photoPath) return u``;
+    if (this._failed || !this._url) {
+      return u`<span aria-label="Has photo">📷</span>`;
+    }
+    return u`
+      <button
+        class="thumb-btn"
+        type="button"
+        aria-label="View photo"
+        title="View photo"
+        @click=${this._openLightbox}
+      >
+        <img
+          class="thumb"
+          src=${this._url}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          @error=${this._onImgError}
+        />
+      </button>
+      ${this._open ? u`
+        <div
+          class="lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Entry photo"
+          @click=${this._closeLightbox}
+        >
+          <button
+            type="button"
+            class="close"
+            aria-label="Close photo viewer"
+            @click=${this._closeLightbox}
+          >✕</button>
+          <img
+            class="full"
+            src=${this._url}
+            alt="Entry photo"
+            @click=${(e) => e.stopPropagation()}
+          />
+        </div>
+      ` : ""}
+    `;
+  }
+};
+Wb.styles = ut`
+  :host { display: inline-flex; align-items: center; }
+  .thumb-btn {
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+    line-height: 0;
+  }
+  .thumb {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--divider-color);
+    vertical-align: middle;
+  }
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    cursor: zoom-out;
+  }
+  .full {
+    max-width: 92vw;
+    max-height: 90vh;
+    cursor: default;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
+  }
+  .close {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+`;
+F([Z({ attribute: !1 })], Wb.prototype, "hass", 2);
+F([Z()], Wb.prototype, "photoPath", 2);
+F([x()], Wb.prototype, "_url", 2);
+F([x()], Wb.prototype, "_failed", 2);
+F([x()], Wb.prototype, "_open", 2);
+Wb = F([ht("bt-entry-thumbnail")], Wb);
 function btPhotoRow(hass, currentValue) {
   return u`
     <label>Photo</label>
@@ -1393,7 +1566,7 @@ function qt(e) {
   });
 }
 const Fe = /* @__PURE__ */ new Set(["sleep", "feeding", "tummy_time", "walk"]);
-function ie(e, t, i, r) {
+function ie(hass, e, t, i, r) {
   return u`
         <li
             class="clickable"
@@ -1408,7 +1581,7 @@ function ie(e, t, i, r) {
             <div class="entry-row">
                 <span aria-label="Entry type">${Be(e)}</span>
                 ${qe(e)}
-                ${e.photo_path ? u`<span aria-label="Has photo">📷</span>` : ""}
+                ${e.photo_path ? u`<bt-entry-thumbnail .hass=${hass} .photoPath=${e.photo_path}></bt-entry-thumbnail>` : ""}
                 ${e.staff ? u`<span
                           class="muted"
                           aria-label="Logged by Procare staff"
@@ -1453,6 +1626,7 @@ function je(e, t, i, r, n = /* @__PURE__ */ new Set(), s = () => {
                       <ul class="entries">
                           ${c.map(
     (b) => ie(
+      e,
       b,
       i,
       n,
@@ -3202,6 +3376,7 @@ let D = class extends P {
                           <ul class="entries">
                               ${this._entries.map(
       (t) => ie(
+        this.hass,
         t,
         this._requestEdit,
         this._expandedNotes,
