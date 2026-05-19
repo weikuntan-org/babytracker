@@ -43,6 +43,26 @@ function _isoToLocalInput(iso?: string | null): string {
     );
 }
 
+/** Today's local date in `YYYY-MM-DD` for `<input type="date">` defaults. */
+function _todayDateInput(): string {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Convert a `YYYY-MM-DD` (local) date input value to a UTC ISO datetime
+ * the backend's `cv.datetime` can parse. Anchors to local noon so a date
+ * doesn't shift across timezones during the JSON round-trip — important
+ * for events like vaccines where only the calendar day matters.
+ */
+function _dateInputToIso(value: string): string | undefined {
+    if (!value) return undefined;
+    const ms = Date.parse(`${value}T12:00`);
+    if (Number.isNaN(ms)) return undefined;
+    return new Date(ms).toISOString();
+}
+
 const SESSION_ENTRY_TYPES = new Set([
     "sleep",
     "feeding",
@@ -909,6 +929,32 @@ function growthLogForm(
     `;
 }
 
+// US/UK common childhood + adolescent vaccines. Routine names match the
+// shorthand pediatricians use on records, which matches what the CDC/NHS
+// schedule files in `data/vaccines/` ship. "Other…" is the escape hatch
+// for anything novel (travel, COVID variants, brand-specific lots) that
+// the dropdown doesn't cover.
+const COMMON_VACCINES = [
+    "COVID-19",
+    "DTaP",
+    "Tdap",
+    "HepA",
+    "HepB",
+    "Hib",
+    "HPV",
+    "Influenza",
+    "IPV",
+    "MenACWY",
+    "MenB",
+    "MMR",
+    "PCV13",
+    "PCV15",
+    "PCV20",
+    "RSV",
+    "Rotavirus",
+    "VAR"
+];
+
 function vaccineLogForm(
     baby: string,
     defaultName: string,
@@ -929,7 +975,9 @@ function vaccineLogForm(
         e.preventDefault();
         const form = e.currentTarget as HTMLFormElement;
         const f = new FormData(form);
-        const name = String(f.get("name") ?? "").trim();
+        const choice = String(f.get("vaccine_select") ?? "").trim();
+        const customName = String(f.get("vaccine_custom") ?? "").trim();
+        const name = choice === "__other__" ? customName : choice;
         if (!name) return;
         const doseStr = String(f.get("dose_number") ?? "").trim();
         const dose_number = doseStr === "" ? undefined : Number(doseStr);
@@ -943,56 +991,87 @@ function vaccineLogForm(
             site,
             lot_number,
             provider,
-            timestamp: _localInputToIso(String(f.get("when") ?? "")),
+            timestamp: _dateInputToIso(String(f.get("when") ?? "")),
             notes: String(f.get("notes") ?? "") || undefined
         });
     };
-    const dedupedNames = Array.from(
+    // Build the dropdown list: common vaccines + anything the configured
+    // schedule references that isn't already in the common list, sorted.
+    const dropdownNames = Array.from(
         new Set(
-            [defaultName, ...scheduleNames].filter(
+            [...COMMON_VACCINES, ...scheduleNames].filter(
                 (n): n is string => Boolean(n) && n !== "none"
             )
         )
-    );
-    const pickName = (name: string) => (e: Event) => {
-        // Native <datalist> dropdowns are invisible until the user types
-        // and don't render reliably inside Shadow DOM. Render the schedule
-        // names as tappable chips that fill the input directly — single
-        // click, no typing required.
-        const input = (e.currentTarget as HTMLElement)
+    ).sort((a, b) => a.localeCompare(b));
+    // Resolve the initial selection: if `defaultName` matches a dropdown
+    // entry, preselect it. If it's set but not in the list, fall back to
+    // "Other…" and prefill the freeform input. Empty / "none" stays on
+    // the placeholder.
+    const defaultIsKnown =
+        defaultName && defaultName !== "none" && dropdownNames.includes(defaultName);
+    const defaultIsCustom =
+        defaultName && defaultName !== "none" && !defaultIsKnown;
+    const initialSelect = defaultIsKnown
+        ? defaultName
+        : defaultIsCustom
+        ? "__other__"
+        : "";
+    const initialCustom = defaultIsCustom ? defaultName : "";
+    const onSelectChange = (e: Event) => {
+        const select = e.currentTarget as HTMLSelectElement;
+        const custom = select
             .closest("form")
-            ?.querySelector("#vaccine_name") as HTMLInputElement | null;
-        if (input) {
-            input.value = name;
-            input.focus();
+            ?.querySelector("#vaccine_custom") as HTMLInputElement | null;
+        if (!custom) return;
+        if (select.value === "__other__") {
+            custom.hidden = false;
+            custom.required = true;
+            custom.focus();
+        } else {
+            custom.hidden = true;
+            custom.required = false;
+            custom.value = "";
         }
     };
     return html`
         <form @submit=${onSubmit}>
             <h2>Log vaccine</h2>
-            <label for="vaccine_name">Vaccine</label>
-            <input
-                id="vaccine_name"
-                name="name"
-                type="text"
-                .value=${defaultName && defaultName !== "none" ? defaultName : ""}
-                placeholder="e.g. DTaP"
+            <label for="vaccine_select">Vaccine</label>
+            <select
+                id="vaccine_select"
+                name="vaccine_select"
                 required
                 autofocus
+                @change=${onSelectChange}
+            >
+                <option value="" disabled ?selected=${initialSelect === ""}>
+                    (pick one)
+                </option>
+                ${dropdownNames.map(
+                    (n) => html`<option
+                        value=${n}
+                        ?selected=${initialSelect === n}
+                    >
+                        ${n}
+                    </option>`
+                )}
+                <option
+                    value="__other__"
+                    ?selected=${initialSelect === "__other__"}
+                >
+                    Other…
+                </option>
+            </select>
+            <input
+                id="vaccine_custom"
+                name="vaccine_custom"
+                type="text"
+                placeholder="Vaccine name"
+                .value=${initialCustom}
+                ?hidden=${initialSelect !== "__other__"}
+                ?required=${initialSelect === "__other__"}
             />
-            ${dedupedNames.length > 0
-                ? html`<div class="suggest-row" role="group" aria-label="Suggested vaccines">
-                      ${dedupedNames.map(
-                          (n) => html`<button
-                              type="button"
-                              class="suggest-chip"
-                              @click=${pickName(n)}
-                          >
-                              ${n}
-                          </button>`
-                      )}
-                  </div>`
-                : ""}
             <label for="dose_number"
                 >Dose number <span class="muted">(auto if blank)</span></label
             >
@@ -1027,12 +1106,12 @@ function vaccineLogForm(
                 type="text"
                 placeholder="optional"
             />
-            <label for="when">When</label>
+            <label for="when">Date</label>
             <input
                 id="when"
                 name="when"
-                type="datetime-local"
-                .value=${_nowLocalForInput()}
+                type="date"
+                .value=${_todayDateInput()}
             />
             <label for="notes">Notes</label>
             <input id="notes" name="notes" type="text" placeholder="optional" />

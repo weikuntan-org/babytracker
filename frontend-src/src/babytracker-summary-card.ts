@@ -9,8 +9,13 @@ import { exportSheetTemplate } from "./components/export-sheet";
 import { growthChartTemplate } from "./components/growth-chart";
 import { modalTemplate, type ModalKind } from "./components/modal";
 import { trendsTemplate } from "./components/trends";
+import { vaccineHistoryTemplate } from "./components/vaccine-history";
 import { vaccinesDueTemplate } from "./components/vaccines-due";
-import { babyEntityId, subscribeIntegrationOptions } from "./lib/ha-helpers";
+import {
+    babyEntityId,
+    subscribeIntegrationOptions,
+    subscribeVaccines
+} from "./lib/ha-helpers";
 
 export interface BabytrackerSummaryCardConfig {
     type: string;
@@ -28,7 +33,9 @@ export class BabytrackerSummaryCard extends LitElement {
     @state() private _config?: BabytrackerSummaryCardConfig;
     @state() private _options?: any;
     @state() private _modal: ModalKind | null = null;
+    @state() private _vaccines: any[] = [];
     private _unsubOptions?: () => void;
+    private _unsubVaccines?: () => void;
 
     static styles = css`
         :host {
@@ -130,27 +137,47 @@ export class BabytrackerSummaryCard extends LitElement {
         .chip .spacer {
             flex: 1;
         }
-        dialog .suggest-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: -4px;
+        dialog input[hidden] {
+            display: none;
         }
-        dialog .suggest-chip {
-            background: var(--secondary-background-color);
+        .vaccine-history h3 {
+            margin: 0 0 6px;
+            font-size: 1rem;
             color: var(--primary-text-color);
-            border: 1px solid var(--divider-color);
-            border-radius: 14px;
-            padding: 4px 10px;
-            font-size: 0.85rem;
-            cursor: pointer;
         }
-        dialog .suggest-chip:hover,
-        dialog .suggest-chip:focus-visible {
-            background: var(--primary-color);
-            color: var(--text-primary-color, #fff);
-            border-color: transparent;
+        ul.vh-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        ul.vh-list li {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            column-gap: 8px;
+            row-gap: 2px;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--divider-color);
+        }
+        ul.vh-list li.clickable {
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 0 -4px;
+            padding: 4px 4px;
+        }
+        ul.vh-list li.clickable:hover,
+        ul.vh-list li.clickable:focus-visible {
+            background: var(--secondary-background-color);
             outline: none;
+        }
+        ul.vh-list li:last-child {
+            border-bottom: none;
+        }
+        .vh-date {
+            min-width: 96px;
+        }
+        .vh-name {
+            font-weight: 500;
         }
     `;
 
@@ -172,6 +199,8 @@ export class BabytrackerSummaryCard extends LitElement {
     public disconnectedCallback(): void {
         this._unsubOptions?.();
         this._unsubOptions = undefined;
+        this._unsubVaccines?.();
+        this._unsubVaccines = undefined;
         super.disconnectedCallback();
     }
 
@@ -214,6 +243,32 @@ export class BabytrackerSummaryCard extends LitElement {
         this._modal = { kind: "log_growth", baby: this._config.baby };
     };
 
+    private _requestEditEntry = (entry: any) => {
+        this._modal = { kind: "edit_entry", entry };
+    };
+
+    private _requestDelete = (entry: {
+        id: string;
+        type?: string;
+        source?: string;
+        staff?: string | null;
+    }) => {
+        if (!entry.source || entry.source === "user") {
+            this.hass.callService("babytracker", "delete_entry", {
+                entry_id: entry.id
+            });
+            this._modal = null;
+            return;
+        }
+        this._modal = {
+            kind: "confirm_delete_imported",
+            entryId: entry.id,
+            entryType: entry.type ?? "entry",
+            source: entry.source,
+            staff: entry.staff ?? null
+        };
+    };
+
     private _requestLogVaccine = () => {
         if (!this._config?.baby) return;
         const due = this.hass?.states?.[
@@ -251,6 +306,19 @@ export class BabytrackerSummaryCard extends LitElement {
                 }
             );
         }
+        if (
+            !this._unsubVaccines &&
+            this._sections.includes("vaccines") &&
+            this._config?.baby
+        ) {
+            this._unsubVaccines = subscribeVaccines(
+                this.hass,
+                this._config.baby,
+                (entries) => {
+                    this._vaccines = Array.isArray(entries) ? entries : [];
+                }
+            );
+        }
     }
 
     private get _sections(): string[] {
@@ -263,11 +331,17 @@ export class BabytrackerSummaryCard extends LitElement {
         return html`
             <ha-card>
                 ${sections.includes("vaccines")
-                    ? vaccinesDueTemplate(
-                          this.hass,
-                          this._config.baby,
-                          this._requestLogVaccine
-                      )
+                    ? html`
+                          ${vaccinesDueTemplate(
+                              this.hass,
+                              this._config.baby,
+                              this._requestLogVaccine
+                          )}
+                          ${vaccineHistoryTemplate(
+                              this._vaccines,
+                              this._requestEditEntry
+                          )}
+                      `
                     : ""}
                 ${sections.includes("growth")
                     ? growthChartTemplate(
@@ -294,7 +368,8 @@ export class BabytrackerSummaryCard extends LitElement {
                 this._options,
                 this._submitModal,
                 this._callService,
-                this._closeModal
+                this._closeModal,
+                this._requestDelete
             )}
         `;
     }

@@ -311,6 +311,72 @@ def _ws_list_entries_in_range(
         _push()
 
 
+def _vaccine_history_payload(coord, slug: str) -> list[dict[str, Any]] | None:
+    """Return all vaccine entries for a baby, newest-first.
+
+    Returns None if the baby slug is unknown so the caller can route the
+    `unknown_baby` error consistently with the other commands.
+    """
+    baby = coord.baby_by_slug(slug)
+    if baby is None:
+        return None
+    out: list[dict[str, Any]] = []
+    for e in coord.entries_by_baby(baby.id):
+        if e.type != "vaccine":
+            continue
+        out.append(
+            {
+                "id": e.id,
+                "timestamp": e.timestamp,
+                "source": e.source,
+                "readonly": e.readonly,
+                "data": dict(e.data),
+                "notes": e.notes,
+                "staff": e.staff,
+            }
+        )
+    out.sort(key=lambda r: r["timestamp"], reverse=True)
+    return out
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "babytracker/list_vaccines",
+        vol.Required("baby"): str,
+        vol.Optional("subscribe"): bool,
+    }
+)
+@callback
+def _ws_list_vaccines(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    coord = _coordinator(hass)
+    if coord is None:
+        connection.send_error(msg["id"], "not_configured", "babytracker not configured")
+        return
+    payload = _vaccine_history_payload(coord, msg["baby"])
+    if payload is None:
+        connection.send_error(msg["id"], "unknown_baby", msg["baby"])
+        return
+    connection.send_result(msg["id"], payload)
+    if msg.get("subscribe"):
+        @callback
+        def _push() -> None:
+            updated = _vaccine_history_payload(coord, msg["baby"])
+            if updated is None:
+                return
+            connection.send_message(
+                websocket_api.event_message(msg["id"], updated)
+            )
+
+        connection.subscriptions[msg["id"]] = async_dispatcher_connect(
+            hass, SIGNAL_DATA_UPDATED, _push
+        )
+        _push()
+
+
 _REGISTERED = False
 
 
@@ -323,6 +389,7 @@ async def async_register(hass: HomeAssistant, entry: ConfigEntry) -> None:
     websocket_api.async_register_command(hass, _ws_get_options)
     websocket_api.async_register_command(hass, _ws_get_schedule)
     websocket_api.async_register_command(hass, _ws_list_entries_in_range)
+    websocket_api.async_register_command(hass, _ws_list_vaccines)
     _REGISTERED = True
 
 
