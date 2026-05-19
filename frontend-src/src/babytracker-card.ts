@@ -553,7 +553,5 @@ import("./editor");
 
 // Bundle the standalone summary card (vaccines + growth + trends +
 // export) so it ships in the same artefact and is auto-registered when
-// users load /babytracker_static/babytracker-card.js. The same class is
-// also registered under the older `babytracker-medical-card` and
-// `babytracker-growth-card` element names for backward compat.
+// users load /babytracker_static/babytracker-card.js.
 import "./babytracker-summary-card";
