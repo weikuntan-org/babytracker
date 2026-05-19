@@ -551,9 +551,9 @@ window.customCards.push({
 // Editor lives in editor.ts.
 import("./editor");
 
-// Bundle the standalone medical/summary card (vaccines + growth) so it
-// ships in the same artefact and is auto-registered when users load
-// /babytracker_static/babytracker-card.js. The same class is also
-// registered as `babytracker-growth-card` for backward compat with the
-// old card name.
-import "./babytracker-medical-card";
+// Bundle the standalone summary card (vaccines + growth + trends +
+// export) so it ships in the same artefact and is auto-registered when
+// users load /babytracker_static/babytracker-card.js. The same class is
+// also registered under the older `babytracker-medical-card` and
+// `babytracker-growth-card` element names for backward compat.
+import "./babytracker-summary-card";
