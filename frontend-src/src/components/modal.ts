@@ -26,6 +26,30 @@ function _localInputToIso(value: string): string | undefined {
     return new Date(ms).toISOString();
 }
 
+/**
+ * Convert a stored ISO timestamp to the `YYYY-MM-DDTHH:MM` (local) value
+ * an `<input type="datetime-local">` expects. Returns "" for missing or
+ * unparseable input so the input stays empty.
+ */
+function _isoToLocalInput(iso?: string | null): string {
+    if (!iso) return "";
+    const ms = Date.parse(iso);
+    if (Number.isNaN(ms)) return "";
+    const d = new Date(ms);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return (
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+        `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    );
+}
+
+const SESSION_ENTRY_TYPES = new Set([
+    "sleep",
+    "feeding",
+    "tummy_time",
+    "walk"
+]);
+
 export type ActivityKind = "diaper" | "bottle" | "solids" | "other";
 
 export type SessionActivity = "sleep" | "tummy_time" | "walk" | "feeding";
@@ -58,18 +82,29 @@ export type ModalKind =
           entryType: string;
           source: string;
           staff?: string | null;
+      }
+    | {
+          kind: "edit_entry";
+          entry: any;
       };
 
 type Submit = (service: string, data: Record<string, unknown>) => Promise<void>;
 type Call = (service: string, data: Record<string, unknown>) => Promise<unknown>;
 type Close = () => void;
+type RequestDelete = (entry: {
+    id: string;
+    type?: string;
+    source?: string;
+    staff?: string | null;
+}) => void;
 
 export function modalTemplate(
     modal: ModalKind | null,
     options: any,
     submit: Submit,
     call: Call,
-    close: Close
+    close: Close,
+    requestDelete?: RequestDelete
 ): TemplateResult {
     let body: TemplateResult | typeof nothing = nothing;
     if (modal !== null) {
@@ -119,6 +154,14 @@ export function modalTemplate(
                     modal.staff ?? null,
                     submit,
                     close
+                );
+                break;
+            case "edit_entry":
+                body = editEntryForm(
+                    modal.entry,
+                    submit,
+                    close,
+                    requestDelete
                 );
                 break;
         }
@@ -431,6 +474,181 @@ function confirmDeleteImportedForm(
             </div>
         </form>
     `;
+}
+
+function editEntryForm(
+    entry: any,
+    submit: Submit,
+    close: Close,
+    requestDelete?: RequestDelete
+): TemplateResult {
+    const type = String(entry?.type ?? "");
+    const data = entry?.data ?? {};
+    const isSession =
+        SESSION_ENTRY_TYPES.has(type) &&
+        // Bottle feedings are point-in-time (started_at == ended_at); render
+        // them as a single Time field, same as the log form.
+        !(type === "feeding" && data.method === "bottle");
+    const onSubmit = (e: SubmitEvent) => {
+        e.preventDefault();
+        const form = e.currentTarget as HTMLFormElement;
+        const f = new FormData(form);
+        const fields: Record<string, unknown> = {};
+        const startIso = _localInputToIso(String(f.get("started") ?? ""));
+        if (startIso) fields.timestamp = startIso;
+        if (isSession) {
+            const endIso = _localInputToIso(String(f.get("ended") ?? ""));
+            // Empty end → leave the session open (set to null).
+            fields.ended_at = endIso ?? null;
+        } else if (type === "feeding" && data.method === "bottle") {
+            // Single-time bottle: mirror started_at into ended_at so the
+            // entry stays "closed" and doesn't reappear in OpenSessionBinary.
+            if (startIso) fields.ended_at = startIso;
+        }
+        const notes = String(f.get("notes") ?? "");
+        fields.notes = notes || null;
+        const dataPatch: Record<string, unknown> = {};
+        if (type === "diaper") {
+            dataPatch.kind = String(f.get("kind") ?? data.kind ?? "wet");
+        } else if (type === "feeding" && data.method === "bottle") {
+            const amtStr = String(f.get("amount") ?? "");
+            const amount = amtStr === "" ? null : Number(amtStr);
+            dataPatch.amount = amount;
+            dataPatch.unit = String(f.get("unit") ?? data.unit ?? "oz");
+        } else if (type === "other" || type === "medication") {
+            const name = String(f.get("name") ?? "");
+            if (name) dataPatch.name = name;
+        }
+        if (Object.keys(dataPatch).length) fields.data = dataPatch;
+        submit("edit_entry", { entry_id: entry.id, fields });
+    };
+    const onDelete = () => {
+        if (requestDelete) {
+            requestDelete({
+                id: entry.id,
+                type: entry.type,
+                source: entry.source,
+                staff: entry.staff
+            });
+        }
+        close();
+    };
+    const heading = _editHeading(entry);
+    return html`
+        <form @submit=${onSubmit}>
+            <h2>${heading}</h2>
+            ${isSession
+                ? html`
+                      <label for="started">Started</label>
+                      <input
+                          id="started"
+                          name="started"
+                          type="datetime-local"
+                          .value=${_isoToLocalInput(entry.timestamp)}
+                          required
+                      />
+                      <label for="ended"
+                          >Ended <span class="muted">(blank = ongoing)</span></label
+                      >
+                      <input
+                          id="ended"
+                          name="ended"
+                          type="datetime-local"
+                          .value=${_isoToLocalInput(entry.ended_at)}
+                      />
+                  `
+                : html`
+                      <label for="started">Time</label>
+                      <input
+                          id="started"
+                          name="started"
+                          type="datetime-local"
+                          .value=${_isoToLocalInput(entry.timestamp)}
+                          required
+                      />
+                  `}
+            ${type === "diaper"
+                ? html`
+                      <label for="kind">Kind</label>
+                      <select id="kind" name="kind">
+                          <option value="wet" ?selected=${data.kind === "wet"}>
+                              Wet
+                          </option>
+                          <option
+                              value="dirty"
+                              ?selected=${data.kind === "dirty"}
+                          >
+                              Dirty
+                          </option>
+                          <option value="both" ?selected=${data.kind === "both"}>
+                              Both
+                          </option>
+                      </select>
+                  `
+                : ""}
+            ${type === "feeding" && data.method === "bottle"
+                ? html`
+                      <label for="amount">Amount</label>
+                      <input
+                          id="amount"
+                          name="amount"
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          inputmode="decimal"
+                          .value=${data.amount != null ? String(data.amount) : ""}
+                      />
+                      <label for="unit">Unit</label>
+                      <select id="unit" name="unit">
+                          <option value="oz" ?selected=${data.unit === "oz"}>
+                              oz
+                          </option>
+                          <option value="ml" ?selected=${data.unit === "ml"}>
+                              ml
+                          </option>
+                      </select>
+                  `
+                : ""}
+            ${type === "other" || type === "medication"
+                ? html`
+                      <label for="name">Name</label>
+                      <input
+                          id="name"
+                          name="name"
+                          type="text"
+                          .value=${String(data.name ?? "")}
+                      />
+                  `
+                : ""}
+            <label for="notes">Notes</label>
+            <input
+                id="notes"
+                name="notes"
+                type="text"
+                .value=${String(entry.notes ?? "")}
+                placeholder="optional"
+            />
+            <div class="actions">
+                <button type="button" @click=${close}>Cancel</button>
+                <button
+                    type="button"
+                    class="danger"
+                    aria-label="Delete entry"
+                    @click=${onDelete}
+                >
+                    Delete
+                </button>
+                <button type="submit" class="primary">Save</button>
+            </div>
+        </form>
+    `;
+}
+
+function _editHeading(entry: any): string {
+    const t = String(entry?.type ?? "entry");
+    const d = entry?.data ?? {};
+    const detail = d.name ?? d.method ?? d.kind;
+    return detail ? `Edit ${t} (${detail})` : `Edit ${t}`;
 }
 
 function sessionForm(

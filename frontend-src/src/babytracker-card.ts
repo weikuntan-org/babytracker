@@ -145,6 +145,23 @@ export class BabytrackerCard extends LitElement {
             padding: 6px 0;
             border-bottom: 1px solid var(--divider-color);
         }
+        ul.entries li.clickable {
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 0 -4px;
+            padding: 6px 4px;
+        }
+        ul.entries li.clickable:hover,
+        ul.entries li.clickable:focus-visible {
+            background: var(--secondary-background-color);
+            outline: none;
+        }
+        button.danger {
+            background: var(--error-color, #c62828);
+            color: var(--text-primary-color, #fff);
+            border-color: transparent;
+            padding: 8px 14px;
+        }
         button.icon {
             background: transparent;
             border: none;
@@ -473,6 +490,10 @@ export class BabytrackerCard extends LitElement {
         };
     };
 
+    private _requestEdit = (entry: any) => {
+        this._modal = { kind: "edit_entry", entry };
+    };
+
     private _closeModal = () => {
         this._modal = null;
     };
@@ -522,7 +543,7 @@ export class BabytrackerCard extends LitElement {
                     ? recentEntriesTemplate(
                           this.hass,
                           this._baby(),
-                          this._requestDelete,
+                          this._requestEdit,
                           this._config.recent_limit ?? 50
                       )
                     : ""}
@@ -542,7 +563,8 @@ export class BabytrackerCard extends LitElement {
                 this._options,
                 this._submitModal,
                 (service, data) => this._handleService(service, data),
-                this._closeModal
+                this._closeModal,
+                this._requestDelete
             )}
         `;
     }

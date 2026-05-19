@@ -6,17 +6,37 @@ import { html, type TemplateResult } from "lit";
 import { babyEntityId } from "../lib/ha-helpers";
 import { entriesInLastWindow, formatClock } from "../lib/entries";
 
-export type DeleteRequester = (entry: {
-    id: string;
-    type?: string;
-    source?: string;
-    staff?: string | null;
-}) => void;
+export type EntryRequester = (entry: any) => void;
+
+const SESSION_TYPES = new Set([
+    "sleep",
+    "feeding",
+    "tummy_time",
+    "walk"
+]);
+
+function _renderTime(entry: any): TemplateResult {
+    const start = formatClock(entry.timestamp);
+    // Show the closing time for completed session-shaped entries (sleep,
+    // feeding, tummy time, walk) so the user can see how long it lasted
+    // without opening the row. Bottle feedings have started_at == ended_at;
+    // omit the range to avoid noise like "1:39 PM – 1:39 PM".
+    if (
+        SESSION_TYPES.has(String(entry.type ?? "")) &&
+        entry.ended_at &&
+        entry.ended_at !== entry.timestamp
+    ) {
+        return html`<span class="muted"
+            >${start} – ${formatClock(entry.ended_at)}</span
+        >`;
+    }
+    return html`<span class="muted">${start}</span>`;
+}
 
 export function recentEntriesTemplate(
     hass: any,
     baby: string,
-    requestDelete: DeleteRequester,
+    requestEdit: EntryRequester,
     limit: number
 ): TemplateResult {
     const sensor = hass.states[babyEntityId(baby, "recent_entries")];
@@ -32,13 +52,23 @@ export function recentEntriesTemplate(
                       <ul class="entries">
                           ${entries.map(
                               (entry: any) => html`
-                                  <li>
+                                  <li
+                                      class="clickable"
+                                      role="button"
+                                      tabindex="0"
+                                      aria-label="Edit entry"
+                                      @click=${() => requestEdit(entry)}
+                                      @keydown=${(e: KeyboardEvent) => {
+                                          if (e.key === "Enter" || e.key === " ") {
+                                              e.preventDefault();
+                                              requestEdit(entry);
+                                          }
+                                      }}
+                                  >
                                       <span aria-label="Entry type"
                                           >${_label(entry)}</span
                                       >
-                                      <span class="muted"
-                                          >${formatClock(entry.timestamp)}</span
-                                      >
+                                      ${_renderTime(entry)}
                                       ${entry.photo_path
                                           ? html`<span aria-label="Has photo"
                                                 >📷</span
@@ -51,21 +81,6 @@ export function recentEntriesTemplate(
                                                 >via ${entry.staff}</span
                                             >`
                                           : ""}
-                                      <span class="spacer"></span>
-                                      <button
-                                          class="icon"
-                                          title="Delete entry"
-                                          aria-label="Delete entry"
-                                          @click=${() =>
-                                              requestDelete({
-                                                  id: entry.id,
-                                                  type: entry.type,
-                                                  source: entry.source,
-                                                  staff: entry.staff
-                                              })}
-                                      >
-                                          ×
-                                      </button>
                                   </li>
                               `
                           )}
