@@ -7,9 +7,10 @@ import { customElement, property, state } from "lit/decorators.js";
 
 import { exportSheetTemplate } from "./components/export-sheet";
 import { growthChartTemplate } from "./components/growth-chart";
+import { modalTemplate, type ModalKind } from "./components/modal";
 import { trendsTemplate } from "./components/trends";
 import { vaccinesDueTemplate } from "./components/vaccines-due";
-import { subscribeIntegrationOptions } from "./lib/ha-helpers";
+import { babyEntityId, subscribeIntegrationOptions } from "./lib/ha-helpers";
 
 export interface BabytrackerSummaryCardConfig {
     type: string;
@@ -26,6 +27,7 @@ export class BabytrackerSummaryCard extends LitElement {
     @property({ attribute: false }) public hass?: any;
     @state() private _config?: BabytrackerSummaryCardConfig;
     @state() private _options?: any;
+    @state() private _modal: ModalKind | null = null;
     private _unsubOptions?: () => void;
 
     static styles = css`
@@ -90,6 +92,44 @@ export class BabytrackerSummaryCard extends LitElement {
         .trend + .trend {
             margin-top: 8px;
         }
+        .muted {
+            color: var(--secondary-text-color);
+            font-size: 0.85rem;
+        }
+        dialog {
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            min-width: min(360px, 92vw);
+            background: var(--card-background-color);
+            color: var(--primary-text-color);
+        }
+        dialog::backdrop {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        dialog form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        dialog .actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 8px;
+        }
+        dialog input,
+        dialog select {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid var(--divider-color);
+            background: var(--card-background-color);
+            color: var(--primary-text-color);
+            font: inherit;
+        }
+        .chip .spacer {
+            flex: 1;
+        }
     `;
 
     public setConfig(config: BabytrackerSummaryCardConfig): void {
@@ -117,7 +157,67 @@ export class BabytrackerSummaryCard extends LitElement {
         if (changed.has("hass") || changed.has("_config")) {
             this._maybeSubscribe();
         }
+        if (changed.has("_modal")) {
+            const dlg = this.renderRoot.querySelector(
+                "dialog"
+            ) as HTMLDialogElement | null;
+            if (dlg) {
+                if (this._modal && !dlg.open) dlg.showModal();
+                if (!this._modal && dlg.open) dlg.close();
+            }
+        }
     }
+
+    private _closeModal = () => {
+        this._modal = null;
+    };
+
+    private _submitModal = async (
+        service: string,
+        data: Record<string, unknown>
+    ) => {
+        await this.hass.callService("babytracker", service, data);
+        this._modal = null;
+    };
+
+    private _callService = async (
+        service: string,
+        data: Record<string, unknown>
+    ): Promise<unknown> => {
+        return this.hass.callService("babytracker", service, data);
+    };
+
+    private _requestLogGrowth = () => {
+        if (!this._config?.baby) return;
+        this._modal = { kind: "log_growth", baby: this._config.baby };
+    };
+
+    private _requestLogVaccine = () => {
+        if (!this._config?.baby) return;
+        const due = this.hass?.states?.[
+            babyEntityId(this._config.baby, "vaccines_due")
+        ];
+        const defaultName: string =
+            due?.state && due.state !== "none" && due.state !== "unknown"
+                ? String(due.state)
+                : "";
+        const doseVal = due?.attributes?.dose_number;
+        const defaultDose: number | undefined =
+            typeof doseVal === "number" ? doseVal : undefined;
+        const upcoming: any[] = Array.isArray(due?.attributes?.upcoming)
+            ? due.attributes.upcoming
+            : [];
+        const scheduleNames: string[] = upcoming
+            .map((u: any) => (u && typeof u.name === "string" ? u.name : null))
+            .filter((n: string | null): n is string => Boolean(n));
+        this._modal = {
+            kind: "log_vaccine",
+            baby: this._config.baby,
+            defaultName,
+            defaultDose,
+            scheduleNames
+        };
+    };
 
     private _maybeSubscribe(): void {
         if (!this.hass || !this._config) return;
@@ -141,14 +241,19 @@ export class BabytrackerSummaryCard extends LitElement {
         return html`
             <ha-card>
                 ${sections.includes("vaccines")
-                    ? vaccinesDueTemplate(this.hass, this._config.baby)
+                    ? vaccinesDueTemplate(
+                          this.hass,
+                          this._config.baby,
+                          this._requestLogVaccine
+                      )
                     : ""}
                 ${sections.includes("growth")
                     ? growthChartTemplate(
                           this.hass,
                           this._config.baby,
                           this._options,
-                          this._config.units
+                          this._config.units,
+                          this._requestLogGrowth
                       )
                     : ""}
                 ${sections.includes("trends")
@@ -162,6 +267,13 @@ export class BabytrackerSummaryCard extends LitElement {
                     ? exportSheetTemplate(this.hass, this._config.baby)
                     : ""}
             </ha-card>
+            ${modalTemplate(
+                this._modal,
+                this._options,
+                this._submitModal,
+                this._callService,
+                this._closeModal
+            )}
         `;
     }
 
