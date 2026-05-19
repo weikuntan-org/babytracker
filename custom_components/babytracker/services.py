@@ -531,6 +531,7 @@ LOG_GROWTH_SCHEMA = vol.Schema(
         vol.Optional("head_circumference"): vol.Coerce(float),
         vol.Optional("weight_unit"): vol.In(list(ALL_WEIGHT_UNITS)),
         vol.Optional("length_unit"): vol.In(list(ALL_LENGTH_UNITS)),
+        vol.Optional("timestamp"): cv.datetime,
         vol.Optional("notes"): cv.string,
         vol.Optional("photo_path"): vol.Any(None, str),
     }
@@ -557,13 +558,19 @@ async def _handle_log_growth(call: ServiceCall) -> None:
         "weight_unit": weight_unit,
         "length_unit": length_unit,
     }
-    # Compute percentiles (M6+)
+    # Compute percentiles (M6+). When the user back-dates a measurement
+    # we must compute percentiles against the baby's age on that date,
+    # not today — otherwise the bands are off by however long ago the
+    # measurement was taken.
     from . import percentiles
 
-    percentiles.attach_percentile_data(hass, baby, data)
+    ts = call.data.get("timestamp")
+    measured_at = ts.date() if ts else None
+    percentiles.attach_percentile_data(hass, baby, data, measured_at=measured_at)
     entry = _build_entry(
         type_="growth",
         baby_id=baby.id,
+        timestamp=ts.isoformat() if ts else None,
         notes=call.data.get("notes"),
         photo_path=call.data.get("photo_path"),
         data=data,

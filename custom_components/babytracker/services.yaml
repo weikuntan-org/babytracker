@@ -362,6 +362,9 @@ log_growth:
           options:
             - cm
             - in
+    timestamp:
+      selector:
+        datetime:
     notes:
       selector:
         text:

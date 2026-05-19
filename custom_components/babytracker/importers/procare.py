@@ -258,6 +258,9 @@ class ProcareImporter(BaseImporter):
         staff = activity.get("staff")
         data = self._derive_data(entry_type, activity, mapping)
         timestamp = data.pop("__timestamp_override", None) or timestamp
+        # Surface the Procare `details` payload as the entry's `notes`
+        # field so it shows up in the recent-entries notes row.
+        notes = (activity.get("details") or "").strip() or None
 
         entry = Entry(
             id=str(uuid.uuid4()),
@@ -272,6 +275,7 @@ class ProcareImporter(BaseImporter):
             readonly=self.config.get("mark_readonly", True),
             photo_url=photo_url,
             staff=staff,
+            notes=notes,
             data=data,
         )
         await self.coordinator.add_entry(entry)

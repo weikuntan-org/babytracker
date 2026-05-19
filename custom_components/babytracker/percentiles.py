@@ -166,13 +166,18 @@ def _options(hass: "HomeAssistant") -> dict[str, Any]:
 
 
 def attach_percentile_data(
-    hass: "HomeAssistant", baby: "Baby", data: dict[str, Any]
+    hass: "HomeAssistant",
+    baby: "Baby",
+    data: dict[str, Any],
+    measured_at: date | None = None,
 ) -> None:
     """Compute percentile fields and merge them into `data` in place.
 
     Called from `log_growth`. Percentiles are persisted into the entry's
     `data` block so historical values stay stable across reference table
-    bumps (§4.5).
+    bumps (§4.5). `measured_at` is the date the measurement was taken
+    (used to compute the baby's age at that point); defaults to today
+    so the existing call path keeps the same behavior.
     """
     from .const import OPT_WHO_CDC_HANDOFF_MONTHS
 
@@ -189,7 +194,7 @@ def attach_percentile_data(
     height_cm = to_cm(float(height_raw), length_unit) if height_raw is not None else None
     head_cm = to_cm(float(head_raw), length_unit) if head_raw is not None else None
 
-    a_days = age_days(baby.birthday)
+    a_days = age_days(baby.birthday, today=measured_at)
     src = source_for_age(a_days, handoff)
 
     if weight_kg is not None:
