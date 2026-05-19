@@ -233,6 +233,84 @@ async def _ws_get_schedule(
     connection.send_result(msg["id"], payload)
 
 
+def _entries_in_range_payload(
+    coord, slug: str, start_iso: str, end_iso: str
+) -> list[dict[str, Any]] | None:
+    """Return entries for a baby whose `timestamp` falls in [start, end].
+
+    Returns None if the baby slug is unknown. Sorted newest-first. The
+    `data` dict is shallow-copied so the WS payload doesn't accidentally
+    expose coordinator-internal mutation aliases.
+    """
+    baby = coord.baby_by_slug(slug)
+    if baby is None:
+        return None
+    out: list[dict[str, Any]] = []
+    for e in coord.entries_by_baby(baby.id):
+        if e.timestamp < start_iso or e.timestamp > end_iso:
+            continue
+        out.append(
+            {
+                "id": e.id,
+                "type": e.type,
+                "timestamp": e.timestamp,
+                "ended_at": e.ended_at,
+                "source": e.source,
+                "readonly": e.readonly,
+                "data": dict(e.data),
+                "photo_path": e.photo_path,
+                "photo_url": e.photo_url,
+                "staff": e.staff,
+                "notes": e.notes,
+            }
+        )
+    out.sort(key=lambda r: r["timestamp"], reverse=True)
+    return out
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "babytracker/list_entries_in_range",
+        vol.Required("baby"): str,
+        vol.Required("start"): str,  # ISO-8601 inclusive
+        vol.Required("end"): str,    # ISO-8601 inclusive
+        vol.Optional("subscribe"): bool,
+    }
+)
+@callback
+def _ws_list_entries_in_range(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    coord = _coordinator(hass)
+    if coord is None:
+        connection.send_error(msg["id"], "not_configured", "babytracker not configured")
+        return
+    payload = _entries_in_range_payload(coord, msg["baby"], msg["start"], msg["end"])
+    if payload is None:
+        connection.send_error(msg["id"], "unknown_baby", msg["baby"])
+        return
+    connection.send_result(msg["id"], payload)
+    if msg.get("subscribe"):
+        @callback
+        def _push() -> None:
+            # Coordinator may have changed; re-resolve payload each time.
+            updated = _entries_in_range_payload(
+                coord, msg["baby"], msg["start"], msg["end"]
+            )
+            if updated is None:
+                return
+            connection.send_message(
+                websocket_api.event_message(msg["id"], updated)
+            )
+
+        connection.subscriptions[msg["id"]] = async_dispatcher_connect(
+            hass, SIGNAL_DATA_UPDATED, _push
+        )
+        _push()
+
+
 _REGISTERED = False
 
 
@@ -244,6 +322,7 @@ async def async_register(hass: HomeAssistant, entry: ConfigEntry) -> None:
     websocket_api.async_register_command(hass, _ws_get_baby_config)
     websocket_api.async_register_command(hass, _ws_get_options)
     websocket_api.async_register_command(hass, _ws_get_schedule)
+    websocket_api.async_register_command(hass, _ws_list_entries_in_range)
     _REGISTERED = True
 
 

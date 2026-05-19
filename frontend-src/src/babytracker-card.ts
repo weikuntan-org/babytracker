@@ -628,3 +628,4 @@ import("./editor");
 // export) so it ships in the same artefact and is auto-registered when
 // users load /babytracker_static/babytracker-card.js.
 import "./babytracker-summary-card";
+import "./babytracker-history-card";
