@@ -1,5 +1,6 @@
 // Modal/lightbox forms for activities that need extra input on tap.
 import { html, type TemplateResult, nothing } from "lit";
+import { displayBabyName } from "../lib/ha-helpers";
 
 /**
  * Current local time as the `value` for an `<input type="datetime-local">`.
@@ -107,6 +108,8 @@ export type ModalKind =
     | {
           kind: "end_sleep_first";
           baby: string;
+          /** Configured display name (preserves casing like "TJ"). */
+          babyName?: string;
           label: string;
           then: () => void | Promise<void>;
       }
@@ -187,6 +190,7 @@ export function modalTemplate(
             case "end_sleep_first":
                 body = endSleepFirstForm(
                     modal.baby,
+                    modal.babyName,
                     modal.label,
                     modal.then,
                     call,
@@ -233,6 +237,7 @@ export function modalTemplate(
 
 function endSleepFirstForm(
     baby: string,
+    babyName: string | undefined,
     label: string,
     then: () => void | Promise<void>,
     call: Call,
@@ -251,10 +256,11 @@ function endSleepFirstForm(
         close();
         await then();
     };
+    const displayName = displayBabyName(babyName ?? baby);
     return html`
         <form @submit=${(e: SubmitEvent) => e.preventDefault()}>
             <h2>End sleep first?</h2>
-            <p>${baby} is asleep. End the sleep session before ${label}?</p>
+            <p>${displayName} is asleep. End the sleep session before ${label}?</p>
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
                 <button type="button" @click=${skip}>Skip, just log</button>

@@ -634,13 +634,16 @@ const Ee = [
   "walk",
   "other"
 ], Ne = ["bottle", "breast_left", "breast_right", "solids"];
+function Wn(e) {
+  return typeof e == "string" && e.length ? e.charAt(0).toUpperCase() + e.slice(1) : e;
+}
 function Pe(e, t, i, r) {
-  const n = (e == null ? void 0 : e.enabled_activities) ?? Ee, s = (e == null ? void 0 : e.enabled_feeding_methods) ?? Ne, o = (c) => c.charAt(0).toUpperCase() + c.slice(1), a = [];
+  const n = (e == null ? void 0 : e.enabled_activities) ?? Ee, s = (e == null ? void 0 : e.enabled_feeding_methods) ?? Ne, o = (c) => c.charAt(0).toUpperCase() + c.slice(1), a = [], T = Wn((e == null ? void 0 : e.name) ?? t);
   if (n.includes("diaper") && a.push(
     u`
                 <button
                     class="quick"
-                    aria-label="Log diaper for ${t}"
+                    aria-label="Log diaper for ${T}"
                     @click=${() => r("diaper")}
                 >
                     Diaper
@@ -652,7 +655,7 @@ function Pe(e, t, i, r) {
         u`
                         <button
                             class="quick"
-                            aria-label="Log bottle feeding for ${t}"
+                            aria-label="Log bottle feeding for ${T}"
                             @click=${() => r("bottle")}
                         >
                             Bottle
@@ -662,7 +665,7 @@ function Pe(e, t, i, r) {
         u`
                         <button
                             class="quick"
-                            aria-label="Log solids feeding for ${t}"
+                            aria-label="Log solids feeding for ${T}"
                             @click=${() => r("solids")}
                         >
                             Solids
@@ -672,7 +675,7 @@ function Pe(e, t, i, r) {
         u`
                         <button
                             class="quick"
-                            aria-label="Log ${c} feeding for ${t}"
+                            aria-label="Log ${c} feeding for ${T}"
                             @click=${() => r({ activity: "feeding", method: c })}
                         >
                             ${o(c.replace("_", " "))}
@@ -683,7 +686,7 @@ function Pe(e, t, i, r) {
     u`
                 <button
                     class="quick"
-                    aria-label="Log sleep for ${t}"
+                    aria-label="Log sleep for ${T}"
                     @click=${() => r({ activity: "sleep" })}
                 >
                     Sleep
@@ -693,7 +696,7 @@ function Pe(e, t, i, r) {
     u`
                 <button
                     class="quick"
-                    aria-label="Log tummy time for ${t}"
+                    aria-label="Log tummy time for ${T}"
                     @click=${() => r({ activity: "tummy_time" })}
                 >
                     Tummy time
@@ -703,7 +706,7 @@ function Pe(e, t, i, r) {
     u`
                 <button
                     class="quick"
-                    aria-label="Log walk for ${t}"
+                    aria-label="Log walk for ${T}"
                     @click=${() => r({ activity: "walk" })}
                 >
                     Walk
@@ -713,7 +716,7 @@ function Pe(e, t, i, r) {
     u`
                 <button
                     class="quick"
-                    aria-label="Log other activity for ${t}"
+                    aria-label="Log other activity for ${T}"
                     @click=${() => r("other")}
                 >
                     Other
@@ -1226,6 +1229,7 @@ function Et(e, t, i, r, n, s) {
       case "end_sleep_first":
         o = Xe(
           e.baby,
+          e.babyName,
           e.label,
           e.then,
           r,
@@ -1268,15 +1272,16 @@ function Et(e, t, i, r, n, s) {
         <dialog @cancel=${n} @close=${n}>${o}</dialog>
     `;
 }
-function Xe(e, t, i, r, n) {
+function Xe(e, t, i, r, n, s) {
+  const o = Wn(t ?? e);
   return u`
         <form @submit=${(a) => a.preventDefault()}>
             <h2>End sleep first?</h2>
-            <p>${e} is asleep. End the sleep session before ${t}?</p>
+            <p>${o} is asleep. End the sleep session before ${i}?</p>
             <div class="actions">
-                <button type="button" @click=${n}>Cancel</button>
+                <button type="button" @click=${s}>Cancel</button>
                 <button type="button" @click=${async () => {
-    n(), await i();
+    s(), await r();
   }}>Skip, just log</button>
                 <button
                     type="button"
@@ -1284,11 +1289,11 @@ function Xe(e, t, i, r, n) {
                     autofocus
                     @click=${async () => {
     try {
-      await r("end_sleep", { baby: e });
+      await n("end_sleep", { baby: e });
     } catch (a) {
       console.warn("babytracker: end_sleep failed", a);
     }
-    n(), await i();
+    s(), await r();
   }}
                 >
                     End sleep &amp; continue
@@ -3118,10 +3123,12 @@ let S = class extends P {
         return { amount: d.data.amount, unit: d.data.unit };
   }
   _interceptIfSleeping(e, t) {
+    var i;
     if (!this._isSleeping()) return t();
     this._modal = {
       kind: "end_sleep_first",
       baby: this._baby(),
+      babyName: (i = this._babyConfig) == null ? void 0 : i.name,
       label: e,
       then: t
     };
@@ -3132,7 +3139,7 @@ let S = class extends P {
     const e = this._sections;
     return u`
             <ha-card>
-                <h2>${((t = this._babyConfig) == null ? void 0 : t.name) ?? this._baby()}</h2>
+                <h2>${Wn(((t = this._babyConfig) == null ? void 0 : t.name) ?? this._baby())}</h2>
                 ${e.includes("status") ? this._renderStatus() : ""}
                 ${e.includes("today") ? Ge(this.hass, this._baby(), this._babyConfig) : ""}
                 ${e.includes("active_session") ? Ie(

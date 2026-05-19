@@ -18,6 +18,7 @@ import { todayCountsTemplate } from "./components/today-counts";
 import { modalTemplate, type ModalKind } from "./components/modal";
 import {
     babyEntityId,
+    displayBabyName,
     fireServiceCall,
     subscribeBabyConfig,
     subscribeIntegrationOptions
@@ -431,6 +432,7 @@ export class BabytrackerCard extends LitElement {
         this._modal = {
             kind: "end_sleep_first",
             baby: this._baby(),
+            babyName: this._babyConfig?.name,
             label,
             then: action
         };
@@ -544,7 +546,7 @@ export class BabytrackerCard extends LitElement {
         const sections = this._sections;
         return html`
             <ha-card>
-                <h2>${this._babyConfig?.name ?? this._baby()}</h2>
+                <h2>${displayBabyName(this._babyConfig?.name ?? this._baby())}</h2>
                 ${sections.includes("status") ? this._renderStatus() : ""}
                 ${sections.includes("today")
                     ? todayCountsTemplate(this.hass, this._baby(), this._babyConfig)
