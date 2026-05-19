@@ -52,14 +52,32 @@ export function growthChartTemplate(
     latestEntry?: any,
     onEdit?: (entry: any) => void
 ): TemplateResult {
-    const weightUnit = units?.weight ?? options?.weight_unit ?? "kg";
-    const lengthUnit = units?.length ?? options?.length_unit ?? "cm";
-    const weight = hass.states[babyEntityId(baby, "weight")]?.state;
-    const height = hass.states[babyEntityId(baby, "height")]?.state;
-    const head = hass.states[babyEntityId(baby, "head_circumference")]?.state;
+    // Prefer the entry's stored value + unit pair so the chip shows what
+    // the user actually logged. Falling back to the sensor state would
+    // mean displaying the value converted into the integration's global
+    // unit while labelling it differently — "60 cm logged" rendering as
+    // "23.6 cm" because the global default is inches.
+    const entryData = latestEntry?.data ?? {};
+    const fallbackWeightUnit =
+        units?.weight ?? options?.weight_unit ?? "kg";
+    const fallbackLengthUnit =
+        units?.length ?? options?.length_unit ?? "cm";
+    const weightUnit = entryData.weight_unit ?? fallbackWeightUnit;
+    const lengthUnit = entryData.length_unit ?? fallbackLengthUnit;
+    const weight =
+        entryData.weight ??
+        hass.states[babyEntityId(baby, "weight")]?.state;
+    const height =
+        entryData.height ??
+        hass.states[babyEntityId(baby, "height")]?.state;
+    const head =
+        entryData.head_circumference ??
+        hass.states[babyEntityId(baby, "head_circumference")]?.state;
     const weightP =
+        entryData.weight_percentile ??
         hass.states[babyEntityId(baby, "weight_percentile")]?.state;
     const heightP =
+        entryData.height_percentile ??
         hass.states[babyEntityId(baby, "height_percentile")]?.state;
     const measuredOn = _fmtDate(latestEntry?.timestamp);
     const clickable = !!(latestEntry && onEdit);
