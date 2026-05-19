@@ -177,6 +177,7 @@ START_FEEDING_SCHEMA = vol.Schema(
         vol.Required("baby"): cv.string,
         vol.Required("method"): vol.In(list(ALL_FEEDING_METHODS)),
         vol.Optional("started_at"): cv.datetime,
+        vol.Optional("photo_path"): vol.Any(None, str),
     }
 )
 END_FEEDING_SCHEMA = vol.Schema(
@@ -203,6 +204,7 @@ async def _handle_start_feeding(call: ServiceCall) -> None:
         type_="feeding",
         baby_id=baby.id,
         timestamp=started.isoformat() if started else None,
+        photo_path=call.data.get("photo_path"),
         data={"method": method},
     )
     await coord.add_entry(entry)
@@ -263,6 +265,7 @@ START_SLEEP_SCHEMA = vol.Schema(
         vol.Required("baby"): cv.string,
         vol.Optional("started_at"): cv.datetime,
         vol.Optional("location"): cv.string,
+        vol.Optional("photo_path"): vol.Any(None, str),
     }
 )
 END_SLEEP_SCHEMA = vol.Schema(
@@ -278,12 +281,14 @@ LOG_SLEEP_SCHEMA = vol.Schema(
         vol.Required("ended_at"): cv.datetime,
         vol.Optional("location"): cv.string,
         vol.Optional("notes"): cv.string,
+        vol.Optional("photo_path"): vol.Any(None, str),
     }
 )
 START_TUMMY_SCHEMA = vol.Schema(
     {
         vol.Required("baby"): cv.string,
         vol.Optional("started_at"): cv.datetime,
+        vol.Optional("photo_path"): vol.Any(None, str),
     }
 )
 END_TUMMY_SCHEMA = vol.Schema(
@@ -298,6 +303,7 @@ LOG_TUMMY_SCHEMA = vol.Schema(
         vol.Required("started_at"): cv.datetime,
         vol.Required("ended_at"): cv.datetime,
         vol.Optional("notes"): cv.string,
+        vol.Optional("photo_path"): vol.Any(None, str),
     }
 )
 
@@ -314,6 +320,7 @@ async def _handle_start_sleep(call: ServiceCall) -> None:
         type_="sleep",
         baby_id=baby.id,
         timestamp=started.isoformat() if started else None,
+        photo_path=call.data.get("photo_path"),
         data={"location": call.data.get("location") or "home"},
     )
     await coord.add_entry(entry)
@@ -329,6 +336,7 @@ async def _handle_log_sleep(call: ServiceCall) -> None:
         timestamp=call.data["started_at"].isoformat(),
         ended_at=call.data["ended_at"].isoformat(),
         notes=call.data.get("notes"),
+        photo_path=call.data.get("photo_path"),
         data={"location": call.data.get("location") or "home"},
     )
     await _coordinator(hass).add_entry(entry)
@@ -359,6 +367,7 @@ async def _handle_start_tummy(call: ServiceCall) -> None:
         type_="tummy_time",
         baby_id=baby.id,
         timestamp=started.isoformat() if started else None,
+        photo_path=call.data.get("photo_path"),
     )
     await coord.add_entry(entry)
 
@@ -386,6 +395,7 @@ async def _handle_log_tummy(call: ServiceCall) -> None:
         timestamp=call.data["started_at"].isoformat(),
         ended_at=call.data["ended_at"].isoformat(),
         notes=call.data.get("notes"),
+        photo_path=call.data.get("photo_path"),
     )
     await _coordinator(hass).add_entry(entry)
 
@@ -396,6 +406,7 @@ START_WALK_SCHEMA = vol.Schema(
         vol.Required("baby"): cv.string,
         vol.Optional("started_at"): cv.datetime,
         vol.Optional("location"): cv.string,
+        vol.Optional("photo_path"): vol.Any(None, str),
     }
 )
 END_WALK_SCHEMA = vol.Schema(
@@ -411,6 +422,7 @@ LOG_WALK_SCHEMA = vol.Schema(
         vol.Required("ended_at"): cv.datetime,
         vol.Optional("location"): cv.string,
         vol.Optional("notes"): cv.string,
+        vol.Optional("photo_path"): vol.Any(None, str),
     }
 )
 
@@ -430,6 +442,7 @@ async def _handle_start_walk(call: ServiceCall) -> None:
         type_="walk",
         baby_id=baby.id,
         timestamp=started.isoformat() if started else None,
+        photo_path=call.data.get("photo_path"),
         data=data or None,
     )
     await coord.add_entry(entry)
@@ -461,6 +474,7 @@ async def _handle_log_walk(call: ServiceCall) -> None:
         timestamp=call.data["started_at"].isoformat(),
         ended_at=call.data["ended_at"].isoformat(),
         notes=call.data.get("notes"),
+        photo_path=call.data.get("photo_path"),
         data=data or None,
     )
     await _coordinator(hass).add_entry(entry)

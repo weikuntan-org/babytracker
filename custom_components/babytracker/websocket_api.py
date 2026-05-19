@@ -1,8 +1,11 @@
 """WebSocket commands for the bundled card (§15 #24)."""
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import logging
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +16,19 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import DEFAULT_OPTIONS, DOMAIN, SIGNAL_DATA_UPDATED
+
+# Photo upload (§5 photos). Mirrored constraint with services._validate_photo_path:
+# resulting `media-source://` URL must include "babytracker" so it passes the
+# soft-scope check there.
+PHOTO_MAX_BYTES = 5 * 1024 * 1024
+PHOTO_MIME_TO_EXT: dict[str, str] = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/heic": "heic",
+    "image/heif": "heif",
+}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -444,6 +460,62 @@ def _ws_list_growth(
         _push()
 
 
+def _write_photo_sync(target: Path, payload: bytes) -> None:
+    """Persist the decoded photo bytes. Runs in executor thread."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(payload)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "babytracker/upload_photo",
+        vol.Required("data"): str,
+        vol.Required("mime"): str,
+    }
+)
+@websocket_api.async_response
+async def _ws_upload_photo(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    mime = msg["mime"].lower().strip()
+    ext = PHOTO_MIME_TO_EXT.get(mime)
+    if ext is None:
+        connection.send_error(
+            msg["id"], "unsupported_mime", f"unsupported photo mime: {mime!r}"
+        )
+        return
+    try:
+        payload = base64.b64decode(msg["data"], validate=True)
+    except (binascii.Error, ValueError):
+        connection.send_error(msg["id"], "invalid_base64", "data is not valid base64")
+        return
+    if len(payload) == 0:
+        connection.send_error(msg["id"], "empty_photo", "photo payload is empty")
+        return
+    if len(payload) > PHOTO_MAX_BYTES:
+        connection.send_error(
+            msg["id"],
+            "too_large",
+            f"photo exceeds {PHOTO_MAX_BYTES} bytes",
+        )
+        return
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    # `media/<...>` under HA's config dir is what the `media_source` local
+    # provider serves, and the resulting `media-source://media_source/local/...`
+    # URL satisfies services._validate_photo_path's "babytracker" check.
+    target = Path(hass.config.path("media", "babytracker", filename))
+    try:
+        await hass.async_add_executor_job(_write_photo_sync, target, payload)
+    except OSError as err:
+        _LOGGER.warning("babytracker: photo write failed: %s", err)
+        connection.send_error(msg["id"], "write_failed", str(err))
+        return
+    photo_path = f"media-source://media_source/local/babytracker/{filename}"
+    connection.send_result(msg["id"], {"photo_path": photo_path})
+
+
 _REGISTERED = False
 
 
@@ -458,6 +530,7 @@ async def async_register(hass: HomeAssistant, entry: ConfigEntry) -> None:
     websocket_api.async_register_command(hass, _ws_list_entries_in_range)
     websocket_api.async_register_command(hass, _ws_list_vaccines)
     websocket_api.async_register_command(hass, _ws_list_growth)
+    websocket_api.async_register_command(hass, _ws_upload_photo)
     _REGISTERED = True
 
 

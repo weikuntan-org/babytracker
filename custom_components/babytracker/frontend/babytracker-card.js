@@ -881,6 +881,169 @@ Wm.styles = ut`
 F([Z({ attribute: !1 })], Wm.prototype, "hass", 2);
 F([x()], Wm.prototype, "_state", 2);
 Wm = F([ht("bt-mic-button")], Wm);
+// --- photo upload helper + bt-photo-button element ---
+const BT_PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+const BT_PHOTO_MIMES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif"
+]);
+function btFileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        reject(new Error("FileReader returned non-string"));
+        return;
+      }
+      const idx = result.indexOf(",");
+      resolve(idx >= 0 ? result.slice(idx + 1) : result);
+    };
+    reader.onerror = () => reject(new Error("FileReader failed"));
+    reader.readAsDataURL(file);
+  });
+}
+async function btUploadPhoto(hass, file) {
+  if (file.size > BT_PHOTO_MAX_BYTES) {
+    const err = new Error(`Photo is ${Math.round(file.size / (1024 * 1024))} MB; max is 5 MB`);
+    err.code = "too_large";
+    throw err;
+  }
+  const mime = (file.type || "").toLowerCase();
+  if (!BT_PHOTO_MIMES.has(mime)) {
+    const err = new Error(`Unsupported photo type: ${file.type || "unknown"}`);
+    err.code = "unsupported_mime";
+    throw err;
+  }
+  const data = await btFileToBase64(file);
+  const result = await hass.connection.sendMessagePromise({
+    type: "babytracker/upload_photo",
+    data,
+    mime
+  });
+  const path = result && result.photo_path;
+  if (typeof path !== "string" || !path) {
+    const err = new Error("upload returned no photo_path");
+    err.code = "bad_response";
+    throw err;
+  }
+  return { photo_path: path };
+}
+let Wp = class extends P {
+  constructor() {
+    super(...arguments);
+    this.value = "";
+    this._busy = false;
+    this._error = "";
+    this._onPick = async (e) => {
+      const input = e.currentTarget;
+      const file = input.files && input.files[0];
+      input.value = "";
+      if (!file) return;
+      this._busy = true;
+      this._error = "";
+      try {
+        const result = await btUploadPhoto(this.hass, file);
+        this._setValue(result.photo_path);
+      } catch (err) {
+        this._error = (err && err.message) || "Photo upload failed";
+        console.warn("babytracker: photo upload failed", err);
+      } finally {
+        this._busy = false;
+      }
+    };
+    this._onClickAdd = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this._error = "";
+      const file = this.renderRoot.querySelector("input[type=file]");
+      if (file) file.click();
+    };
+    this._onClickRemove = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this._setValue("");
+    };
+  }
+  _setValue(v) {
+    this.value = v;
+    this.dispatchEvent(new CustomEvent("photo-changed", {
+      detail: { value: v },
+      bubbles: true,
+      composed: true
+    }));
+  }
+  render() {
+    if (!(this.hass && this.hass.connection)) return u``;
+    const v = this.value || "";
+    return u`
+      <div class="row">
+        ${v ? u`
+            <span class="thumb" aria-label="Photo attached">📷</span>
+            <span class="path muted" title=${v}>Photo attached</span>
+            <button
+              type="button"
+              class="remove"
+              aria-label="Remove photo"
+              title="Remove photo"
+              @click=${this._onClickRemove}
+            >✕</button>
+          ` : u`
+            <button
+              type="button"
+              class="add"
+              aria-label="Add photo"
+              title="Add photo"
+              ?disabled=${this._busy}
+              @click=${this._onClickAdd}
+            >${this._busy ? "…" : "📷"}</button>
+          `}
+        <input type="file" accept="image/*" capture="environment" @change=${this._onPick} hidden />
+      </div>
+      ${this._error ? u`<div class="error" role="alert">${this._error}</div>` : ""}
+    `;
+  }
+};
+Wp.styles = ut`
+  :host { display: inline-block; }
+  .row { display: inline-flex; align-items: center; gap: 6px; }
+  button {
+    background: var(--secondary-background-color);
+    color: var(--primary-text-color);
+    border: 1px solid var(--divider-color);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    min-width: 36px;
+  }
+  button.remove { padding: 2px 8px; min-width: 0; }
+  button[disabled] { opacity: 0.7; cursor: progress; }
+  .thumb { font-size: 1.1rem; }
+  .path { font-size: 0.85rem; }
+  .muted { color: var(--secondary-text-color); }
+  .error { color: var(--error-color, #d33); font-size: 0.8rem; margin-top: 4px; }
+`;
+F([Z({ attribute: !1 })], Wp.prototype, "hass", 2);
+F([Z()], Wp.prototype, "value", 2);
+F([x()], Wp.prototype, "_busy", 2);
+F([x()], Wp.prototype, "_error", 2);
+Wp = F([ht("bt-photo-button")], Wp);
+function btPhotoRow(hass, currentValue) {
+  return u`
+    <label>Photo</label>
+    <bt-photo-button .hass=${hass} .value=${currentValue ?? ""}></bt-photo-button>
+  `;
+}
+function btReadPhotoPath(form) {
+  const el = form && form.querySelector("bt-photo-button");
+  const v = el && el.value;
+  return typeof v === "string" && v.length > 0 ? v : void 0;
+}
 // Notes-input row with adjacent mic button. Used by every dialog that has a
 // `<input name="notes">` field.
 function btNotesRow(hass, opts) {
@@ -1578,7 +1741,8 @@ function Je(hass, e, t, i) {
       baby: e,
       kind: String(o.get("kind") ?? "wet"),
       timestamp: T(String(o.get("when") ?? "")),
-      notes: String(o.get("notes") ?? "") || void 0
+      notes: String(o.get("notes") ?? "") || void 0,
+      photo_path: btReadPhotoPath(s)
     });
   }}>
             <h2>Log diaper</h2>
@@ -1591,6 +1755,7 @@ function Je(hass, e, t, i) {
             />
             <label for="notes">Notes</label>
             ${btNotesRow(hass)}
+            ${btPhotoRow(hass)}
             <div
                 style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"
             >
@@ -1641,7 +1806,8 @@ function Qe(hass, e, t, i, r, n, s) {
       unit: m,
       started_at: l,
       ended_at: l,
-      notes: v
+      notes: v,
+      photo_path: btReadPhotoPath(b)
     });
   }}>
             <h2>Log bottle</h2>
@@ -1671,6 +1837,7 @@ function Qe(hass, e, t, i, r, n, s) {
             />
             <label for="notes">Notes</label>
             ${btNotesRow(hass)}
+            ${btPhotoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${s}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -1688,7 +1855,8 @@ function ti(hass, e, t, i) {
       method: "solids",
       started_at: a,
       ended_at: a,
-      notes: String(o.get("notes") ?? "") || void 0
+      notes: String(o.get("notes") ?? "") || void 0,
+      photo_path: btReadPhotoPath(s)
     });
   }}>
             <h2>Log solids</h2>
@@ -1703,6 +1871,7 @@ function ti(hass, e, t, i) {
                 type="datetime-local"
                 .value=${st()}
             />
+            ${btPhotoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${i}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -1719,7 +1888,8 @@ function ei(hass, e, t, i) {
       baby: e,
       name: String(o.get("name") ?? ""),
       timestamp: T(String(o.get("when") ?? "")),
-      notes: String(o.get("notes") ?? "") || void 0
+      notes: String(o.get("notes") ?? "") || void 0,
+      photo_path: btReadPhotoPath(s)
     });
   }}>
             <h2>Log activity</h2>
@@ -1741,6 +1911,7 @@ function ei(hass, e, t, i) {
             />
             <label for="notes">Notes</label>
             ${btNotesRow(hass)}
+            ${btPhotoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${i}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -1804,7 +1975,10 @@ function ni(hass, e, t, i, r) {
         l.get("length_unit") ?? s.length_unit ?? "cm"
       );
     }
-    Object.keys(_).length && (m.data = _), t("edit_entry", { entry_id: e.id, fields: m });
+    Object.keys(_).length && (m.data = _);
+    const photo = btReadPhotoPath(g);
+    m.photo_path = photo ?? null;
+    t("edit_entry", { entry_id: e.id, fields: m });
   }, b = () => {
     if (!r) {
       i();
@@ -1985,6 +2159,7 @@ function ni(hass, e, t, i, r) {
                   ` : ""}
             <label for="notes">Notes</label>
             ${btNotesRow(hass, { value: String(e.notes ?? "") })}
+            ${btPhotoRow(hass, e.photo_path ?? "")}
             <div class="actions">
                 <button type="button" @click=${i}>Cancel</button>
                 <button
@@ -2014,11 +2189,12 @@ function si(hass, e, t, i, r, n) {
   return u`
         <form @submit=${(a) => {
     a.preventDefault();
-    const c = a.currentTarget, d = new FormData(c), b = T(String(d.get("started") ?? "")), p = T(String(d.get("ended") ?? "")), h = String(d.get("notes") ?? "") || void 0;
+    const c = a.currentTarget, d = new FormData(c), b = T(String(d.get("started") ?? "")), p = T(String(d.get("ended") ?? "")), h = String(d.get("notes") ?? "") || void 0, ph = btReadPhotoPath(c);
     if (!p) {
       const m = {
         baby: e,
-        started_at: b
+        started_at: b,
+        photo_path: ph
       };
       let v;
       switch (t) {
@@ -2042,7 +2218,8 @@ function si(hass, e, t, i, r, n) {
       baby: e,
       started_at: b,
       ended_at: p,
-      notes: h
+      notes: h,
+      photo_path: ph
     };
     let l;
     switch (t) {
@@ -2079,6 +2256,7 @@ function si(hass, e, t, i, r, n) {
             />
             <label for="notes">Notes</label>
             ${btNotesRow(hass)}
+            ${btPhotoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${n}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -2105,7 +2283,8 @@ function oi(hass, e, t, i, r) {
       weight_unit: String(d.get("weight_unit") ?? n),
       length_unit: String(d.get("length_unit") ?? s),
       timestamp: Ct(String(d.get("when") ?? "")),
-      notes: String(d.get("notes") ?? "") || void 0
+      notes: String(d.get("notes") ?? "") || void 0,
+      photo_path: btReadPhotoPath(c)
     });
   }}>
             <h2>Log growth measurement</h2>
@@ -2179,6 +2358,7 @@ function oi(hass, e, t, i, r) {
             />
             <label for="notes">Notes</label>
             ${btNotesRow(hass)}
+            ${btPhotoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${r}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -2248,7 +2428,8 @@ function ci(hass, e, t, i, r, n, s) {
       lot_number: L,
       provider: H,
       timestamp: Ct(String(f.get("when") ?? "")),
-      notes: String(f.get("notes") ?? "") || void 0
+      notes: String(f.get("notes") ?? "") || void 0,
+      photo_path: btReadPhotoPath(v)
     });
   }, c = Array.from(
     new Set(
@@ -2340,6 +2521,7 @@ function ci(hass, e, t, i, r, n, s) {
             />
             <label for="notes">Notes</label>
             ${btNotesRow(hass)}
+            ${btPhotoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${s}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
