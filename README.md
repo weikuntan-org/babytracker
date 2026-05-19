@@ -31,8 +31,6 @@ loads, so there is **no separate HACS plugin to install**.
   and `type: custom:babytracker-summary-card` for a separate vaccines +
   growth + 7-day trend charts + pediatrician export panel. Both ship in
   the same JS bundle and register themselves when the integration loads.
-  The older names `custom:babytracker-medical-card` and
-  `custom:babytracker-growth-card` continue to work as aliases.
 
 ## Installation
 
@@ -51,9 +49,7 @@ loads, so there is **no separate HACS plugin to install**.
    up cleanly without manual Resource edits.
 5. Add a `type: custom:babytracker-card` card to your dashboard. Add a
    `type: custom:babytracker-summary-card` card separately for a
-   vaccines + growth + trends + export panel. The older type names
-   `babytracker-medical-card` and `babytracker-growth-card` keep
-   working as aliases.
+   vaccines + growth + trends + export panel.
 
 ### Manual
 

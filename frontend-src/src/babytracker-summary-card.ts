@@ -2,10 +2,6 @@
 // and the pediatrician export for one baby. Bundled into the same
 // babytracker-card.js artefact as the main card, registered as a separate
 // Lovelace custom element so users place it independently on their dashboard.
-//
-// Backward compat: the older `babytracker-medical-card` and
-// `babytracker-growth-card` element names are kept as aliases so existing
-// dashboard YAMLs keep working — all three names resolve to this class.
 import { LitElement, html, css, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
@@ -181,22 +177,6 @@ declare global {
             name: string;
             description: string;
         }>;
-    }
-}
-
-// Backward-compat aliases. Old dashboard YAMLs using
-// `babytracker-medical-card` (the previous name) or
-// `babytracker-growth-card` (the original name) keep working — all three
-// element registrations resolve to the same rendering.
-for (const aliasName of [
-    "babytracker-medical-card",
-    "babytracker-growth-card"
-]) {
-    if (!customElements.get(aliasName)) {
-        customElements.define(
-            aliasName,
-            class extends BabytrackerSummaryCard {} as any
-        );
     }
 }
 
