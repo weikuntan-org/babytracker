@@ -47,6 +47,7 @@ export class BabytrackerCard extends LitElement {
     @state() private _babyConfig?: any;
     @state() private _options?: any;
     @state() private _modal: ModalKind | null = null;
+    @state() private _expandedNotes: Set<string> = new Set();
     @query("dialog") private _dialog!: HTMLDialogElement;
     private _unsubBaby?: () => void;
     private _unsubOptions?: () => void;
@@ -140,10 +141,33 @@ export class BabytrackerCard extends LitElement {
         }
         ul.entries li {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            flex-direction: column;
+            gap: 2px;
             padding: 6px 0;
             border-bottom: 1px solid var(--divider-color);
+        }
+        ul.entries li .entry-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        ul.entries li .entry-notes {
+            font-size: 0.85rem;
+            padding-left: 0;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-radius: 4px;
+        }
+        ul.entries li .entry-notes:focus-visible {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+        ul.entries li .entry-notes.expanded {
+            white-space: pre-wrap;
+            overflow: visible;
+            text-overflow: clip;
         }
         ul.entries li.clickable {
             cursor: pointer;
@@ -494,6 +518,13 @@ export class BabytrackerCard extends LitElement {
         this._modal = { kind: "edit_entry", entry };
     };
 
+    private _toggleNotes = (entryId: string) => {
+        const next = new Set(this._expandedNotes);
+        if (next.has(entryId)) next.delete(entryId);
+        else next.add(entryId);
+        this._expandedNotes = next;
+    };
+
     private _closeModal = () => {
         this._modal = null;
     };
@@ -544,7 +575,9 @@ export class BabytrackerCard extends LitElement {
                           this.hass,
                           this._baby(),
                           this._requestEdit,
-                          this._config.recent_limit ?? 50
+                          this._config.recent_limit ?? 50,
+                          this._expandedNotes,
+                          this._toggleNotes
                       )
                     : ""}
                 ${sections.includes("importer_sync")
@@ -595,3 +628,4 @@ import("./editor");
 // export) so it ships in the same artefact and is auto-registered when
 // users load /babytracker_static/babytracker-card.js.
 import "./babytracker-summary-card";
+import "./babytracker-history-card";

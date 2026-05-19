@@ -61,3 +61,34 @@ export function subscribeIntegrationOptions(
     })();
     return () => unsub.current?.();
 }
+
+export function subscribeEntriesInRange(
+    hass: any,
+    baby: string,
+    startIso: string,
+    endIso: string,
+    cb: (entries: any[]) => void
+): () => void {
+    const unsub: { current?: () => void } = {};
+    (async () => {
+        try {
+            const unsubscribe = await hass.connection.subscribeMessage(
+                cb,
+                {
+                    type: "babytracker/list_entries_in_range",
+                    baby,
+                    start: startIso,
+                    end: endIso,
+                    subscribe: true
+                }
+            );
+            unsub.current = unsubscribe;
+        } catch (err) {
+            console.warn(
+                "babytracker: subscribeEntriesInRange failed",
+                err
+            );
+        }
+    })();
+    return () => unsub.current?.();
+}
