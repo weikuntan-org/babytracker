@@ -398,6 +398,12 @@ class BabytrackerCoordinator:
     def entries_by_baby(self, baby_id: str) -> list[Entry]:
         return [e for e in self._entries if e.baby_id == baby_id]
 
+    def entry_by_id(self, entry_id: str) -> Entry | None:
+        for e in self._entries:
+            if e.id == entry_id:
+                return e
+        return None
+
     def recent_entries(self, baby_id: str | None = None) -> list[Entry]:
         if baby_id is None:
             pool = list(self._entries)

@@ -662,6 +662,23 @@ DELETE_ENTRY_SCHEMA = vol.Schema({vol.Required("entry_id"): cv.string})
 PURGE_BABY_SCHEMA = vol.Schema({vol.Required("baby_id"): cv.string})
 
 
+_PERCENTILE_FIELDS = (
+    "weight_percentile",
+    "weight_z",
+    "weight_percentile_source",
+    "height_percentile",
+    "height_z",
+    "height_percentile_source",
+    "head_circumference_percentile",
+    "head_z",
+    "head_percentile_source",
+    "bmi",
+    "bmi_percentile",
+    "bmi_z",
+    "bmi_percentile_source",
+)
+
+
 async def _handle_edit_entry(call: ServiceCall) -> None:
     coord = _coordinator(call.hass)
     if coord is None:
@@ -669,6 +686,31 @@ async def _handle_edit_entry(call: ServiceCall) -> None:
     fields = dict(call.data.get("fields") or {})
     if "photo_path" in fields:
         fields["photo_path"] = _validate_photo_path(fields["photo_path"])
+    # Editing a growth entry's measurement or timestamp invalidates the
+    # cached percentile fields stored on the entry. Recompute them inline
+    # so the merged write that `coord.edit_entry` performs reflects the
+    # new age/value pair instead of leaving stale percentile data behind.
+    entry = coord.entry_by_id(call.data["entry_id"])
+    if entry is not None and entry.type == "growth" and "data" in fields:
+        baby = coord.baby_by_id(entry.baby_id) if entry.baby_id else None
+        if baby is not None:
+            patch = fields.get("data") or {}
+            merged = {**entry.data, **patch}
+            for key in _PERCENTILE_FIELDS:
+                merged.pop(key, None)
+            ts_field = fields.get("timestamp", entry.timestamp)
+            measured_at = None
+            if ts_field:
+                try:
+                    measured_at = datetime.fromisoformat(ts_field).date()
+                except ValueError:
+                    measured_at = None
+            from . import percentiles
+
+            percentiles.attach_percentile_data(
+                call.hass, baby, merged, measured_at=measured_at
+            )
+            fields["data"] = merged
     try:
         await coord.edit_entry(call.data["entry_id"], fields)
     except ValueError as err:
