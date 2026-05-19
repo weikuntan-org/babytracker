@@ -6,16 +6,17 @@ import { html, type TemplateResult } from "lit";
 import { babyEntityId } from "../lib/ha-helpers";
 import { entriesInLastWindow, formatClock } from "../lib/entries";
 
-type ServiceCaller = (
-    service: string,
-    data: Record<string, unknown>,
-    sourceBtn?: EventTarget | null
-) => Promise<unknown>;
+export type DeleteRequester = (entry: {
+    id: string;
+    type?: string;
+    source?: string;
+    staff?: string | null;
+}) => void;
 
 export function recentEntriesTemplate(
     hass: any,
     baby: string,
-    call: ServiceCaller,
+    requestDelete: DeleteRequester,
     limit: number
 ): TemplateResult {
     const sensor = hass.states[babyEntityId(baby, "recent_entries")];
@@ -53,12 +54,13 @@ export function recentEntriesTemplate(
                                       <span class="spacer"></span>
                                       <button
                                           aria-label="Delete entry"
-                                          @click=${(e: Event) =>
-                                              call(
-                                                  "delete_entry",
-                                                  { entry_id: entry.id },
-                                                  e.currentTarget
-                                              )}
+                                          @click=${() =>
+                                              requestDelete({
+                                                  id: entry.id,
+                                                  type: entry.type,
+                                                  source: entry.source,
+                                                  staff: entry.staff
+                                              })}
                                       >
                                           Delete
                                       </button>
@@ -73,6 +75,9 @@ export function recentEntriesTemplate(
 
 function _label(entry: any): string {
     const t = String(entry.type ?? "");
-    const method = entry?.data?.method ?? entry?.data?.kind;
-    return method ? `${t} (${method})` : t;
+    // "other" entries carry their description in data.name; everything else
+    // is differentiated by method (feeding) or kind (diaper).
+    const detail =
+        entry?.data?.name ?? entry?.data?.method ?? entry?.data?.kind;
+    return detail ? `${t} (${detail})` : t;
 }

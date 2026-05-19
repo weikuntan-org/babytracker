@@ -23,6 +23,7 @@ ACTIVITY_GROWTH: Final = "growth"
 ACTIVITY_MEDICATION: Final = "medication"
 ACTIVITY_VACCINE: Final = "vaccine"
 ACTIVITY_WALK: Final = "walk"
+ACTIVITY_OTHER: Final = "other"
 
 ALL_ACTIVITIES: Final = (
     ACTIVITY_FEEDING,
@@ -33,6 +34,7 @@ ALL_ACTIVITIES: Final = (
     ACTIVITY_MEDICATION,
     ACTIVITY_VACCINE,
     ACTIVITY_WALK,
+    ACTIVITY_OTHER,
 )
 
 FEEDING_METHOD_BOTTLE: Final = "bottle"

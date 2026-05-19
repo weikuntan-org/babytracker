@@ -732,6 +732,10 @@ async def async_setup_entry(
                     ),
                 ]
             )
+        if "other" in ea:
+            entities.append(
+                LastEventSensor(coord, baby, "other", "last_other", "Last other")
+            )
         if "growth" in ea:
             entities.extend(
                 [
