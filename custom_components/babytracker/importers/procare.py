@@ -411,14 +411,29 @@ class ProcareImporter(BaseImporter):
         if entry_type not in (self.config.get("import_types") or []):
             return
 
+        prior = existing.get(source_id)
+
         # Inference-window mode: if we have no recent sign-in but receive
         # activities, assume baby is checked in — but only when the
         # activity's timestamp is recent. Without this guard, a late
         # photo edit / a resync / the upstream sensor republishing its
         # cached list of the day's activities would flip at_daycare
         # back to True hours after the baby has been picked up.
+        #
+        # Two additional carve-outs:
+        #   1. Sign-in/out events (`synthetic_mapping`) carry explicit
+        #      presence intent. A fresh sign-OUT must stay OUT — running
+        #      the inference branch right after `_set_at_daycare(False)`
+        #      would immediately flip it back to True since the sign-out's
+        #      own timestamp is by definition recent.
+        #   2. Updates to an existing entry (`prior is not None`) are
+        #      not fresh presence signals — the activity already happened.
+        #      Honoring them here lets a photo backfill or details edit
+        #      hours after pickup re-flip presence.
         if (
-            self.config.get("mode", "inference_window") == "inference_window"
+            synthetic_mapping is None
+            and prior is None
+            and self.config.get("mode", "inference_window") == "inference_window"
             and self._activity_in_presence_window(timestamp)
         ):
             await self._set_at_daycare(True, source="inference_window")
@@ -432,7 +447,6 @@ class ProcareImporter(BaseImporter):
         # field so it shows up in the recent-entries notes row.
         notes = (activity.get("details") or "").strip() or None
 
-        prior = existing.get(source_id)
         if prior is not None:
             # Update path: upstream may have mutated this activity (most
             # commonly "Nap Started" → "Slept from X to Y" once the nap
