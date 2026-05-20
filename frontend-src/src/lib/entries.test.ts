@@ -169,7 +169,7 @@ describe("summarizeDay", () => {
         expect(s.vaccineCount).toBe(0);
     });
 
-    it("counts diapers and splits wet/dirty/both into separate buckets", () => {
+    it("counts diapers; `both` increments wet AND dirty (matches summarize)", () => {
         const entries = [
             { type: "diaper", timestamp: iso(-1), data: { kind: "wet" } },
             { type: "diaper", timestamp: iso(-2), data: { kind: "dirty" } },
@@ -178,9 +178,8 @@ describe("summarizeDay", () => {
         ];
         const s = summarizeDay(entries, NOW);
         expect(s.diapers).toBe(4);
-        expect(s.wet).toBe(2);
-        expect(s.dirty).toBe(1);
-        expect(s.mixed).toBe(1);
+        expect(s.wet).toBe(3); // wet + both + wet
+        expect(s.dirty).toBe(2); // dirty + both
     });
 
     it("sums sleep durations and tracks the longest single stretch", () => {
@@ -289,18 +288,14 @@ describe("summarizeDay", () => {
         expect(s.vaccineCount).toBe(1);
     });
 
-    it("does not double-count `both` diapers into wet+dirty", () => {
-        // Unlike the 24h `summarize`, the day summary keeps the three diaper
-        // kinds in separate buckets so the chip detail breakdown is honest
-        // about how many were mixed vs only-wet/only-dirty.
+    it("`both`-only day reports the diaper once but counts toward both wet and dirty", () => {
         const entries = [
             { type: "diaper", timestamp: iso(-1), data: { kind: "both" } }
         ];
         const s = summarizeDay(entries, NOW);
         expect(s.diapers).toBe(1);
-        expect(s.wet).toBe(0);
-        expect(s.dirty).toBe(0);
-        expect(s.mixed).toBe(1);
+        expect(s.wet).toBe(1);
+        expect(s.dirty).toBe(1);
     });
 });
 

@@ -117,7 +117,6 @@ export interface DaySummary {
     diapers: number;
     wet: number;
     dirty: number;
-    mixed: number;
     sleepMinutes: number;
     longestSleepMinutes: number;
     // Conditional — only render chip when non-zero
@@ -167,7 +166,6 @@ export function summarizeDay(
         diapers: 0,
         wet: 0,
         dirty: 0,
-        mixed: 0,
         sleepMinutes: 0,
         longestSleepMinutes: 0,
         bottleFeeds: 0,
@@ -199,7 +197,8 @@ export function summarizeDay(
                     s.dirty += 1;
                 } else if (kind === "both") {
                     s.diapers += 1;
-                    s.mixed += 1;
+                    s.wet += 1;
+                    s.dirty += 1;
                 }
                 break;
             }
