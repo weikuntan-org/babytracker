@@ -16,6 +16,7 @@ photo_url preserved as a diagnostic pointer but photo_path null.
 """
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import pytest
@@ -689,3 +690,94 @@ async def test_download_procare_photo_still_rejects_concrete_non_image_header(
     # Confirm we didn't even try to drain the body (session.get was called
     # but no iter_chunked happened — implicit via the early return).
     assert session.requested_urls == ["https://cdn.procare.example/photo/redirect.html"]
+
+
+# ---------------------------------------------------------------------------
+# Presence inference window (regression: previously, ANY processed
+# activity flipped at_daycare back to True — including late-posted
+# updates after pickup. The window-gated inference fixes that.)
+# ---------------------------------------------------------------------------
+
+
+def _iso_minutes_ago(minutes: float) -> str:
+    return (
+        datetime.now(tz=timezone.utc) - timedelta(minutes=minutes)
+    ).isoformat()
+
+
+@pytest.mark.asyncio
+async def test_inference_sets_at_daycare_for_recent_activity(
+    hass: HomeAssistant,
+) -> None:
+    importer, coord, baby = await _make_importer(hass)
+    assert coord.at_daycare(baby) is False
+
+    # 5 minutes ago is well inside the default 60-minute window.
+    await importer._process_activity(
+        {
+            "id": "recent-diaper",
+            "title": "Diaper: Wet",
+            "timestamp": _iso_minutes_ago(5),
+        },
+        {},
+    )
+    assert coord.at_daycare(baby) is True
+
+
+@pytest.mark.asyncio
+async def test_inference_skips_at_daycare_for_stale_activity(
+    hass: HomeAssistant,
+) -> None:
+    """The bug: a late-posted or re-processed activity from earlier in
+    the day used to flip presence back to True after pickup. With the
+    window guard the importer now leaves presence alone for stale
+    timestamps.
+    """
+    importer, coord, baby = await _make_importer(hass)
+    assert coord.at_daycare(baby) is False
+
+    # 4 hours ago is far outside the default 60-minute window.
+    await importer._process_activity(
+        {
+            "id": "stale-diaper",
+            "title": "Diaper: Wet",
+            "timestamp": _iso_minutes_ago(240),
+        },
+        {},
+    )
+    assert coord.at_daycare(baby) is False, (
+        "stale activity must not infer presence — that was the original bug"
+    )
+
+
+@pytest.mark.asyncio
+async def test_inference_window_does_not_block_sign_in_out(
+    hass: HomeAssistant,
+) -> None:
+    """Sign-in / sign-out are explicit presence intent from the daycare,
+    not inference — they must continue to drive presence regardless of
+    the activity's timestamp (e.g. a backdated sign-out that the user
+    forgot to log earlier).
+    """
+    importer, coord, baby = await _make_importer(hass)
+    # Stale Sign In still flips presence on (presence-source is
+    # `title_events`, which doesn't go through the inference branch).
+    await importer._process_activity(
+        {
+            "id": "old-signin",
+            "title": "Signed In by Teacher",
+            "timestamp": _iso_minutes_ago(240),
+        },
+        {},
+    )
+    assert coord.at_daycare(baby) is True
+
+    await importer._process_activity(
+        {
+            "id": "old-signout",
+            "title": "Signed Out by Teacher",
+            "timestamp": _iso_minutes_ago(180),
+        },
+        {},
+    )
+    assert coord.at_daycare(baby) is False
