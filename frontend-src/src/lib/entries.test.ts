@@ -6,6 +6,7 @@ import {
     formatMinutes,
     formatVolume,
     parseTimestamp,
+    sessionDurationMinutes,
     summarize,
     summarizeDay,
     timeSinceLastWakeMinutes
@@ -296,6 +297,32 @@ describe("summarizeDay", () => {
         expect(s.diapers).toBe(1);
         expect(s.wet).toBe(1);
         expect(s.dirty).toBe(1);
+    });
+});
+
+describe("sessionDurationMinutes", () => {
+    it("returns elapsed minutes for a completed session", () => {
+        const mins = sessionDurationMinutes(iso(-2), iso(-0.5), NOW); // 90m
+        expect(mins).toBeCloseTo(90, 2);
+    });
+
+    it("uses `now` as the end for an in-progress session", () => {
+        const mins = sessionDurationMinutes(iso(-1), null, NOW); // 60m
+        expect(mins).toBeCloseTo(60, 2);
+    });
+
+    it("treats empty-string endedAt as in-progress", () => {
+        const mins = sessionDurationMinutes(iso(-1), "", NOW);
+        expect(mins).toBeCloseTo(60, 2);
+    });
+
+    it("returns 0 for a missing/invalid start timestamp", () => {
+        expect(sessionDurationMinutes(undefined, null, NOW)).toBe(0);
+        expect(sessionDurationMinutes("nope", null, NOW)).toBe(0);
+    });
+
+    it("returns 0 when end precedes start (clock skew safety)", () => {
+        expect(sessionDurationMinutes(iso(-1), iso(-2), NOW)).toBe(0);
     });
 });
 
