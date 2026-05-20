@@ -19,10 +19,13 @@ export class EntryThumbnail extends LitElement {
 
     @property() photoPath = "";
 
-    /** Edge length in pixels for the inline thumbnail. Defaults to 128
-     * — large enough to actually see the photo in entry rows and the
-     * edit modal. Override per-instance for tighter layouts. The
-     * lightbox is unaffected. */
+    /** Bounding-box size in pixels for the inline thumbnail (the
+     * longest edge). Aspect ratio is preserved, so a portrait photo
+     * renders narrower than `size` and a landscape one renders
+     * shorter — never stretched or cropped. Defaults to 128 so the
+     * photo is actually visible in entry rows and the edit modal.
+     * Override per-instance for tighter layouts; the lightbox is
+     * unaffected. */
     @property({ type: Number }) size = 128;
 
     @state() private _url = "";
@@ -148,7 +151,7 @@ export class EntryThumbnail extends LitElement {
                     alt=""
                     loading="lazy"
                     decoding="async"
-                    style="width:${sizePx};height:${sizePx}"
+                    style="max-width:${sizePx};max-height:${sizePx}"
                     @error=${this._onImgError}
                 />
             </button>
@@ -194,9 +197,11 @@ export class EntryThumbnail extends LitElement {
             line-height: 0;
         }
         .thumb {
-            /* Width/height come from an inline style attribute so each
-             * instance can pick its own size without a CSS variable. */
-            object-fit: cover;
+            /* max-width/max-height come from an inline style attribute
+             * so each instance can pick its own bounding box without a
+             * CSS variable. Aspect ratio is preserved by leaving both
+             * width and height intrinsic. */
+            display: block;
             border-radius: 4px;
             border: 1px solid var(--divider-color);
             vertical-align: middle;
