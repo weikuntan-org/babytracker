@@ -27,7 +27,7 @@ from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_change
 
-from ..const import ENTRY_SOURCE_PROCARE
+from ..const import ENTRY_SOURCE_PROCARE, OPT_PRESENCE_INFERENCE_WINDOW_MINUTES
 from ..models import Baby, Entry
 from ..photo_storage import (
     PHOTO_MAX_BYTES,
@@ -36,7 +36,7 @@ from ..photo_storage import (
     sniff_image_mime,
     write_photo,
 )
-from ..runtime import now_iso
+from ..runtime import get_entry_options, now_iso
 from .base import BaseImporter
 from .procare_mappings import async_load_mappings, match_title
 
@@ -412,8 +412,15 @@ class ProcareImporter(BaseImporter):
             return
 
         # Inference-window mode: if we have no recent sign-in but receive
-        # activities, assume baby is checked in.
-        if self.config.get("mode", "inference_window") == "inference_window":
+        # activities, assume baby is checked in — but only when the
+        # activity's timestamp is recent. Without this guard, a late
+        # photo edit / a resync / the upstream sensor republishing its
+        # cached list of the day's activities would flip at_daycare
+        # back to True hours after the baby has been picked up.
+        if (
+            self.config.get("mode", "inference_window") == "inference_window"
+            and self._activity_in_presence_window(timestamp)
+        ):
             await self._set_at_daycare(True, source="inference_window")
 
         photo_url = activity.get("photo_url") or None
@@ -554,6 +561,36 @@ class ProcareImporter(BaseImporter):
                 data["details"] = details
             return data
         return {}
+
+    def _activity_in_presence_window(self, timestamp: str | None) -> bool:
+        """Return True when `timestamp` falls within the configured
+        presence-inference window — i.e. it's recent enough that the
+        activity plausibly indicates the baby is currently at daycare.
+
+        A small future buffer absorbs the inevitable clock skew between
+        Procare's clocks and HA. Unparseable timestamps default to True
+        so we don't quietly drop presence updates for malformed payloads
+        — the user can still correct presence manually.
+        """
+        if not isinstance(timestamp, str) or not timestamp:
+            return True
+        try:
+            ts = datetime.fromisoformat(timestamp)
+        except ValueError:
+            return True
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        options = get_entry_options(self.hass)
+        window_minutes = int(
+            options.get(OPT_PRESENCE_INFERENCE_WINDOW_MINUTES, 60)
+        )
+        now = datetime.now(tz=timezone.utc)
+        # Buffer against minor clock skew where Procare's stamp is
+        # slightly ahead of our local clock.
+        future_buffer = timedelta(minutes=5)
+        return (now - timedelta(minutes=window_minutes)) <= ts <= (
+            now + future_buffer
+        )
 
     async def _set_at_daycare(self, value: bool, *, source: str) -> None:
         await self.coordinator.set_at_daycare(self.baby, value)
