@@ -8,6 +8,12 @@ import { customElement, property, state } from "lit/decorators.js";
 import { exportSheetTemplate } from "./components/export-sheet";
 import { growthChartTemplate } from "./components/growth-chart";
 import { modalTemplate, type ModalKind } from "./components/modal";
+import {
+    requestDeleteOrPromptImported,
+    syncDialogToModal,
+    type DeleteEntryInput
+} from "./components/modals/_host";
+import { dialogStyles } from "./components/modals/_styles";
 import { trendsTemplate } from "./components/trends";
 import { vaccineHistoryTemplate } from "./components/vaccine-history";
 import { vaccinesDueTemplate } from "./components/vaccines-due";
@@ -175,37 +181,7 @@ export class BabytrackerSummaryCard extends LitElement {
             color: var(--secondary-text-color);
             font-size: 0.85rem;
         }
-        dialog {
-            border: none;
-            border-radius: 12px;
-            padding: 16px;
-            min-width: min(360px, 92vw);
-            background: var(--card-background-color);
-            color: var(--primary-text-color);
-        }
-        dialog::backdrop {
-            background: rgba(0, 0, 0, 0.5);
-        }
-        dialog form {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        dialog .actions {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-end;
-            margin-top: 8px;
-        }
-        dialog input,
-        dialog select {
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid var(--divider-color);
-            background: var(--card-background-color);
-            color: var(--primary-text-color);
-            font: inherit;
-        }
+        ${dialogStyles}
         .chip .spacer {
             flex: 1;
         }
@@ -283,13 +259,7 @@ export class BabytrackerSummaryCard extends LitElement {
             this._maybeSubscribe();
         }
         if (changed.has("_modal")) {
-            const dlg = this.renderRoot.querySelector(
-                "dialog"
-            ) as HTMLDialogElement | null;
-            if (dlg) {
-                if (this._modal && !dlg.open) dlg.showModal();
-                if (!this._modal && dlg.open) dlg.close();
-            }
+            syncDialogToModal(this.renderRoot, this._modal);
         }
     }
 
@@ -321,26 +291,10 @@ export class BabytrackerSummaryCard extends LitElement {
         this._modal = { kind: "edit_entry", entry };
     };
 
-    private _requestDelete = (entry: {
-        id: string;
-        type?: string;
-        source?: string;
-        staff?: string | null;
-    }) => {
-        if (!entry.source || entry.source === "user") {
-            this.hass.callService("babytracker", "delete_entry", {
-                entry_id: entry.id
-            });
-            this._modal = null;
-            return;
-        }
-        this._modal = {
-            kind: "confirm_delete_imported",
-            entryId: entry.id,
-            entryType: entry.type ?? "entry",
-            source: entry.source,
-            staff: entry.staff ?? null
-        };
+    private _requestDelete = (entry: DeleteEntryInput) => {
+        this._modal = requestDeleteOrPromptImported(entry, (id) =>
+            this.hass.callService("babytracker", "delete_entry", { entry_id: id })
+        );
     };
 
     private _requestLogVaccine = () => {
