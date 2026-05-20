@@ -12,7 +12,10 @@ from typing import Any
 
 from typing import TYPE_CHECKING
 
-from .runtime import parse_ts
+try:
+    from .runtime import parse_ts
+except ImportError:  # pragma: no cover — supports bare-module loading in tests
+    from runtime import parse_ts  # type: ignore[no-redef]
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant

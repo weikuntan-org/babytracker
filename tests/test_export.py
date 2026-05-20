@@ -20,7 +20,13 @@ def _load(name: str, relative: str):
 
 
 # The whole-module import path requires HA, but the private writer helpers
-# do not. Pull them directly from source so we can exercise them.
+# do not. Pull them directly from source so we can exercise them. Load
+# `const` + `runtime` first so `export.py`'s bare-module fallback imports
+# (`from runtime import parse_ts`) resolve even when this file runs alone.
+if "const" not in sys.modules:
+    _load("const", "const.py")
+if "runtime" not in sys.modules:
+    _load("runtime", "runtime.py")
 models = _load("models", "models.py")
 exporter = _load("export", "export.py")
 

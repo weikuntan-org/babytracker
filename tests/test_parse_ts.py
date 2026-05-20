@@ -21,6 +21,11 @@ def _load_pure(name: str, rel: str):
     return module
 
 
+# `runtime.py` has a `from .const import ...` that falls back to bare
+# `from const import ...` for test loading — make sure `const` is in
+# sys.modules even when this test runs in isolation (pytest tests/test_parse_ts.py).
+if "const" not in sys.modules:
+    _load_pure("const", "const.py")
 runtime = _load_pure("runtime", "runtime.py")
 
 

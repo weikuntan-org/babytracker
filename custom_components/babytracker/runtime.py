@@ -13,7 +13,10 @@ from typing import Any
 
 from homeassistant.core import HomeAssistant
 
-from .const import DEFAULT_OPTIONS, DOMAIN
+try:
+    from .const import DEFAULT_OPTIONS, DOMAIN
+except ImportError:  # pragma: no cover — supports bare-module loading in tests
+    from const import DEFAULT_OPTIONS, DOMAIN  # type: ignore[no-redef]
 
 
 def now_iso() -> str:
