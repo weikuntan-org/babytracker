@@ -52,6 +52,10 @@ export class BabytrackerCard extends LitElement {
     @query("dialog") private _dialog!: HTMLDialogElement;
     private _unsubBaby?: () => void;
     private _unsubOptions?: () => void;
+    // Ticks the "awake for…" chip without depending on incidental
+    // hass-state churn. 30 s is fine resolution for a minutes-granular
+    // display and keeps the re-render cost low.
+    private _clockTimer?: ReturnType<typeof setInterval>;
 
     static styles = css`
         :host {
@@ -300,6 +304,9 @@ export class BabytrackerCard extends LitElement {
     public connectedCallback(): void {
         super.connectedCallback();
         this._maybeSubscribe();
+        if (this._clockTimer == null) {
+            this._clockTimer = setInterval(() => this.requestUpdate(), 30000);
+        }
     }
 
     public disconnectedCallback(): void {
@@ -307,6 +314,10 @@ export class BabytrackerCard extends LitElement {
         this._unsubOptions?.();
         this._unsubBaby = undefined;
         this._unsubOptions = undefined;
+        if (this._clockTimer != null) {
+            clearInterval(this._clockTimer);
+            this._clockTimer = undefined;
+        }
         super.disconnectedCallback();
     }
 
