@@ -20,7 +20,7 @@
         "kind": "dirty"
     },
     {
-        "pattern": "^Bottle\\s*:",
+        "pattern": "^Bottle\\b",
         "type": "feeding",
         "method": "bottle"
     },

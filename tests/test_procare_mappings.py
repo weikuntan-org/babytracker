@@ -61,6 +61,28 @@ def test_match_bottle_feeding():
     assert m is not None and m["type"] == "feeding" and m["method"] == "bottle"
 
 
+def test_match_bottle_bare():
+    # Procare started emitting bare "Bottle" (no colon, no amount); the
+    # pattern uses a word boundary so the bare form still maps to a feed.
+    rows = load_mappings()
+    m = match_title(rows, "Bottle")
+    assert m is not None and m["type"] == "feeding" and m["method"] == "bottle"
+
+
+def test_match_bottle_with_amount_no_colon():
+    rows = load_mappings()
+    m = match_title(rows, "Bottle 4oz")
+    assert m is not None and m["type"] == "feeding" and m["method"] == "bottle"
+
+
+def test_match_bottle_pattern_does_not_match_compound_words():
+    # `\b` after "Bottle" prevents matching unrelated activity titles that
+    # happen to start with the same letters (e.g. a future "BottleBrush").
+    rows = load_mappings()
+    assert match_title(rows, "Bottles weekly check") is None
+    assert match_title(rows, "BottleBrush replaced") is None
+
+
 def test_match_meal_feeding():
     rows = load_mappings()
     m = match_title(rows, "Meal: Sweet potato")
