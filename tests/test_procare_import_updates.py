@@ -781,3 +781,69 @@ async def test_inference_window_does_not_block_sign_in_out(
         {},
     )
     assert coord.at_daycare(baby) is False
+
+
+@pytest.mark.asyncio
+async def test_recent_signout_stays_signed_out(
+    hass: HomeAssistant,
+) -> None:
+    """Regression: a fresh sign-out used to be immediately overridden by
+    the inference-window branch (the sign-out's own timestamp is by
+    definition recent), flipping at_daycare back to True. Sign events
+    are explicit presence intent and must not be second-guessed by
+    inference.
+    """
+    importer, coord, baby = await _make_importer(hass)
+    # Seed presence as if a sign-in had been processed earlier.
+    await coord.set_at_daycare(baby, True)
+    assert coord.at_daycare(baby) is True
+
+    # A sign-out that just happened (well inside the inference window).
+    await importer._process_activity(
+        {
+            "id": "fresh-signout",
+            "title": "Signed Out by Teacher",
+            "timestamp": _iso_minutes_ago(2),
+        },
+        {},
+    )
+    assert coord.at_daycare(baby) is False, (
+        "sign-out must remain authoritative even when its timestamp is "
+        "inside the inference window"
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_to_existing_entry_does_not_set_at_daycare(
+    hass: HomeAssistant,
+) -> None:
+    """Regression: re-processing an existing activity (e.g. a photo
+    backfill or a details edit) used to fire the inference-window
+    auto-flip when the activity's timestamp was recent — re-marking the
+    baby as at daycare even though the activity isn't a new presence
+    signal. Updates must leave presence alone.
+    """
+    importer, coord, baby = await _make_importer(hass)
+
+    # First pass — fresh activity, presence flips on as designed.
+    activity = {
+        "id": "diaper-1",
+        "title": "Diaper: Wet",
+        "timestamp": _iso_minutes_ago(5),
+    }
+    await importer._process_activity(activity, {})
+    assert coord.at_daycare(baby) is True
+
+    # User picks the baby up — sign-out (or auto-sign-out) clears presence.
+    await coord.set_at_daycare(baby, False)
+    assert coord.at_daycare(baby) is False
+
+    # Procare republishes the same activity later (added photo, edited
+    # details). The importer sees `prior is not None` and must skip the
+    # inference-window auto-flip.
+    existing = {"diaper-1": next(iter(coord.entries_by_baby(baby.id)))}
+    await importer._process_activity(activity, existing)
+    assert coord.at_daycare(baby) is False, (
+        "an update to an existing entry must not re-trigger presence "
+        "inference"
+    )
