@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from typing import Any
 
@@ -693,6 +694,129 @@ class UnmappedProcareTitlesSensor(_GlobalEntity):
 # ------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class _BuildCtx:
+    """Everything a sensor factory needs to construct one entity."""
+
+    coord: BabytrackerCoordinator
+    baby: Baby
+    options: dict[str, Any]
+    hass: HomeAssistant
+    entry: ConfigEntry
+
+
+_SensorFactory = Callable[[_BuildCtx], SensorEntity]
+
+
+# Per-activity sensor specs. The key is the value in `baby.enabled_activities`
+# that gates the group; the value is a list of factories that build the
+# sensors when that activity is enabled. Insertion order = registration
+# order, so any UI that sorts by entity_id (which embeds the suffix) is
+# stable across reloads.
+PER_BABY_SENSORS: dict[str, list[_SensorFactory]] = {
+    "feeding": [
+        lambda c: LastEventSensor(c.coord, c.baby, "feeding", "last_feeding", "Last feeding"),
+        lambda c: LastFeedingMethodSensor(c.coord, c.baby),
+        lambda c: LastFeedingAmountSensor(c.coord, c.baby),
+        lambda c: CountTodaySensor(c.coord, c.baby, "feeding", "feedings_today", "Feedings today"),
+        lambda c: TotalFeedingVolumeTodaySensor(c.coord, c.baby, c.options),
+    ],
+    "diaper": [
+        lambda c: LastEventSensor(c.coord, c.baby, "diaper", "last_diaper", "Last diaper"),
+        lambda c: LastDiaperKindSensor(c.coord, c.baby),
+        lambda c: CountTodaySensor(c.coord, c.baby, "diaper", "diapers_today", "Diapers today"),
+        lambda c: CountTodaySensor(
+            c.coord,
+            c.baby,
+            "diaper",
+            "wet_diapers_today",
+            "Wet diapers today",
+            predicate=lambda e: e.data.get("kind") in ("wet", "both"),
+        ),
+        lambda c: CountTodaySensor(
+            c.coord,
+            c.baby,
+            "diaper",
+            "dirty_diapers_today",
+            "Dirty diapers today",
+            predicate=lambda e: e.data.get("kind") in ("dirty", "both"),
+        ),
+    ],
+    "sleep": [
+        lambda c: LastEventSensor(c.coord, c.baby, "sleep", "last_sleep_start", "Last sleep start"),
+        lambda c: MinutesTodaySensor(c.coord, c.baby, "sleep", "total_sleep_today", "Total sleep today"),
+        lambda c: CountTodaySensor(c.coord, c.baby, "sleep", "naps_today", "Naps today"),
+    ],
+    "tummy_time": [
+        lambda c: LastEventSensor(c.coord, c.baby, "tummy_time", "last_tummy_time_start", "Last tummy time start"),
+        lambda c: MinutesTodaySensor(c.coord, c.baby, "tummy_time", "total_tummy_time_today", "Total tummy time today"),
+        lambda c: CountTodaySensor(c.coord, c.baby, "tummy_time", "tummy_time_sessions_today", "Tummy time sessions today"),
+    ],
+    "walk": [
+        lambda c: LastEventSensor(c.coord, c.baby, "walk", "last_walk_start", "Last walk start"),
+        lambda c: MinutesTodaySensor(c.coord, c.baby, "walk", "total_walk_today", "Total walk today"),
+        lambda c: CountTodaySensor(c.coord, c.baby, "walk", "walks_today", "Walks today"),
+    ],
+    "other": [
+        lambda c: LastEventSensor(c.coord, c.baby, "other", "last_other", "Last other"),
+    ],
+    "growth": [
+        lambda c: GrowthValueSensor(
+            c.coord,
+            c.baby,
+            "weight",
+            "weight",
+            "Weight",
+            unit=c.options.get("weight_unit", "kg"),
+            device_class=SensorDeviceClass.WEIGHT,
+        ),
+        lambda c: GrowthValueSensor(
+            c.coord,
+            c.baby,
+            "height",
+            "height",
+            "Height",
+            unit=c.options.get("length_unit", "cm"),
+            device_class=SensorDeviceClass.DISTANCE,
+        ),
+        lambda c: GrowthValueSensor(
+            c.coord,
+            c.baby,
+            "head_circumference",
+            "head_circumference",
+            "Head circumference",
+            unit=c.options.get("length_unit", "cm"),
+            device_class=SensorDeviceClass.DISTANCE,
+        ),
+        lambda c: GrowthValueSensor(c.coord, c.baby, "bmi", "bmi", "BMI"),
+        lambda c: PercentileSensor(c.coord, c.baby, "weight_percentile", "weight_percentile", "Weight percentile"),
+        lambda c: PercentileSensor(c.coord, c.baby, "height_percentile", "height_percentile", "Height percentile"),
+        lambda c: PercentileSensor(
+            c.coord,
+            c.baby,
+            "head_percentile",
+            "head_circumference_percentile",
+            "Head circumference percentile",
+        ),
+        lambda c: PercentileSensor(c.coord, c.baby, "bmi_percentile", "bmi_percentile", "BMI percentile"),
+    ],
+    "vaccine": [
+        lambda c: LastVaccineSensor(c.coord, c.baby, "vaccine", "last_vaccine", "Last vaccine"),
+        lambda c: VaccinesDueSensor(c.coord, c.baby, c.hass, c.entry),
+    ],
+}
+
+
+# Per-baby sensors that don't gate on `enabled_activities` — every
+# tracked baby gets age + recent-entries entities regardless of which
+# activity flags are turned on.
+ALWAYS_PER_BABY: list[_SensorFactory] = [
+    lambda c: AgeDaysSensor(c.coord, c.baby),
+    lambda c: AgeMonthsSensor(c.coord, c.baby),
+    lambda c: RecentEntriesSensor(c.coord, c.baby),
+]
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -707,142 +831,13 @@ async def async_setup_entry(
     for baby in coord.babies:
         if baby.archived:
             continue
-        ea = set(baby.enabled_activities)
-        if "feeding" in ea:
-            entities.extend(
-                [
-                    LastEventSensor(coord, baby, "feeding", "last_feeding", "Last feeding"),
-                    LastFeedingMethodSensor(coord, baby),
-                    LastFeedingAmountSensor(coord, baby),
-                    CountTodaySensor(coord, baby, "feeding", "feedings_today", "Feedings today"),
-                    TotalFeedingVolumeTodaySensor(coord, baby, options),
-                ]
-            )
-        if "diaper" in ea:
-            entities.extend(
-                [
-                    LastEventSensor(coord, baby, "diaper", "last_diaper", "Last diaper"),
-                    LastDiaperKindSensor(coord, baby),
-                    CountTodaySensor(coord, baby, "diaper", "diapers_today", "Diapers today"),
-                    CountTodaySensor(
-                        coord,
-                        baby,
-                        "diaper",
-                        "wet_diapers_today",
-                        "Wet diapers today",
-                        predicate=lambda e: e.data.get("kind") in ("wet", "both"),
-                    ),
-                    CountTodaySensor(
-                        coord,
-                        baby,
-                        "diaper",
-                        "dirty_diapers_today",
-                        "Dirty diapers today",
-                        predicate=lambda e: e.data.get("kind") in ("dirty", "both"),
-                    ),
-                ]
-            )
-        if "sleep" in ea:
-            entities.extend(
-                [
-                    LastEventSensor(coord, baby, "sleep", "last_sleep_start", "Last sleep start"),
-                    MinutesTodaySensor(coord, baby, "sleep", "total_sleep_today", "Total sleep today"),
-                    CountTodaySensor(coord, baby, "sleep", "naps_today", "Naps today"),
-                ]
-            )
-        if "tummy_time" in ea:
-            entities.extend(
-                [
-                    LastEventSensor(
-                        coord,
-                        baby,
-                        "tummy_time",
-                        "last_tummy_time_start",
-                        "Last tummy time start",
-                    ),
-                    MinutesTodaySensor(
-                        coord, baby, "tummy_time", "total_tummy_time_today", "Total tummy time today"
-                    ),
-                    CountTodaySensor(
-                        coord, baby, "tummy_time", "tummy_time_sessions_today", "Tummy time sessions today"
-                    ),
-                ]
-            )
-        if "walk" in ea:
-            entities.extend(
-                [
-                    LastEventSensor(
-                        coord,
-                        baby,
-                        "walk",
-                        "last_walk_start",
-                        "Last walk start",
-                    ),
-                    MinutesTodaySensor(
-                        coord, baby, "walk", "total_walk_today", "Total walk today"
-                    ),
-                    CountTodaySensor(
-                        coord, baby, "walk", "walks_today", "Walks today"
-                    ),
-                ]
-            )
-        if "other" in ea:
-            entities.append(
-                LastEventSensor(coord, baby, "other", "last_other", "Last other")
-            )
-        if "growth" in ea:
-            entities.extend(
-                [
-                    GrowthValueSensor(
-                        coord,
-                        baby,
-                        "weight",
-                        "weight",
-                        "Weight",
-                        unit=options.get("weight_unit", "kg"),
-                        device_class=SensorDeviceClass.WEIGHT,
-                    ),
-                    GrowthValueSensor(
-                        coord,
-                        baby,
-                        "height",
-                        "height",
-                        "Height",
-                        unit=options.get("length_unit", "cm"),
-                        device_class=SensorDeviceClass.DISTANCE,
-                    ),
-                    GrowthValueSensor(
-                        coord,
-                        baby,
-                        "head_circumference",
-                        "head_circumference",
-                        "Head circumference",
-                        unit=options.get("length_unit", "cm"),
-                        device_class=SensorDeviceClass.DISTANCE,
-                    ),
-                    GrowthValueSensor(coord, baby, "bmi", "bmi", "BMI"),
-                    PercentileSensor(coord, baby, "weight_percentile", "weight_percentile", "Weight percentile"),
-                    PercentileSensor(coord, baby, "height_percentile", "height_percentile", "Height percentile"),
-                    PercentileSensor(
-                        coord,
-                        baby,
-                        "head_percentile",
-                        "head_circumference_percentile",
-                        "Head circumference percentile",
-                    ),
-                    PercentileSensor(coord, baby, "bmi_percentile", "bmi_percentile", "BMI percentile"),
-                ]
-            )
-        if "vaccine" in ea:
-            entities.extend(
-                [
-                    LastVaccineSensor(coord, baby, "vaccine", "last_vaccine", "Last vaccine"),
-                    VaccinesDueSensor(coord, baby, hass, entry),
-                ]
-            )
-        entities.append(AgeDaysSensor(coord, baby))
-        entities.append(AgeMonthsSensor(coord, baby))
-        entities.append(RecentEntriesSensor(coord, baby))
+        ctx = _BuildCtx(coord=coord, baby=baby, options=options, hass=hass, entry=entry)
+        enabled = set(baby.enabled_activities)
+        for activity, factories in PER_BABY_SENSORS.items():
+            if activity not in enabled:
+                continue
+            entities.extend(f(ctx) for f in factories)
+        entities.extend(f(ctx) for f in ALWAYS_PER_BABY)
 
     # Global sensors
     if options.get(OPT_ENABLE_PUMPING, True):
