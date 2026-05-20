@@ -1,7 +1,8 @@
 // Last-24-hours summary chips — computed from the recent_entries sensor
 // attribute so the totals match the 24h activity list directly underneath.
-// The status row above carries the "Awake for / Last feed / Last diaper"
-// chips; this row is just the 24 h totals.
+// Returns inline chip fragments (no wrapping container) so the card can
+// flow these in the same `.chips` flex row as the status chips above
+// without an awkward line break between the two groups.
 import { html, type TemplateResult } from "lit";
 
 import { babyEntityId } from "../lib/ha-helpers";
@@ -16,16 +17,14 @@ export function todayCountsTemplate(
     const entries = sensor?.attributes?.entries ?? [];
     const s = summarize(entries);
     return html`
-        <div class="chips" role="list" aria-label="Last 24 hours summary">
-            <div class="chip" role="listitem">
-                ${formatVolume(s.totalVolumeMl)} consumed
-            </div>
-            <div class="chip" role="listitem">
-                ${s.wetDiapers} wet and ${s.dirtyDiapers} dirty
-            </div>
-            <div class="chip" role="listitem">
-                ${formatMinutes(s.sleepMinutes)} sleep
-            </div>
+        <div class="chip" role="listitem">
+            ${formatVolume(s.totalVolumeMl)} consumed
+        </div>
+        <div class="chip" role="listitem">
+            ${s.wetDiapers} wet and ${s.dirtyDiapers} dirty
+        </div>
+        <div class="chip" role="listitem">
+            ${formatMinutes(s.sleepMinutes)} sleep
         </div>
     `;
 }

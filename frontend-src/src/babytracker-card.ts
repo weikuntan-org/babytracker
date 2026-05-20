@@ -371,7 +371,12 @@ export class BabytrackerCard extends LitElement {
         return babyEntityId(this._baby(), suffix, prefix);
     }
 
-    private _renderStatus(): TemplateResult {
+    /** Status chip fragments (no wrapper). Caller wraps these together
+     *  with the 24 h chips inside a single `.chips` flex row so the two
+     *  groups flow continuously instead of breaking onto separate
+     *  lines.
+     */
+    private _renderStatusChips(): TemplateResult {
         const hass = this.hass!;
         const lastFeeding = hass.states?.[this._entityId("last_feeding")]?.state;
         const lastDiaper = hass.states?.[this._entityId("last_diaper")]?.state;
@@ -394,28 +399,26 @@ export class BabytrackerCard extends LitElement {
             ? null
             : timeSinceLastWakeMinutes(recentEntries);
         return html`
-            <div class="chips" role="list" aria-label="Status chips">
-                <div class="chip" role="listitem">
-                    Last feed: ${this._timeSince(lastFeeding)}
-                </div>
-                <div class="chip" role="listitem">
-                    Last diaper: ${this._timeSince(lastDiaper)}
-                </div>
-                ${awakeMinutes !== null
-                    ? html`<div class="chip" role="listitem">
-                          Awake for: ${formatMinutes(awakeMinutes)}
-                      </div>`
-                    : ""}
-                ${sleeping
-                    ? html`<div class="chip warning" role="listitem">Sleeping</div>`
-                    : ""}
-                ${walking
-                    ? html`<div class="chip warning" role="listitem">On a walk</div>`
-                    : ""}
-                ${atDaycare
-                    ? html`<div class="chip warning" role="listitem">At daycare</div>`
-                    : ""}
+            <div class="chip" role="listitem">
+                Last feed: ${this._timeSince(lastFeeding)}
             </div>
+            <div class="chip" role="listitem">
+                Last diaper: ${this._timeSince(lastDiaper)}
+            </div>
+            ${awakeMinutes !== null
+                ? html`<div class="chip" role="listitem">
+                      Awake for: ${formatMinutes(awakeMinutes)}
+                  </div>`
+                : ""}
+            ${sleeping
+                ? html`<div class="chip warning" role="listitem">Sleeping</div>`
+                : ""}
+            ${walking
+                ? html`<div class="chip warning" role="listitem">On a walk</div>`
+                : ""}
+            ${atDaycare
+                ? html`<div class="chip warning" role="listitem">At daycare</div>`
+                : ""}
         `;
     }
 
@@ -605,12 +608,26 @@ export class BabytrackerCard extends LitElement {
     protected render(): TemplateResult {
         if (!this.hass || !this._config) return html``;
         const sections = this._sections;
+        const showStatus = sections.includes("status");
+        const showToday = sections.includes("today");
         return html`
             <ha-card>
                 <h2>${displayBabyName(this._babyConfig?.name ?? this._baby())}</h2>
-                ${sections.includes("status") ? this._renderStatus() : ""}
-                ${sections.includes("today")
-                    ? todayCountsTemplate(this.hass, this._baby(), this._babyConfig)
+                ${showStatus || showToday
+                    ? html`<div
+                          class="chips"
+                          role="list"
+                          aria-label="Status and last 24 hours"
+                      >
+                          ${showStatus ? this._renderStatusChips() : ""}
+                          ${showToday
+                              ? todayCountsTemplate(
+                                    this.hass,
+                                    this._baby(),
+                                    this._babyConfig
+                                )
+                              : ""}
+                      </div>`
                     : ""}
                 ${sections.includes("active_session")
                     ? sessionTileTemplate(
