@@ -276,6 +276,16 @@ export class BabytrackerCard extends LitElement {
             justify-content: flex-end;
             margin-top: 8px;
         }
+        dialog .quick-other {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        dialog .quick-other button.quick {
+            padding: 8px 12px;
+            font-weight: 500;
+            flex: 0 0 auto;
+        }
     `;
 
     public setConfig(config: BabytrackerCardConfig): void {
