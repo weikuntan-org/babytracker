@@ -4,7 +4,7 @@
 // place so the two surfaces stay visually consistent.
 import { html, type TemplateResult } from "lit";
 
-import { formatClock } from "../lib/entries";
+import { entryLabel, formatClock } from "../lib/entries";
 import "./entry-thumbnail";
 
 export type EntryRequester = (entry: any) => void;
@@ -33,7 +33,7 @@ export function entryRowTemplate(
             }}
         >
             <div class="entry-row">
-                <span aria-label="Entry type">${_label(entry)}</span>
+                <span aria-label="Entry type">${entryLabel(entry)}</span>
                 ${_renderTime(entry)}
                 ${entry.staff
                     ? html`<span
@@ -96,23 +96,4 @@ function _renderTime(entry: any): TemplateResult {
         >`;
     }
     return html`<span class="muted">${start}</span>`;
-}
-
-function _label(entry: any): string {
-    const t = String(entry.type ?? "");
-    // "other" entries carry their description in data.name; everything else
-    // is differentiated by method (feeding) or kind (diaper). Feeding rows
-    // also surface the amount+unit so bottles show "feeding (bottle, 4 oz)".
-    const d = entry?.data ?? {};
-    const detail = d.name ?? d.method ?? d.kind;
-    if (!detail) return t;
-    if (
-        t === "feeding" &&
-        d.amount != null &&
-        d.amount !== "" &&
-        d.unit
-    ) {
-        return `${t} (${detail}, ${d.amount} ${d.unit})`;
-    }
-    return `${t} (${detail})`;
 }

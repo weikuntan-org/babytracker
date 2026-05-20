@@ -155,6 +155,52 @@ export function formatVolume(ml: number): string {
     return `${Math.round(ml)} ml`;
 }
 
+/** Human-facing label for an entry row. Sentence-cased and never
+ *  prefixed with the technical type for "other" — users see the
+ *  actual activity name they logged (or the chip label).
+ *  Examples:
+ *    - { type: "sleep" }                                → "Sleep"
+ *    - { type: "tummy_time" }                           → "Tummy time"
+ *    - { type: "feeding", data:{method:"breast_left"} } → "Feeding (breast left)"
+ *    - { type: "feeding", data:{method:"bottle", amount:4, unit:"oz"} }
+ *                                                       → "Feeding (bottle, 4 oz)"
+ *    - { type: "diaper", data:{kind:"wet"} }            → "Diaper (wet)"
+ *    - { type: "other", data:{name:"bath"} }            → "Bath"
+ */
+export function entryLabel(entry: any): string {
+    const t = String(entry?.type ?? "");
+    const d = entry?.data ?? {};
+    if (t === "other") {
+        const name = String(d.name ?? "").trim();
+        return capitalizeFirst(name || _humanize(t));
+    }
+    const rawDetail = d.method ?? d.kind;
+    const detail =
+        rawDetail != null && rawDetail !== ""
+            ? _humanize(String(rawDetail))
+            : null;
+    const main = capitalizeFirst(_humanize(t));
+    if (!detail) return main;
+    if (
+        t === "feeding" &&
+        d.amount != null &&
+        d.amount !== "" &&
+        d.unit
+    ) {
+        return `${main} (${detail}, ${d.amount} ${d.unit})`;
+    }
+    return `${main} (${detail})`;
+}
+
+function _humanize(s: string): string {
+    return s.replace(/_/g, " ");
+}
+
+function capitalizeFirst(s: string): string {
+    if (!s) return s;
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 /**
  * Format an ISO timestamp as a local HH:MM clock string for compact list rows.
  * Returns "" for missing/invalid input.
