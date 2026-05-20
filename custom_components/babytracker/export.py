@@ -12,6 +12,11 @@ from typing import Any
 
 from typing import TYPE_CHECKING
 
+try:
+    from .runtime import parse_ts
+except ImportError:  # pragma: no cover — supports bare-module loading in tests
+    from runtime import parse_ts  # type: ignore[no-redef]
+
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
@@ -80,7 +85,7 @@ def _filter_entries(
         if ts < start or ts > end:
             continue
         out.append(entry)
-    out.sort(key=lambda e: e.timestamp)
+    out.sort(key=lambda e: parse_ts(e.timestamp))
     return out
 
 
