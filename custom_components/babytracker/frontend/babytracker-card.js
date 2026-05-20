@@ -1117,7 +1117,7 @@ let I = class extends O {
                     alt=""
                     loading="lazy"
                     decoding="async"
-                    style="width:${t};height:${t}"
+                    style="max-width:${t};max-height:${t}"
                     @error=${this._onImgError}
                 />
             </button>
@@ -1161,9 +1161,11 @@ I.styles = V`
             line-height: 0;
         }
         .thumb {
-            /* Width/height come from an inline style attribute so each
-             * instance can pick its own size without a CSS variable. */
-            object-fit: cover;
+            /* max-width/max-height come from an inline style attribute
+             * so each instance can pick its own bounding box without a
+             * CSS variable. Aspect ratio is preserved by leaving both
+             * width and height intrinsic. */
+            display: block;
             border-radius: 4px;
             border: 1px solid var(--divider-color);
             vertical-align: middle;
