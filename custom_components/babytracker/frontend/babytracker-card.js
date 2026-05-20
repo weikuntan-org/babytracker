@@ -928,7 +928,6 @@ function _i(e, t = Date.now()) {
     diapers: 0,
     wet: 0,
     dirty: 0,
-    mixed: 0,
     sleepMinutes: 0,
     longestSleepMinutes: 0,
     bottleFeeds: 0,
@@ -949,7 +948,7 @@ function _i(e, t = Date.now()) {
     switch (n.type) {
       case "diaper": {
         const s = String(o.kind ?? "");
-        s === "wet" ? (i.diapers += 1, i.wet += 1) : s === "dirty" ? (i.diapers += 1, i.dirty += 1) : s === "both" && (i.diapers += 1, i.mixed += 1);
+        s === "wet" ? (i.diapers += 1, i.wet += 1) : s === "dirty" ? (i.diapers += 1, i.dirty += 1) : s === "both" && (i.diapers += 1, i.wet += 1, i.dirty += 1);
         break;
       }
       case "sleep": {
@@ -4051,7 +4050,7 @@ let U = class extends N {
   }
   _renderChips(e) {
     const t = [], i = [];
-    if (e.wet && i.push(`${e.wet}w`), e.dirty && i.push(`${e.dirty}d`), e.mixed && i.push(`${e.mixed}b`), t.push(c`
+    if (e.wet && i.push(`${e.wet} wet`), e.dirty && i.push(`${e.dirty} dirty`), t.push(c`
             <span class="chip"
                 ><span class="chip-label">Diapers</span> ${e.diapers}${i.length > 0 ? c` <span class="chip-detail"
                               >(${i.join(" · ")})</span

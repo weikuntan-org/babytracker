@@ -343,9 +343,8 @@ export class BabytrackerHistoryCard extends LitElement {
         const chips: TemplateResult[] = [];
 
         const diaperDetail: string[] = [];
-        if (summary.wet) diaperDetail.push(`${summary.wet}w`);
-        if (summary.dirty) diaperDetail.push(`${summary.dirty}d`);
-        if (summary.mixed) diaperDetail.push(`${summary.mixed}b`);
+        if (summary.wet) diaperDetail.push(`${summary.wet} wet`);
+        if (summary.dirty) diaperDetail.push(`${summary.dirty} dirty`);
         chips.push(html`
             <span class="chip"
                 ><span class="chip-label">Diapers</span> ${summary.diapers}${
