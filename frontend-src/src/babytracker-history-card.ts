@@ -18,6 +18,12 @@ import {
 } from "./components/modals/_host";
 import { dialogStyles } from "./components/modals/_styles";
 import { subscribeEntriesInRange } from "./lib/ha-helpers";
+import {
+    formatMinutes,
+    formatVolume,
+    summarizeDay,
+    type DaySummary
+} from "./lib/entries";
 
 export interface BabytrackerHistoryCardConfig {
     type: string;
@@ -152,6 +158,31 @@ export class BabytrackerHistoryCard extends LitElement {
             color: var(--secondary-text-color);
             font-size: 0.95rem;
             padding: 12px 0;
+        }
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 0 0 12px;
+        }
+        .chip {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: var(--secondary-background-color);
+            border: 1px solid var(--divider-color);
+            font-size: 0.85rem;
+            line-height: 1.2;
+            color: var(--primary-text-color);
+        }
+        .chip .chip-label {
+            color: var(--secondary-text-color);
+        }
+        .chip .chip-detail {
+            color: var(--secondary-text-color);
+            font-size: 0.78rem;
         }
         ul.entries {
             list-style: none;
@@ -308,9 +339,123 @@ export class BabytrackerHistoryCard extends LitElement {
         return this.hass.callService("babytracker", service, data);
     };
 
+    private _renderChips(summary: DaySummary): TemplateResult {
+        const chips: TemplateResult[] = [];
+
+        const diaperDetail: string[] = [];
+        if (summary.wet) diaperDetail.push(`${summary.wet}w`);
+        if (summary.dirty) diaperDetail.push(`${summary.dirty}d`);
+        if (summary.mixed) diaperDetail.push(`${summary.mixed}b`);
+        chips.push(html`
+            <span class="chip"
+                ><span class="chip-label">Diapers</span> ${summary.diapers}${
+                    diaperDetail.length > 0
+                        ? html` <span class="chip-detail"
+                              >(${diaperDetail.join(" · ")})</span
+                          >`
+                        : ""
+                }</span
+            >
+        `);
+
+        chips.push(html`
+            <span class="chip"
+                ><span class="chip-label">Sleep</span>
+                ${formatMinutes(summary.sleepMinutes)}</span
+            >
+        `);
+        chips.push(html`
+            <span class="chip"
+                ><span class="chip-label">Longest sleep</span>
+                ${formatMinutes(summary.longestSleepMinutes)}</span
+            >
+        `);
+
+        if (summary.bottleFeeds > 0) {
+            chips.push(html`
+                <span class="chip"
+                    ><span class="chip-label">Feeds</span>
+                    ${summary.bottleFeeds}
+                    <span class="chip-detail"
+                        >· ${formatVolume(summary.bottleVolumeMl)}</span
+                    ></span
+                >
+            `);
+        }
+        if (summary.nursingMinutes > 0) {
+            const sides: string[] = [];
+            if (summary.nursingLeftMinutes > 0)
+                sides.push(`L ${formatMinutes(summary.nursingLeftMinutes)}`);
+            if (summary.nursingRightMinutes > 0)
+                sides.push(`R ${formatMinutes(summary.nursingRightMinutes)}`);
+            chips.push(html`
+                <span class="chip"
+                    ><span class="chip-label">Nursing</span>
+                    ${formatMinutes(summary.nursingMinutes)}
+                    <span class="chip-detail">(${sides.join(" · ")})</span></span
+                >
+            `);
+        }
+        if (summary.pumpingMl > 0) {
+            chips.push(html`
+                <span class="chip"
+                    ><span class="chip-label">Pumping</span>
+                    ${formatVolume(summary.pumpingMl)}</span
+                >
+            `);
+        }
+        if (summary.solidsCount > 0) {
+            chips.push(html`
+                <span class="chip"
+                    ><span class="chip-label">Solids</span>
+                    ${summary.solidsCount}</span
+                >
+            `);
+        }
+        if (summary.tummyMinutes > 0) {
+            chips.push(html`
+                <span class="chip"
+                    ><span class="chip-label">Tummy time</span>
+                    ${formatMinutes(summary.tummyMinutes)}</span
+                >
+            `);
+        }
+        if (summary.walkCount > 0) {
+            chips.push(html`
+                <span class="chip"
+                    ><span class="chip-label">Walks</span> ${summary.walkCount}
+                    <span class="chip-detail"
+                        >· ${formatMinutes(summary.walkMinutes)}</span
+                    ></span
+                >
+            `);
+        }
+        if (summary.medCount > 0) {
+            chips.push(html`
+                <span class="chip"
+                    ><span class="chip-label">Meds</span>
+                    ${summary.medCount}</span
+                >
+            `);
+        }
+        if (summary.vaccineCount > 0) {
+            chips.push(html`
+                <span class="chip"
+                    ><span class="chip-label">Vaccines</span>
+                    ${summary.vaccineCount}</span
+                >
+            `);
+        }
+
+        return html`<div class="chips" aria-label="Day summary">
+            ${chips}
+        </div>`;
+    }
+
     protected render(): TemplateResult {
         if (!this.hass || !this._config) return html``;
         const isToday = this._date === _toDateInput(new Date());
+        const summary = summarizeDay(this._entries);
         return html`
             <ha-card>
                 <h2>History — ${_humanDate(this._date)}</h2>
@@ -347,6 +492,7 @@ export class BabytrackerHistoryCard extends LitElement {
                 ${this._entries.length === 0
                     ? html`<p class="empty">Nothing logged on this day.</p>`
                     : html`
+                          ${this._renderChips(summary)}
                           <ul class="entries">
                               ${this._entries.map((entry: any) =>
                                   entryRowTemplate(
