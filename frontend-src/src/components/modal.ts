@@ -532,6 +532,20 @@ function solidsForm(
     `;
 }
 
+// Common one-tap activities. Each chip submits `log_other` with `name`
+// set to the chip label and timestamp/notes/photo left blank so the
+// server defaults to "now". Users who need finer control type into
+// the input below and use the dated form.
+const QUICK_OTHER_OPTIONS = [
+    "Bath",
+    "Butt wash",
+    "Medication",
+    "Vitamin",
+    "Burp",
+    "Spit up",
+    "Throw up"
+] as const;
+
 function otherForm(
     hass: any,
     baby: string,
@@ -550,15 +564,29 @@ function otherForm(
             photo_path: _readPhotoPath(form)
         });
     };
+    const onQuick = (name: string) => submit("log_other", { baby, name });
     return html`
         <form @submit=${onSubmit}>
             <h2>Log activity</h2>
-            <label for="name">What happened</label>
+            <div class="quick-other" role="group" aria-label="Quick activities">
+                ${QUICK_OTHER_OPTIONS.map(
+                    name => html`
+                        <button
+                            type="button"
+                            class="quick"
+                            @click=${() => onQuick(name)}
+                        >
+                            ${name}
+                        </button>
+                    `
+                )}
+            </div>
+            <label for="name">Or type your own</label>
             <input
                 id="name"
                 name="name"
                 type="text"
-                placeholder="e.g. bath, doctor visit, first smile"
+                placeholder="e.g. doctor visit, first smile"
                 autofocus
                 required
             />
