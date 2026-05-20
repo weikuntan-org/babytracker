@@ -5,7 +5,8 @@ import {
     formatMinutes,
     formatVolume,
     parseTimestamp,
-    summarize
+    summarize,
+    timeSinceLastWakeMinutes
 } from "./entries";
 
 // Fixed "now" for deterministic windowing.
@@ -202,5 +203,49 @@ describe("formatClock", () => {
         // Exact rendering depends on the test runner's locale/timezone, so
         // only assert structure: two pairs of digits separated by a colon.
         expect(s).toMatch(/^\d{1,2}:\d{2}(\s?[AP]M)?$/i);
+    });
+});
+
+describe("timeSinceLastWakeMinutes", () => {
+    it("returns null when no completed sleep is present", () => {
+        expect(timeSinceLastWakeMinutes([], NOW)).toBeNull();
+        // An open session (no ended_at) is not a "wake" yet.
+        expect(
+            timeSinceLastWakeMinutes(
+                [{ type: "sleep", timestamp: iso(-2) }],
+                NOW
+            )
+        ).toBeNull();
+    });
+
+    it("returns minutes since the latest ended_at across all entries", () => {
+        // recent_entries is sorted by start time; the LATEST end may
+        // belong to an earlier-sorted entry if naps ever overlapped.
+        const entries = [
+            { type: "sleep", timestamp: iso(-1), ended_at: iso(-0.5) },
+            { type: "sleep", timestamp: iso(-3), ended_at: iso(-0.25) },
+            { type: "feeding", timestamp: iso(-0.1), data: {} }
+        ];
+        const mins = timeSinceLastWakeMinutes(entries, NOW);
+        // 0.25h × 60 = 15m since the latest end.
+        expect(mins).toBeCloseTo(15, 2);
+    });
+
+    it("clamps negative deltas to 0 (clock skew safety)", () => {
+        // ended_at in the future relative to NOW.
+        const entries = [
+            { type: "sleep", timestamp: iso(-1), ended_at: iso(1) }
+        ];
+        expect(timeSinceLastWakeMinutes(entries, NOW)).toBe(0);
+    });
+
+    it("ignores non-sleep entries and invalid timestamps", () => {
+        const entries = [
+            { type: "diaper", timestamp: iso(-1) },
+            { type: "sleep", timestamp: iso(-2), ended_at: "garbage" },
+            { type: "sleep", timestamp: iso(-3), ended_at: iso(-1) }
+        ];
+        const mins = timeSinceLastWakeMinutes(entries, NOW);
+        expect(mins).toBeCloseTo(60, 2);
     });
 });

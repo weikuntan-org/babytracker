@@ -23,6 +23,7 @@ import {
     subscribeBabyConfig,
     subscribeIntegrationOptions
 } from "./lib/ha-helpers";
+import { formatMinutes, timeSinceLastWakeMinutes } from "./lib/entries";
 
 export interface BabytrackerCardConfig {
     type: string;
@@ -383,14 +384,28 @@ export class BabytrackerCard extends LitElement {
         const atDaycare =
             hass.states?.[this._entityId("at_daycare", "binary_sensor")]?.state ===
             "on";
+        // Awake-for is hidden while a sleep session is open (the session
+        // tile carries the in-progress duration). When no completed sleep
+        // is in recent_entries we stay silent rather than show "—".
+        const recentEntries =
+            hass.states?.[this._entityId("recent_entries")]?.attributes?.entries ??
+            [];
+        const awakeMinutes = sleeping
+            ? null
+            : timeSinceLastWakeMinutes(recentEntries);
         return html`
             <div class="chips" role="list" aria-label="Status chips">
                 <div class="chip" role="listitem">
-                    Last feeding: ${this._timeSince(lastFeeding)}
+                    Last feed: ${this._timeSince(lastFeeding)}
                 </div>
                 <div class="chip" role="listitem">
                     Last diaper: ${this._timeSince(lastDiaper)}
                 </div>
+                ${awakeMinutes !== null
+                    ? html`<div class="chip" role="listitem">
+                          Awake for: ${formatMinutes(awakeMinutes)}
+                      </div>`
+                    : ""}
                 ${sleeping
                     ? html`<div class="chip warning" role="listitem">Sleeping</div>`
                     : ""}
