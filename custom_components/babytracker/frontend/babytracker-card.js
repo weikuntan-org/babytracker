@@ -3,18 +3,18 @@
  * Copyright 2019 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const wt = globalThis, zt = wt.ShadowRoot && (wt.ShadyCSS === void 0 || wt.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, Ut = Symbol(), Yt = /* @__PURE__ */ new WeakMap();
-let ye = class {
+const xt = globalThis, Ut = xt.ShadowRoot && (xt.ShadyCSS === void 0 || xt.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, Bt = Symbol(), Gt = /* @__PURE__ */ new WeakMap();
+let ve = class {
   constructor(t, i, r) {
-    if (this._$cssResult$ = !0, r !== Ut) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
+    if (this._$cssResult$ = !0, r !== Bt) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
     this.cssText = t, this.t = i;
   }
   get styleSheet() {
     let t = this.o;
     const i = this.t;
-    if (zt && t === void 0) {
+    if (Ut && t === void 0) {
       const r = i !== void 0 && i.length === 1;
-      r && (t = Yt.get(i)), t === void 0 && ((this.o = t = new CSSStyleSheet()).replaceSync(this.cssText), r && Yt.set(i, t));
+      r && (t = Gt.get(i)), t === void 0 && ((this.o = t = new CSSStyleSheet()).replaceSync(this.cssText), r && Gt.set(i, t));
     }
     return t;
   }
@@ -22,33 +22,33 @@ let ye = class {
     return this.cssText;
   }
 };
-const Oe = (e) => new ye(typeof e == "string" ? e : e + "", void 0, Ut), j = (e, ...t) => {
+const Re = (e) => new ve(typeof e == "string" ? e : e + "", void 0, Bt), q = (e, ...t) => {
   const i = e.length === 1 ? e[0] : t.reduce((r, n, o) => r + ((s) => {
     if (s._$cssResult$ === !0) return s.cssText;
     if (typeof s == "number") return s;
     throw Error("Value passed to 'css' function must be a 'css' function result: " + s + ". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.");
   })(n) + e[o + 1], e[0]);
-  return new ye(i, e, Ut);
-}, Re = (e, t) => {
-  if (zt) e.adoptedStyleSheets = t.map((i) => i instanceof CSSStyleSheet ? i : i.styleSheet);
+  return new ve(i, e, Bt);
+}, Le = (e, t) => {
+  if (Ut) e.adoptedStyleSheets = t.map((i) => i instanceof CSSStyleSheet ? i : i.styleSheet);
   else for (const i of t) {
-    const r = document.createElement("style"), n = wt.litNonce;
+    const r = document.createElement("style"), n = xt.litNonce;
     n !== void 0 && r.setAttribute("nonce", n), r.textContent = i.cssText, e.appendChild(r);
   }
-}, Gt = zt ? (e) => e : (e) => e instanceof CSSStyleSheet ? ((t) => {
+}, Xt = Ut ? (e) => e : (e) => e instanceof CSSStyleSheet ? ((t) => {
   let i = "";
   for (const r of t.cssRules) i += r.cssText;
-  return Oe(i);
+  return Re(i);
 })(e) : e;
 /**
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const { is: Le, defineProperty: He, getOwnPropertyDescriptor: Ie, getOwnPropertyNames: ze, getOwnPropertySymbols: Ue, getPrototypeOf: Be } = Object, B = globalThis, Xt = B.trustedTypes, Ve = Xt ? Xt.emptyScript : "", Pt = B.reactiveElementPolyfillSupport, pt = (e, t) => e, kt = { toAttribute(e, t) {
+const { is: He, defineProperty: Ie, getOwnPropertyDescriptor: ze, getOwnPropertyNames: Ue, getOwnPropertySymbols: Be, getPrototypeOf: Ve } = Object, V = globalThis, Zt = V.trustedTypes, Fe = Zt ? Zt.emptyScript : "", Pt = V.reactiveElementPolyfillSupport, bt = (e, t) => e, St = { toAttribute(e, t) {
   switch (t) {
     case Boolean:
-      e = e ? Ve : null;
+      e = e ? Fe : null;
       break;
     case Object:
     case Array:
@@ -73,23 +73,23 @@ const { is: Le, defineProperty: He, getOwnPropertyDescriptor: Ie, getOwnProperty
       }
   }
   return i;
-} }, Bt = (e, t) => !Le(e, t), Zt = { attribute: !0, type: String, converter: kt, reflect: !1, useDefault: !1, hasChanged: Bt };
-Symbol.metadata ?? (Symbol.metadata = Symbol("metadata")), B.litPropertyMetadata ?? (B.litPropertyMetadata = /* @__PURE__ */ new WeakMap());
-let ot = class extends HTMLElement {
+} }, Vt = (e, t) => !He(e, t), Qt = { attribute: !0, type: String, converter: St, reflect: !1, useDefault: !1, hasChanged: Vt };
+Symbol.metadata ?? (Symbol.metadata = Symbol("metadata")), V.litPropertyMetadata ?? (V.litPropertyMetadata = /* @__PURE__ */ new WeakMap());
+let st = class extends HTMLElement {
   static addInitializer(t) {
     this._$Ei(), (this.l ?? (this.l = [])).push(t);
   }
   static get observedAttributes() {
     return this.finalize(), this._$Eh && [...this._$Eh.keys()];
   }
-  static createProperty(t, i = Zt) {
+  static createProperty(t, i = Qt) {
     if (i.state && (i.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(t) && ((i = Object.create(i)).wrapped = !0), this.elementProperties.set(t, i), !i.noAccessor) {
       const r = Symbol(), n = this.getPropertyDescriptor(t, r, i);
-      n !== void 0 && He(this.prototype, t, n);
+      n !== void 0 && Ie(this.prototype, t, n);
     }
   }
   static getPropertyDescriptor(t, i, r) {
-    const { get: n, set: o } = Ie(this.prototype, t) ?? { get() {
+    const { get: n, set: o } = ze(this.prototype, t) ?? { get() {
       return this[i];
     }, set(s) {
       this[i] = s;
@@ -100,17 +100,17 @@ let ot = class extends HTMLElement {
     }, configurable: !0, enumerable: !0 };
   }
   static getPropertyOptions(t) {
-    return this.elementProperties.get(t) ?? Zt;
+    return this.elementProperties.get(t) ?? Qt;
   }
   static _$Ei() {
-    if (this.hasOwnProperty(pt("elementProperties"))) return;
-    const t = Be(this);
+    if (this.hasOwnProperty(bt("elementProperties"))) return;
+    const t = Ve(this);
     t.finalize(), t.l !== void 0 && (this.l = [...t.l]), this.elementProperties = new Map(t.elementProperties);
   }
   static finalize() {
-    if (this.hasOwnProperty(pt("finalized"))) return;
-    if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(pt("properties"))) {
-      const i = this.properties, r = [...ze(i), ...Ue(i)];
+    if (this.hasOwnProperty(bt("finalized"))) return;
+    if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(bt("properties"))) {
+      const i = this.properties, r = [...Ue(i), ...Be(i)];
       for (const n of r) this.createProperty(n, i[n]);
     }
     const t = this[Symbol.metadata];
@@ -129,8 +129,8 @@ let ot = class extends HTMLElement {
     const i = [];
     if (Array.isArray(t)) {
       const r = new Set(t.flat(1 / 0).reverse());
-      for (const n of r) i.unshift(Gt(n));
-    } else t !== void 0 && i.push(Gt(t));
+      for (const n of r) i.unshift(Xt(n));
+    } else t !== void 0 && i.push(Xt(t));
     return i;
   }
   static _$Eu(t, i) {
@@ -159,7 +159,7 @@ let ot = class extends HTMLElement {
   }
   createRenderRoot() {
     const t = this.shadowRoot ?? this.attachShadow(this.constructor.shadowRootOptions);
-    return Re(t, this.constructor.elementStyles), t;
+    return Le(t, this.constructor.elementStyles), t;
   }
   connectedCallback() {
     var t;
@@ -184,7 +184,7 @@ let ot = class extends HTMLElement {
     var o;
     const r = this.constructor.elementProperties.get(t), n = this.constructor._$Eu(t, r);
     if (n !== void 0 && r.reflect === !0) {
-      const s = (((o = r.converter) == null ? void 0 : o.toAttribute) !== void 0 ? r.converter : kt).toAttribute(i, r.type);
+      const s = (((o = r.converter) == null ? void 0 : o.toAttribute) !== void 0 ? r.converter : St).toAttribute(i, r.type);
       this._$Em = t, s == null ? this.removeAttribute(n) : this.setAttribute(n, s), this._$Em = null;
     }
   }
@@ -192,7 +192,7 @@ let ot = class extends HTMLElement {
     var o, s;
     const r = this.constructor, n = r._$Eh.get(t);
     if (n !== void 0 && this._$Em !== n) {
-      const a = r.getPropertyOptions(n), l = typeof a.converter == "function" ? { fromAttribute: a.converter } : ((o = a.converter) == null ? void 0 : o.fromAttribute) !== void 0 ? a.converter : kt;
+      const a = r.getPropertyOptions(n), l = typeof a.converter == "function" ? { fromAttribute: a.converter } : ((o = a.converter) == null ? void 0 : o.fromAttribute) !== void 0 ? a.converter : St;
       this._$Em = n;
       const c = l.fromAttribute(i, a.type);
       this[n] = c ?? ((s = this._$Ej) == null ? void 0 : s.get(n)) ?? c, this._$Em = null;
@@ -202,7 +202,7 @@ let ot = class extends HTMLElement {
     var s;
     if (t !== void 0) {
       const a = this.constructor;
-      if (n === !1 && (o = this[t]), r ?? (r = a.getPropertyOptions(t)), !((r.hasChanged ?? Bt)(o, i) || r.useDefault && r.reflect && o === ((s = this._$Ej) == null ? void 0 : s.get(t)) && !this.hasAttribute(a._$Eu(t, r)))) return;
+      if (n === !1 && (o = this[t]), r ?? (r = a.getPropertyOptions(t)), !((r.hasChanged ?? Vt)(o, i) || r.useDefault && r.reflect && o === ((s = this._$Ej) == null ? void 0 : s.get(t)) && !this.hasAttribute(a._$Eu(t, r)))) return;
       this.C(t, i, r);
     }
     this.isUpdatePending === !1 && (this._$ES = this._$EP());
@@ -278,76 +278,76 @@ let ot = class extends HTMLElement {
   firstUpdated(t) {
   }
 };
-ot.elementStyles = [], ot.shadowRootOptions = { mode: "open" }, ot[pt("elementProperties")] = /* @__PURE__ */ new Map(), ot[pt("finalized")] = /* @__PURE__ */ new Map(), Pt == null || Pt({ ReactiveElement: ot }), (B.reactiveElementVersions ?? (B.reactiveElementVersions = [])).push("2.1.2");
+st.elementStyles = [], st.shadowRootOptions = { mode: "open" }, st[bt("elementProperties")] = /* @__PURE__ */ new Map(), st[bt("finalized")] = /* @__PURE__ */ new Map(), Pt == null || Pt({ ReactiveElement: st }), (V.reactiveElementVersions ?? (V.reactiveElementVersions = [])).push("2.1.2");
 /**
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const ht = globalThis, Qt = (e) => e, St = ht.trustedTypes, Jt = St ? St.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, ve = "$lit$", z = `lit$${Math.random().toFixed(9).slice(2)}$`, $e = "?" + z, Fe = `<${$e}>`, J = document, bt = () => J.createComment(""), gt = (e) => e === null || typeof e != "object" && typeof e != "function", Vt = Array.isArray, je = (e) => Vt(e) || typeof (e == null ? void 0 : e[Symbol.iterator]) == "function", Dt = `[ 	
-\f\r]`, ut = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, te = /-->/g, ee = />/g, X = RegExp(`>|${Dt}(?:([^\\s"'>=/]+)(${Dt}*=${Dt}*(?:[^ 	
-\f\r"'\`<>=]|("|')|))|$)`, "g"), ie = /'/g, re = /"/g, we = /^(?:script|style|textarea|title)$/i, xe = (e) => (t, ...i) => ({ _$litType$: e, strings: t, values: i }), d = xe(1), O = xe(2), at = Symbol.for("lit-noChange"), C = Symbol.for("lit-nothing"), ne = /* @__PURE__ */ new WeakMap(), Z = J.createTreeWalker(J, 129);
-function ke(e, t) {
-  if (!Vt(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-  return Jt !== void 0 ? Jt.createHTML(t) : t;
+const gt = globalThis, Jt = (e) => e, Ct = gt.trustedTypes, te = Ct ? Ct.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, $e = "$lit$", U = `lit$${Math.random().toFixed(9).slice(2)}$`, we = "?" + U, je = `<${we}>`, tt = document, mt = () => tt.createComment(""), ft = (e) => e === null || typeof e != "object" && typeof e != "function", Ft = Array.isArray, qe = (e) => Ft(e) || typeof (e == null ? void 0 : e[Symbol.iterator]) == "function", Dt = `[ 	
+\f\r]`, ht = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ee = /-->/g, ie = />/g, Z = RegExp(`>|${Dt}(?:([^\\s"'>=/]+)(${Dt}*=${Dt}*(?:[^ 	
+\f\r"'\`<>=]|("|')|))|$)`, "g"), re = /'/g, ne = /"/g, xe = /^(?:script|style|textarea|title)$/i, ke = (e) => (t, ...i) => ({ _$litType$: e, strings: t, values: i }), d = ke(1), O = ke(2), lt = Symbol.for("lit-noChange"), C = Symbol.for("lit-nothing"), oe = /* @__PURE__ */ new WeakMap(), Q = tt.createTreeWalker(tt, 129);
+function Se(e, t) {
+  if (!Ft(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
+  return te !== void 0 ? te.createHTML(t) : t;
 }
-const qe = (e, t) => {
+const We = (e, t) => {
   const i = e.length - 1, r = [];
-  let n, o = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", s = ut;
+  let n, o = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", s = ht;
   for (let a = 0; a < i; a++) {
     const l = e[a];
     let c, b, h = -1, g = 0;
-    for (; g < l.length && (s.lastIndex = g, b = s.exec(l), b !== null); ) g = s.lastIndex, s === ut ? b[1] === "!--" ? s = te : b[1] !== void 0 ? s = ee : b[2] !== void 0 ? (we.test(b[2]) && (n = RegExp("</" + b[2], "g")), s = X) : b[3] !== void 0 && (s = X) : s === X ? b[0] === ">" ? (s = n ?? ut, h = -1) : b[1] === void 0 ? h = -2 : (h = s.lastIndex - b[2].length, c = b[1], s = b[3] === void 0 ? X : b[3] === '"' ? re : ie) : s === re || s === ie ? s = X : s === te || s === ee ? s = ut : (s = X, n = void 0);
-    const f = s === X && e[a + 1].startsWith("/>") ? " " : "";
-    o += s === ut ? l + Fe : h >= 0 ? (r.push(c), l.slice(0, h) + ve + l.slice(h) + z + f) : l + z + (h === -2 ? a : f);
+    for (; g < l.length && (s.lastIndex = g, b = s.exec(l), b !== null); ) g = s.lastIndex, s === ht ? b[1] === "!--" ? s = ee : b[1] !== void 0 ? s = ie : b[2] !== void 0 ? (xe.test(b[2]) && (n = RegExp("</" + b[2], "g")), s = Z) : b[3] !== void 0 && (s = Z) : s === Z ? b[0] === ">" ? (s = n ?? ht, h = -1) : b[1] === void 0 ? h = -2 : (h = s.lastIndex - b[2].length, c = b[1], s = b[3] === void 0 ? Z : b[3] === '"' ? ne : re) : s === ne || s === re ? s = Z : s === ee || s === ie ? s = ht : (s = Z, n = void 0);
+    const f = s === Z && e[a + 1].startsWith("/>") ? " " : "";
+    o += s === ht ? l + je : h >= 0 ? (r.push(c), l.slice(0, h) + $e + l.slice(h) + U + f) : l + U + (h === -2 ? a : f);
   }
-  return [ke(e, o + (e[i] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+  return [Se(e, o + (e[i] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
 };
-class mt {
+class _t {
   constructor({ strings: t, _$litType$: i }, r) {
     let n;
     this.parts = [];
     let o = 0, s = 0;
-    const a = t.length - 1, l = this.parts, [c, b] = qe(t, i);
-    if (this.el = mt.createElement(c, r), Z.currentNode = this.el.content, i === 2 || i === 3) {
+    const a = t.length - 1, l = this.parts, [c, b] = We(t, i);
+    if (this.el = _t.createElement(c, r), Q.currentNode = this.el.content, i === 2 || i === 3) {
       const h = this.el.content.firstChild;
       h.replaceWith(...h.childNodes);
     }
-    for (; (n = Z.nextNode()) !== null && l.length < a; ) {
+    for (; (n = Q.nextNode()) !== null && l.length < a; ) {
       if (n.nodeType === 1) {
-        if (n.hasAttributes()) for (const h of n.getAttributeNames()) if (h.endsWith(ve)) {
-          const g = b[s++], f = n.getAttribute(h).split(z), m = /([.?@])?(.*)/.exec(g);
-          l.push({ type: 1, index: o, name: m[2], strings: f, ctor: m[1] === "." ? Ke : m[1] === "?" ? Ye : m[1] === "@" ? Ge : Ct }), n.removeAttribute(h);
-        } else h.startsWith(z) && (l.push({ type: 6, index: o }), n.removeAttribute(h));
-        if (we.test(n.tagName)) {
-          const h = n.textContent.split(z), g = h.length - 1;
+        if (n.hasAttributes()) for (const h of n.getAttributeNames()) if (h.endsWith($e)) {
+          const g = b[s++], f = n.getAttribute(h).split(U), m = /([.?@])?(.*)/.exec(g);
+          l.push({ type: 1, index: o, name: m[2], strings: f, ctor: m[1] === "." ? Ye : m[1] === "?" ? Ge : m[1] === "@" ? Xe : At }), n.removeAttribute(h);
+        } else h.startsWith(U) && (l.push({ type: 6, index: o }), n.removeAttribute(h));
+        if (xe.test(n.tagName)) {
+          const h = n.textContent.split(U), g = h.length - 1;
           if (g > 0) {
-            n.textContent = St ? St.emptyScript : "";
-            for (let f = 0; f < g; f++) n.append(h[f], bt()), Z.nextNode(), l.push({ type: 2, index: ++o });
-            n.append(h[g], bt());
+            n.textContent = Ct ? Ct.emptyScript : "";
+            for (let f = 0; f < g; f++) n.append(h[f], mt()), Q.nextNode(), l.push({ type: 2, index: ++o });
+            n.append(h[g], mt());
           }
         }
-      } else if (n.nodeType === 8) if (n.data === $e) l.push({ type: 2, index: o });
+      } else if (n.nodeType === 8) if (n.data === we) l.push({ type: 2, index: o });
       else {
         let h = -1;
-        for (; (h = n.data.indexOf(z, h + 1)) !== -1; ) l.push({ type: 7, index: o }), h += z.length - 1;
+        for (; (h = n.data.indexOf(U, h + 1)) !== -1; ) l.push({ type: 7, index: o }), h += U.length - 1;
       }
       o++;
     }
   }
   static createElement(t, i) {
-    const r = J.createElement("template");
+    const r = tt.createElement("template");
     return r.innerHTML = t, r;
   }
 }
-function lt(e, t, i = e, r) {
+function ct(e, t, i = e, r) {
   var s, a;
-  if (t === at) return t;
+  if (t === lt) return t;
   let n = r !== void 0 ? (s = i._$Co) == null ? void 0 : s[r] : i._$Cl;
-  const o = gt(t) ? void 0 : t._$litDirective$;
-  return (n == null ? void 0 : n.constructor) !== o && ((a = n == null ? void 0 : n._$AO) == null || a.call(n, !1), o === void 0 ? n = void 0 : (n = new o(e), n._$AT(e, i, r)), r !== void 0 ? (i._$Co ?? (i._$Co = []))[r] = n : i._$Cl = n), n !== void 0 && (t = lt(e, n._$AS(e, t.values), n, r)), t;
+  const o = ft(t) ? void 0 : t._$litDirective$;
+  return (n == null ? void 0 : n.constructor) !== o && ((a = n == null ? void 0 : n._$AO) == null || a.call(n, !1), o === void 0 ? n = void 0 : (n = new o(e), n._$AT(e, i, r)), r !== void 0 ? (i._$Co ?? (i._$Co = []))[r] = n : i._$Cl = n), n !== void 0 && (t = ct(e, n._$AS(e, t.values), n, r)), t;
 }
-class We {
+class Ke {
   constructor(t, i) {
     this._$AV = [], this._$AN = void 0, this._$AD = t, this._$AM = i;
   }
@@ -358,24 +358,24 @@ class We {
     return this._$AM._$AU;
   }
   u(t) {
-    const { el: { content: i }, parts: r } = this._$AD, n = ((t == null ? void 0 : t.creationScope) ?? J).importNode(i, !0);
-    Z.currentNode = n;
-    let o = Z.nextNode(), s = 0, a = 0, l = r[0];
+    const { el: { content: i }, parts: r } = this._$AD, n = ((t == null ? void 0 : t.creationScope) ?? tt).importNode(i, !0);
+    Q.currentNode = n;
+    let o = Q.nextNode(), s = 0, a = 0, l = r[0];
     for (; l !== void 0; ) {
       if (s === l.index) {
         let c;
-        l.type === 2 ? c = new yt(o, o.nextSibling, this, t) : l.type === 1 ? c = new l.ctor(o, l.name, l.strings, this, t) : l.type === 6 && (c = new Xe(o, this, t)), this._$AV.push(c), l = r[++a];
+        l.type === 2 ? c = new $t(o, o.nextSibling, this, t) : l.type === 1 ? c = new l.ctor(o, l.name, l.strings, this, t) : l.type === 6 && (c = new Ze(o, this, t)), this._$AV.push(c), l = r[++a];
       }
-      s !== (l == null ? void 0 : l.index) && (o = Z.nextNode(), s++);
+      s !== (l == null ? void 0 : l.index) && (o = Q.nextNode(), s++);
     }
-    return Z.currentNode = J, n;
+    return Q.currentNode = tt, n;
   }
   p(t) {
     let i = 0;
     for (const r of this._$AV) r !== void 0 && (r.strings !== void 0 ? (r._$AI(t, r, i), i += r.strings.length - 2) : r._$AI(t[i])), i++;
   }
 }
-class yt {
+class $t {
   get _$AU() {
     var t;
     return ((t = this._$AM) == null ? void 0 : t._$AU) ?? this._$Cv;
@@ -395,7 +395,7 @@ class yt {
     return this._$AB;
   }
   _$AI(t, i = this) {
-    t = lt(this, t, i), gt(t) ? t === C || t == null || t === "" ? (this._$AH !== C && this._$AR(), this._$AH = C) : t !== this._$AH && t !== at && this._(t) : t._$litType$ !== void 0 ? this.$(t) : t.nodeType !== void 0 ? this.T(t) : je(t) ? this.k(t) : this._(t);
+    t = ct(this, t, i), ft(t) ? t === C || t == null || t === "" ? (this._$AH !== C && this._$AR(), this._$AH = C) : t !== this._$AH && t !== lt && this._(t) : t._$litType$ !== void 0 ? this.$(t) : t.nodeType !== void 0 ? this.T(t) : qe(t) ? this.k(t) : this._(t);
   }
   O(t) {
     return this._$AA.parentNode.insertBefore(t, this._$AB);
@@ -404,33 +404,33 @@ class yt {
     this._$AH !== t && (this._$AR(), this._$AH = this.O(t));
   }
   _(t) {
-    this._$AH !== C && gt(this._$AH) ? this._$AA.nextSibling.data = t : this.T(J.createTextNode(t)), this._$AH = t;
+    this._$AH !== C && ft(this._$AH) ? this._$AA.nextSibling.data = t : this.T(tt.createTextNode(t)), this._$AH = t;
   }
   $(t) {
     var o;
-    const { values: i, _$litType$: r } = t, n = typeof r == "number" ? this._$AC(t) : (r.el === void 0 && (r.el = mt.createElement(ke(r.h, r.h[0]), this.options)), r);
+    const { values: i, _$litType$: r } = t, n = typeof r == "number" ? this._$AC(t) : (r.el === void 0 && (r.el = _t.createElement(Se(r.h, r.h[0]), this.options)), r);
     if (((o = this._$AH) == null ? void 0 : o._$AD) === n) this._$AH.p(i);
     else {
-      const s = new We(n, this), a = s.u(this.options);
+      const s = new Ke(n, this), a = s.u(this.options);
       s.p(i), this.T(a), this._$AH = s;
     }
   }
   _$AC(t) {
-    let i = ne.get(t.strings);
-    return i === void 0 && ne.set(t.strings, i = new mt(t)), i;
+    let i = oe.get(t.strings);
+    return i === void 0 && oe.set(t.strings, i = new _t(t)), i;
   }
   k(t) {
-    Vt(this._$AH) || (this._$AH = [], this._$AR());
+    Ft(this._$AH) || (this._$AH = [], this._$AR());
     const i = this._$AH;
     let r, n = 0;
-    for (const o of t) n === i.length ? i.push(r = new yt(this.O(bt()), this.O(bt()), this, this.options)) : r = i[n], r._$AI(o), n++;
+    for (const o of t) n === i.length ? i.push(r = new $t(this.O(mt()), this.O(mt()), this, this.options)) : r = i[n], r._$AI(o), n++;
     n < i.length && (this._$AR(r && r._$AB.nextSibling, n), i.length = n);
   }
   _$AR(t = this._$AA.nextSibling, i) {
     var r;
     for ((r = this._$AP) == null ? void 0 : r.call(this, !1, !0, i); t !== this._$AB; ) {
-      const n = Qt(t).nextSibling;
-      Qt(t).remove(), t = n;
+      const n = Jt(t).nextSibling;
+      Jt(t).remove(), t = n;
     }
   }
   setConnected(t) {
@@ -438,7 +438,7 @@ class yt {
     this._$AM === void 0 && (this._$Cv = t, (i = this._$AP) == null || i.call(this, t));
   }
 }
-class Ct {
+class At {
   get tagName() {
     return this.element.tagName;
   }
@@ -451,11 +451,11 @@ class Ct {
   _$AI(t, i = this, r, n) {
     const o = this.strings;
     let s = !1;
-    if (o === void 0) t = lt(this, t, i, 0), s = !gt(t) || t !== this._$AH && t !== at, s && (this._$AH = t);
+    if (o === void 0) t = ct(this, t, i, 0), s = !ft(t) || t !== this._$AH && t !== lt, s && (this._$AH = t);
     else {
       const a = t;
       let l, c;
-      for (t = o[0], l = 0; l < o.length - 1; l++) c = lt(this, a[r + l], i, l), c === at && (c = this._$AH[l]), s || (s = !gt(c) || c !== this._$AH[l]), c === C ? t = C : t !== C && (t += (c ?? "") + o[l + 1]), this._$AH[l] = c;
+      for (t = o[0], l = 0; l < o.length - 1; l++) c = ct(this, a[r + l], i, l), c === lt && (c = this._$AH[l]), s || (s = !ft(c) || c !== this._$AH[l]), c === C ? t = C : t !== C && (t += (c ?? "") + o[l + 1]), this._$AH[l] = c;
     }
     s && !n && this.j(t);
   }
@@ -463,7 +463,7 @@ class Ct {
     t === C ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, t ?? "");
   }
 }
-class Ke extends Ct {
+class Ye extends At {
   constructor() {
     super(...arguments), this.type = 3;
   }
@@ -471,7 +471,7 @@ class Ke extends Ct {
     this.element[this.name] = t === C ? void 0 : t;
   }
 }
-class Ye extends Ct {
+class Ge extends At {
   constructor() {
     super(...arguments), this.type = 4;
   }
@@ -479,12 +479,12 @@ class Ye extends Ct {
     this.element.toggleAttribute(this.name, !!t && t !== C);
   }
 }
-class Ge extends Ct {
+class Xe extends At {
   constructor(t, i, r, n, o) {
     super(t, i, r, n, o), this.type = 5;
   }
   _$AI(t, i = this) {
-    if ((t = lt(this, t, i, 0) ?? C) === at) return;
+    if ((t = ct(this, t, i, 0) ?? C) === lt) return;
     const r = this._$AH, n = t === C && r !== C || t.capture !== r.capture || t.once !== r.once || t.passive !== r.passive, o = t !== C && (r === C || n);
     n && this.element.removeEventListener(this.name, this, r), o && this.element.addEventListener(this.name, this, t), this._$AH = t;
   }
@@ -493,7 +493,7 @@ class Ge extends Ct {
     typeof this._$AH == "function" ? this._$AH.call(((i = this.options) == null ? void 0 : i.host) ?? this.element, t) : this._$AH.handleEvent(t);
   }
 }
-class Xe {
+class Ze {
   constructor(t, i, r) {
     this.element = t, this.type = 6, this._$AN = void 0, this._$AM = i, this.options = r;
   }
@@ -501,17 +501,17 @@ class Xe {
     return this._$AM._$AU;
   }
   _$AI(t) {
-    lt(this, t);
+    ct(this, t);
   }
 }
-const Et = ht.litHtmlPolyfillSupport;
-Et == null || Et(mt, yt), (ht.litHtmlVersions ?? (ht.litHtmlVersions = [])).push("3.3.3");
-const Ze = (e, t, i) => {
+const Tt = gt.litHtmlPolyfillSupport;
+Tt == null || Tt(_t, $t), (gt.litHtmlVersions ?? (gt.litHtmlVersions = [])).push("3.3.3");
+const Qe = (e, t, i) => {
   const r = (i == null ? void 0 : i.renderBefore) ?? t;
   let n = r._$litPart$;
   if (n === void 0) {
     const o = (i == null ? void 0 : i.renderBefore) ?? null;
-    r._$litPart$ = n = new yt(t.insertBefore(bt(), o), o, void 0, i ?? {});
+    r._$litPart$ = n = new $t(t.insertBefore(mt(), o), o, void 0, i ?? {});
   }
   return n._$AI(e), n;
 };
@@ -520,8 +520,8 @@ const Ze = (e, t, i) => {
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const Q = globalThis;
-class N extends ot {
+const J = globalThis;
+class N extends st {
   constructor() {
     super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
   }
@@ -532,7 +532,7 @@ class N extends ot {
   }
   update(t) {
     const i = this.render();
-    this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(t), this._$Do = Ze(i, this.renderRoot, this.renderOptions);
+    this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(t), this._$Do = Qe(i, this.renderRoot, this.renderOptions);
   }
   connectedCallback() {
     var t;
@@ -543,20 +543,20 @@ class N extends ot {
     super.disconnectedCallback(), (t = this._$Do) == null || t.setConnected(!1);
   }
   render() {
-    return at;
+    return lt;
   }
 }
-var _e;
-N._$litElement$ = !0, N.finalized = !0, (_e = Q.litElementHydrateSupport) == null || _e.call(Q, { LitElement: N });
-const Tt = Q.litElementPolyfillSupport;
-Tt == null || Tt({ LitElement: N });
-(Q.litElementVersions ?? (Q.litElementVersions = [])).push("4.2.2");
+var ye;
+N._$litElement$ = !0, N.finalized = !0, (ye = J.litElementHydrateSupport) == null || ye.call(J, { LitElement: N });
+const Nt = J.litElementPolyfillSupport;
+Nt == null || Nt({ LitElement: N });
+(J.litElementVersions ?? (J.litElementVersions = [])).push("4.2.2");
 /**
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const q = (e) => (t, i) => {
+const W = (e) => (t, i) => {
   i !== void 0 ? i.addInitializer(() => {
     customElements.define(e, t);
   }) : customElements.define(e, t);
@@ -566,7 +566,7 @@ const q = (e) => (t, i) => {
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const Qe = { attribute: !0, type: String, converter: kt, reflect: !1, hasChanged: Bt }, Je = (e = Qe, t, i) => {
+const Je = { attribute: !0, type: String, converter: St, reflect: !1, hasChanged: Vt }, ti = (e = Je, t, i) => {
   const { kind: r, metadata: n } = i;
   let o = globalThis.litPropertyMetadata.get(n);
   if (o === void 0 && globalThis.litPropertyMetadata.set(n, o = /* @__PURE__ */ new Map()), r === "setter" && ((e = Object.create(e)).wrapped = !0), o.set(i.name, e), r === "accessor") {
@@ -588,7 +588,7 @@ const Qe = { attribute: !0, type: String, converter: kt, reflect: !1, hasChanged
   throw Error("Unsupported decorator location: " + r);
 };
 function T(e) {
-  return (t, i) => typeof i == "object" ? Je(e, t, i) : ((r, n, o) => {
+  return (t, i) => typeof i == "object" ? ti(e, t, i) : ((r, n, o) => {
     const s = n.hasOwnProperty(o);
     return n.constructor.createProperty(o, r), s ? Object.getOwnPropertyDescriptor(n, o) : void 0;
   })(e, t, i);
@@ -606,19 +606,19 @@ function k(e) {
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const ti = (e, t, i) => (i.configurable = !0, i.enumerable = !0, Reflect.decorate && typeof t != "object" && Object.defineProperty(e, t, i), i);
+const ei = (e, t, i) => (i.configurable = !0, i.enumerable = !0, Reflect.decorate && typeof t != "object" && Object.defineProperty(e, t, i), i);
 /**
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-function Se(e, t) {
+function Ce(e, t) {
   return (i, r, n) => {
     const o = (s) => {
       var a;
       return ((a = s.renderRoot) == null ? void 0 : a.querySelector(e)) ?? null;
     };
-    return ti(i, r, { get() {
+    return ei(i, r, { get() {
       return o(this);
     } });
   };
@@ -626,13 +626,13 @@ function Se(e, t) {
 function A(e, t, i = "sensor") {
   return `${i}.babytracker_${e}_${t}`;
 }
-function Ft(e) {
+function jt(e) {
   return typeof e != "string" || e.length === 0 ? "" : e.charAt(0).toUpperCase() + e.slice(1);
 }
-async function ei(e, t, i, r) {
+async function ii(e, t, i, r) {
   return e.callService(t, i, r);
 }
-function vt(e, t, i, r) {
+function wt(e, t, i, r) {
   const n = { cancelled: !1 }, o = async (s) => {
     if (!n.cancelled)
       try {
@@ -661,24 +661,24 @@ function vt(e, t, i, r) {
     n.cancelled = !0, n.timer != null && (clearTimeout(n.timer), n.timer = void 0), (s = n.unsub) == null || s.call(n);
   };
 }
-function ii(e, t, i) {
-  return vt(
+function ri(e, t, i) {
+  return wt(
     e,
     { type: "babytracker/get_baby_config", baby: t, subscribe: !0 },
     i,
     "subscribeBabyConfig"
   );
 }
-function Ce(e, t) {
-  return vt(
+function Ae(e, t) {
+  return wt(
     e,
     { type: "babytracker/get_integration_options", subscribe: !0 },
     t,
     "subscribeIntegrationOptions"
   );
 }
-function ri(e, t, i, r, n) {
-  return vt(
+function ni(e, t, i, r, n) {
+  return wt(
     e,
     {
       type: "babytracker/list_entries_in_range",
@@ -691,23 +691,23 @@ function ri(e, t, i, r, n) {
     "subscribeEntriesInRange"
   );
 }
-function ni(e, t, i) {
-  return vt(
+function oi(e, t, i) {
+  return wt(
     e,
     { type: "babytracker/list_vaccines", baby: t, subscribe: !0 },
     i,
     "subscribeVaccines"
   );
 }
-function oi(e, t, i) {
-  return vt(
+function si(e, t, i) {
+  return wt(
     e,
     { type: "babytracker/list_growth", baby: t, subscribe: !0 },
     i,
     "subscribeGrowth"
   );
 }
-function si(e, t, i, r) {
+function ai(e, t, i, r) {
   if (!e)
     return d`
             <div
@@ -720,7 +720,7 @@ function si(e, t, i, r) {
                 <span class="muted">Loading activities…</span>
             </div>
         `;
-  const n = e.enabled_activities ?? [], o = e.enabled_feeding_methods ?? [], s = (c) => c.charAt(0).toUpperCase() + c.slice(1), a = Ft(e.name ?? t), l = [];
+  const n = e.enabled_activities ?? [], o = e.enabled_feeding_methods ?? [], s = (c) => c.charAt(0).toUpperCase() + c.slice(1), a = jt(e.name ?? t), l = [];
   if (n.includes("diaper") && l.push(
     d`
                 <button
@@ -810,7 +810,7 @@ function si(e, t, i, r) {
         </div>
     `;
 }
-function ai(e, t, i) {
+function li(e, t, i) {
   var l, c, b, h, g, f;
   const r = ((l = e.states[A(t, "sleeping", "binary_sensor")]) == null ? void 0 : l.state) === "on", n = ((c = e.states[A(t, "feeding", "binary_sensor")]) == null ? void 0 : c.state) === "on", o = ((b = e.states[A(t, "tummy_time", "binary_sensor")]) == null ? void 0 : b.state) === "on", s = ((h = e.states[A(t, "walking", "binary_sensor")]) == null ? void 0 : h.state) === "on";
   if (!r && !n && !o && !s) return "";
@@ -820,7 +820,7 @@ function ai(e, t, i) {
     a.push(
       d`
                 <div class="chip warning" role="status">
-                    Sleeping ${m ? d`· started ${oe(m)}` : ""}
+                    Sleeping ${m ? d`· started ${se(m)}` : ""}
                     <button
                         aria-label="End sleep"
                         @click=${(y) => i("end_sleep", { baby: t }, y.currentTarget)}
@@ -860,7 +860,7 @@ function ai(e, t, i) {
     a.push(
       d`
                 <div class="chip warning" role="status">
-                    Walking ${m ? d`· started ${oe(m)}` : ""}
+                    Walking ${m ? d`· started ${se(m)}` : ""}
                     <button
                         aria-label="End walk"
                         @click=${(y) => i("end_walk", { baby: t }, y.currentTarget)}
@@ -873,7 +873,7 @@ function ai(e, t, i) {
   }
   return d`<div class="section">${a}</div>`;
 }
-function oe(e) {
+function se(e) {
   if (!e) return "";
   const t = Date.parse(e);
   return Number.isNaN(t) ? "" : new Date(t).toLocaleTimeString([], {
@@ -881,24 +881,24 @@ function oe(e) {
     minute: "2-digit"
   });
 }
-const Ae = 29.5735, Pe = 24 * 60 * 60 * 1e3;
-function st(e) {
+const Ee = 29.5735, Pe = 24 * 60 * 60 * 1e3;
+function at(e) {
   if (!e) return 0;
   const t = Date.parse(e);
   return Number.isNaN(t) ? 0 : t;
 }
-function li(e, t = Pe, i = Date.now()) {
+function ci(e, t = Pe, i = Date.now()) {
   const r = i - t;
-  return e.filter((n) => st(n.timestamp) >= r).slice().sort((n, o) => st(o.timestamp) - st(n.timestamp));
+  return e.filter((n) => at(n.timestamp) >= r).slice().sort((n, o) => at(o.timestamp) - at(n.timestamp));
 }
-function ci(e, t = Date.now(), i = Pe) {
+function di(e, t = Date.now(), i = Pe) {
   var c, b, h;
   const r = t - i;
   let n = 0, o = 0, s = 0, a = 0, l = 0;
   for (const g of e) {
-    const f = st(g.timestamp);
+    const f = at(g.timestamp);
     if (g.type === "sleep") {
-      const m = f, y = g.ended_at != null && g.ended_at !== "" ? st(g.ended_at) : t;
+      const m = f, y = g.ended_at != null && g.ended_at !== "" ? at(g.ended_at) : t;
       if (m > 0 && y > m && y > r) {
         const p = Math.max(m, r), $ = Math.min(y, t);
         $ > p && (l += ($ - p) / 6e4);
@@ -909,7 +909,7 @@ function ci(e, t = Date.now(), i = Pe) {
       if (g.type === "feeding") {
         n += 1;
         const m = Number(((c = g.data) == null ? void 0 : c.amount) ?? 0), y = String(((b = g.data) == null ? void 0 : b.unit) ?? "");
-        m > 0 && (a += y === "oz" ? m * Ae : m);
+        m > 0 && (a += y === "oz" ? m * Ee : m);
       } else if (g.type === "diaper") {
         const m = String(((h = g.data) == null ? void 0 : h.kind) ?? "");
         m === "wet" ? o += 1 : m === "dirty" ? s += 1 : m === "both" && (o += 1, s += 1);
@@ -918,7 +918,7 @@ function ci(e, t = Date.now(), i = Pe) {
   }
   return { feedings: n, wetDiapers: o, dirtyDiapers: s, totalVolumeMl: a, sleepMinutes: l };
 }
-function di(e, t = Date.now()) {
+function ui(e, t = Date.now()) {
   let i = null;
   for (const r of e) {
     if ((r == null ? void 0 : r.type) !== "sleep" || !(r != null && r.ended_at)) continue;
@@ -933,39 +933,39 @@ function De(e) {
   const t = Math.floor(e / 60), i = Math.round(e % 60);
   return i === 0 ? `${t}h` : `${t}h ${i}m`;
 }
-function ui(e) {
+function pi(e) {
   if (!Number.isFinite(e) || e <= 0) return "0 oz";
-  const t = e / Ae;
+  const t = e / Ee;
   return t >= 1 ? `${t.toFixed(1)} oz` : `${Math.round(e)} ml`;
 }
-function pi(e) {
+function hi(e) {
   const t = String((e == null ? void 0 : e.type) ?? ""), i = (e == null ? void 0 : e.data) ?? {};
   if (t === "other") {
     const s = String(i.name ?? "").trim();
-    return se(s || Nt(t));
+    return ae(s || Mt(t));
   }
-  const r = i.method ?? i.kind, n = r != null && r !== "" ? Nt(String(r)) : null, o = se(Nt(t));
+  const r = i.method ?? i.kind, n = r != null && r !== "" ? Mt(String(r)) : null, o = ae(Mt(t));
   return n ? t === "feeding" && i.amount != null && i.amount !== "" && i.unit ? `${o} (${n}, ${i.amount} ${i.unit})` : `${o} (${n})` : o;
 }
-function Nt(e) {
+function Mt(e) {
   return e.replace(/_/g, " ");
 }
-function se(e) {
+function ae(e) {
   return e && e.charAt(0).toUpperCase() + e.slice(1);
 }
-function ae(e) {
-  const t = st(e);
+function le(e) {
+  const t = at(e);
   return t === 0 ? "" : new Date(t).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit"
   });
 }
-var hi = Object.defineProperty, bi = Object.getOwnPropertyDescriptor, et = (e, t, i, r) => {
-  for (var n = r > 1 ? void 0 : r ? bi(t, i) : t, o = e.length - 1, s; o >= 0; o--)
+var bi = Object.defineProperty, gi = Object.getOwnPropertyDescriptor, it = (e, t, i, r) => {
+  for (var n = r > 1 ? void 0 : r ? gi(t, i) : t, o = e.length - 1, s; o >= 0; o--)
     (s = e[o]) && (n = (r ? s(t, i, n) : s(n)) || n);
-  return r && n && hi(t, i, n), n;
+  return r && n && bi(t, i, n), n;
 };
-let R = class extends N {
+let L = class extends N {
   constructor() {
     super(...arguments), this.photoPath = "", this.size = 128, this._url = "", this._failed = !1, this._open = !1, this._lastResolved = "", this._resolveToken = 0, this._onKeydown = (e) => {
       e.key === "Escape" && (e.preventDefault(), this._close_lightbox());
@@ -1069,7 +1069,7 @@ let R = class extends N {
         `;
   }
 };
-R.styles = j`
+L.styles = q`
         :host {
             display: inline-flex;
             align-items: center;
@@ -1119,29 +1119,29 @@ R.styles = j`
             cursor: pointer;
         }
     `;
-et([
+it([
   T({ attribute: !1 })
-], R.prototype, "hass", 2);
-et([
+], L.prototype, "hass", 2);
+it([
   T()
-], R.prototype, "photoPath", 2);
-et([
+], L.prototype, "photoPath", 2);
+it([
   T({ type: Number })
-], R.prototype, "size", 2);
-et([
+], L.prototype, "size", 2);
+it([
   k()
-], R.prototype, "_url", 2);
-et([
+], L.prototype, "_url", 2);
+it([
   k()
-], R.prototype, "_failed", 2);
-et([
+], L.prototype, "_failed", 2);
+it([
   k()
-], R.prototype, "_open", 2);
-R = et([
-  q("bt-entry-thumbnail")
-], R);
-const gi = /* @__PURE__ */ new Set(["sleep", "feeding", "tummy_time", "walk"]);
-function Ee(e, t, i, r, n) {
+], L.prototype, "_open", 2);
+L = it([
+  W("bt-entry-thumbnail")
+], L);
+const mi = /* @__PURE__ */ new Set(["sleep", "feeding", "tummy_time", "walk"]);
+function Te(e, t, i, r, n) {
   return d`
         <li
             class="clickable"
@@ -1154,8 +1154,8 @@ function Ee(e, t, i, r, n) {
   }}
         >
             <div class="entry-row">
-                <span aria-label="Entry type">${pi(t)}</span>
-                ${mi(t)}
+                <span aria-label="Entry type">${hi(t)}</span>
+                ${fi(t)}
                 ${t.staff ? d`<span
                           class="muted"
                           aria-label="Logged by Procare staff"
@@ -1185,23 +1185,23 @@ function Ee(e, t, i, r, n) {
         </li>
     `;
 }
-function mi(e) {
-  const t = ae(e.timestamp);
-  return gi.has(String(e.type ?? "")) && e.ended_at && e.ended_at !== e.timestamp ? d`<span class="muted"
-            >${t} – ${ae(e.ended_at)}</span
+function fi(e) {
+  const t = le(e.timestamp);
+  return mi.has(String(e.type ?? "")) && e.ended_at && e.ended_at !== e.timestamp ? d`<span class="muted"
+            >${t} – ${le(e.ended_at)}</span
         >` : d`<span class="muted">${t}</span>`;
 }
-function fi(e, t, i, r, n = /* @__PURE__ */ new Set(), o = () => {
+function _i(e, t, i, r, n = /* @__PURE__ */ new Set(), o = () => {
 }) {
   var c;
-  const s = e.states[A(t, "recent_entries")], a = ((c = s == null ? void 0 : s.attributes) == null ? void 0 : c.entries) ?? [], l = li(a).slice(0, Math.min(r, 120));
+  const s = e.states[A(t, "recent_entries")], a = ((c = s == null ? void 0 : s.attributes) == null ? void 0 : c.entries) ?? [], l = ci(a).slice(0, Math.min(r, 120));
   return d`
         <div class="section" role="region" aria-label="Last 24 hours">
             <h2>Last 24 hours</h2>
             ${l.length === 0 ? d`<p>Nothing logged yet.</p>` : d`
                       <ul class="entries">
                           ${l.map(
-    (b) => Ee(
+    (b) => Te(
       e,
       b,
       i,
@@ -1214,12 +1214,12 @@ function fi(e, t, i, r, n = /* @__PURE__ */ new Set(), o = () => {
         </div>
     `;
 }
-var _i = Object.defineProperty, yi = Object.getOwnPropertyDescriptor, At = (e, t, i, r) => {
-  for (var n = r > 1 ? void 0 : r ? yi(t, i) : t, o = e.length - 1, s; o >= 0; o--)
+var yi = Object.defineProperty, vi = Object.getOwnPropertyDescriptor, Et = (e, t, i, r) => {
+  for (var n = r > 1 ? void 0 : r ? vi(t, i) : t, o = e.length - 1, s; o >= 0; o--)
     (s = e[o]) && (n = (r ? s(t, i, n) : s(n)) || n);
-  return r && n && _i(t, i, n), n;
+  return r && n && yi(t, i, n), n;
 };
-let ct = class extends N {
+let dt = class extends N {
   constructor() {
     super(...arguments), this.label = "", this.renderChart = null, this._open = !1, this._onKeydown = (e) => {
       e.key === "Escape" && (e.preventDefault(), this._close());
@@ -1289,7 +1289,7 @@ let ct = class extends N {
         `;
   }
 };
-ct.styles = j`
+dt.styles = q`
         :host {
             display: block;
         }
@@ -1376,40 +1376,40 @@ ct.styles = j`
             max-height: 70vh;
         }
     `;
-At([
+Et([
   T()
-], ct.prototype, "label", 2);
-At([
+], dt.prototype, "label", 2);
+Et([
   T({ attribute: !1 })
-], ct.prototype, "renderChart", 2);
-At([
+], dt.prototype, "renderChart", 2);
+Et([
   k()
-], ct.prototype, "_open", 2);
-ct = At([
-  q("bt-chart-lightbox")
-], ct);
-const le = [
+], dt.prototype, "_open", 2);
+dt = Et([
+  W("bt-chart-lightbox")
+], dt);
+const ce = [
   { key: "weight", label: "Weight", color: "var(--primary-color, #2563eb)" },
   { key: "height", label: "Height", color: "var(--success-color, #16a34a)" },
   { key: "head", label: "Head", color: "var(--warning-color, #ea580c)" }
 ];
-function vi(e, t) {
+function $i(e, t) {
   const i = (e == null ? void 0 : e.data) ?? {}, r = t === "weight" ? i.weight_percentile : t === "height" ? i.height_percentile : i.head_percentile;
   if (r == null) return null;
   const n = Number(r);
   return Number.isFinite(n) ? n : null;
 }
-function Mt(e) {
+function Ot(e) {
   if (e == null) return "—";
   const t = typeof e == "number" ? e : Number(e);
   return Number.isFinite(t) ? String(Math.round(t * 100) / 100) : String(e);
 }
-function Ot(e) {
+function Rt(e) {
   if (e == null || e === "—") return "—";
   const t = typeof e == "number" ? e : Number(e);
   return Number.isFinite(t) ? `p${Math.round(t)}` : String(e);
 }
-function $i(e) {
+function wi(e) {
   if (!e) return "";
   const t = Date.parse(e);
   return Number.isNaN(t) ? "" : new Date(t).toLocaleDateString([], {
@@ -1418,9 +1418,9 @@ function $i(e) {
     day: "numeric"
   });
 }
-function Te(e, t, i, r, n, o, s, a) {
-  var v, P, D, S, E, I;
-  const l = (o == null ? void 0 : o.data) ?? {}, c = (r == null ? void 0 : r.weight) ?? (i == null ? void 0 : i.weight_unit) ?? "kg", b = (r == null ? void 0 : r.length) ?? (i == null ? void 0 : i.length_unit) ?? "cm", h = l.weight_unit ?? c, g = l.length_unit ?? b, f = l.weight ?? ((v = e.states[A(t, "weight")]) == null ? void 0 : v.state), m = l.height ?? ((P = e.states[A(t, "height")]) == null ? void 0 : P.state), y = l.head_circumference ?? ((D = e.states[A(t, "head_circumference")]) == null ? void 0 : D.state), p = l.weight_percentile ?? ((S = e.states[A(t, "weight_percentile")]) == null ? void 0 : S.state), $ = l.height_percentile ?? ((E = e.states[A(t, "height_percentile")]) == null ? void 0 : E.state), w = l.head_percentile ?? ((I = e.states[A(t, "head_circumference_percentile")]) == null ? void 0 : I.state), x = $i(o == null ? void 0 : o.timestamp), _ = !!(o && s), u = _ ? () => s(o) : void 0;
+function Ne(e, t, i, r, n, o, s, a) {
+  var v, E, P, S, D, z;
+  const l = (o == null ? void 0 : o.data) ?? {}, c = (r == null ? void 0 : r.weight) ?? (i == null ? void 0 : i.weight_unit) ?? "kg", b = (r == null ? void 0 : r.length) ?? (i == null ? void 0 : i.length_unit) ?? "cm", h = l.weight_unit ?? c, g = l.length_unit ?? b, f = l.weight ?? ((v = e.states[A(t, "weight")]) == null ? void 0 : v.state), m = l.height ?? ((E = e.states[A(t, "height")]) == null ? void 0 : E.state), y = l.head_circumference ?? ((P = e.states[A(t, "head_circumference")]) == null ? void 0 : P.state), p = l.weight_percentile ?? ((S = e.states[A(t, "weight_percentile")]) == null ? void 0 : S.state), $ = l.height_percentile ?? ((D = e.states[A(t, "height_percentile")]) == null ? void 0 : D.state), w = l.head_percentile ?? ((z = e.states[A(t, "head_circumference_percentile")]) == null ? void 0 : z.state), x = wi(o == null ? void 0 : o.timestamp), _ = !!(o && s), u = _ ? () => s(o) : void 0;
   return d`
         <div class="section" role="region" aria-label="Growth">
             <div
@@ -1443,8 +1443,8 @@ function Te(e, t, i, r, n, o, s, a) {
                 tabindex=${_ ? "0" : "-1"}
                 aria-label=${_ ? "Edit latest growth measurement" : "Latest growth measurement"}
                 @click=${u}
-                @keydown=${_ ? (nt) => {
-    (nt.key === "Enter" || nt.key === " ") && (nt.preventDefault(), u == null || u());
+                @keydown=${_ ? (ot) => {
+    (ot.key === "Enter" || ot.key === " ") && (ot.preventDefault(), u == null || u());
   } : void 0}
             >
                 ${x ? d`<div class="growth-date muted">
@@ -1453,38 +1453,38 @@ function Te(e, t, i, r, n, o, s, a) {
                 <div class="growth-grid">
                     <div>
                         <div class="label">Weight</div>
-                        <div>${Mt(f)} ${h} · ${Ot(p)}</div>
+                        <div>${Ot(f)} ${h} · ${Rt(p)}</div>
                     </div>
                     <div>
                         <div class="label">Height</div>
-                        <div>${Mt(m)} ${g} · ${Ot($)}</div>
+                        <div>${Ot(m)} ${g} · ${Rt($)}</div>
                     </div>
                     <div>
                         <div class="label">Head</div>
-                        <div>${Mt(y)} ${g} · ${Ot(w)}</div>
+                        <div>${Ot(y)} ${g} · ${Rt(w)}</div>
                     </div>
                 </div>
             </div>
-            ${wi(a)}
+            ${xi(a)}
         </div>
     `;
 }
-function wi(e) {
-  return ce(e) === "" ? "" : d`
+function xi(e) {
+  return de(e) === "" ? "" : d`
         <bt-chart-lightbox
             label="Percentile over time"
-            .renderChart=${() => ce(e)}
+            .renderChart=${() => de(e)}
         ></bt-chart-lightbox>
     `;
 }
-function ce(e) {
+function de(e) {
   if (!Array.isArray(e) || e.length < 2) return "";
   const t = [...e].filter((_) => Number.isFinite(Date.parse(_ == null ? void 0 : _.timestamp))).sort((_, u) => Date.parse(_.timestamp) - Date.parse(u.timestamp));
   if (t.length < 2) return "";
-  const i = Date.parse(t[0].timestamp), r = Date.parse(t[t.length - 1].timestamp), n = Math.max(1, r - i), o = 320, s = 140, a = 22, l = 8, c = 8, b = 20, h = o - a - l, g = s - c - b, f = (_) => a + (_ - i) / n * h, m = (_) => c + (1 - _ / 100) * g, y = le.map((_) => ({
+  const i = Date.parse(t[0].timestamp), r = Date.parse(t[t.length - 1].timestamp), n = Math.max(1, r - i), o = 320, s = 140, a = 22, l = 8, c = 8, b = 20, h = o - a - l, g = s - c - b, f = (_) => a + (_ - i) / n * h, m = (_) => c + (1 - _ / 100) * g, y = ce.map((_) => ({
     ..._,
     points: t.map((u) => {
-      const v = vi(u, _.key);
+      const v = $i(u, _.key);
       return v === null ? null : { ts: Date.parse(u.timestamp), p: v };
     }).filter((u) => u !== null)
   }));
@@ -1492,13 +1492,13 @@ function ce(e) {
     (_, u) => _ + u.points.length,
     0
   ) < 2) return "";
-  const $ = Rt(t[0].timestamp), w = Rt(t[t.length - 1].timestamp), x = [10, 50, 90];
+  const $ = Lt(t[0].timestamp), w = Lt(t[t.length - 1].timestamp), x = [10, 50, 90];
   return d`
         <div class="growth-trend">
             <div class="label-row">
                 <div class="label">Percentile over time</div>
                 <div class="legend">
-                    ${le.map(
+                    ${ce.map(
     (_) => d`
                             <span class="legend-item">
                                 <span
@@ -1542,7 +1542,7 @@ function ce(e) {
                 ${y.map((_) => {
     if (_.points.length === 0) return O``;
     const u = _.points.map(
-      (v, P) => `${P === 0 ? "M" : "L"}${f(v.ts).toFixed(1)},${m(v.p).toFixed(1)}`
+      (v, E) => `${E === 0 ? "M" : "L"}${f(v.ts).toFixed(1)},${m(v.p).toFixed(1)}`
     ).join(" ");
     return O`
                         ${_.points.length > 1 ? O`<path
@@ -1561,7 +1561,7 @@ function ce(e) {
                                     r="2.5"
                                     fill=${_.color}
                                 >
-                                    <title>${_.label} ${Rt(new Date(v.ts).toISOString())}: p${Math.round(v.p)}</title>
+                                    <title>${_.label} ${Lt(new Date(v.ts).toISOString())}: p${Math.round(v.p)}</title>
                                 </circle>
                             `
     )}
@@ -1588,7 +1588,7 @@ function ce(e) {
         </div>
     `;
 }
-function Rt(e) {
+function Lt(e) {
   if (!e) return "";
   const t = Date.parse(e);
   return Number.isNaN(t) ? "" : new Date(t).toLocaleDateString([], {
@@ -1596,7 +1596,7 @@ function Rt(e) {
     day: "numeric"
   });
 }
-function Ne(e, t) {
+function Me(e, t) {
   return d`
         <div class="section">
             <button
@@ -1621,7 +1621,7 @@ function Ne(e, t) {
         </div>
     `;
 }
-function xi(e, t, i) {
+function ki(e, t, i) {
   var r;
   return (r = e == null ? void 0 : e.importer) != null && r.source_entity_id ? d`
         <div class="section">
@@ -1635,12 +1635,12 @@ function xi(e, t, i) {
         </div>
     ` : "";
 }
-function ki(e, t, i) {
+function Si(e, t, i) {
   var s, a;
-  const r = (s = e.states) == null ? void 0 : s[A(t, "recent_entries")], n = ((a = r == null ? void 0 : r.attributes) == null ? void 0 : a.entries) ?? [], o = ci(n);
+  const r = (s = e.states) == null ? void 0 : s[A(t, "recent_entries")], n = ((a = r == null ? void 0 : r.attributes) == null ? void 0 : a.entries) ?? [], o = di(n);
   return d`
         <div class="chip" role="listitem">
-            ${ui(o.totalVolumeMl)} consumed
+            ${pi(o.totalVolumeMl)} consumed
         </div>
         <div class="chip" role="listitem">
             ${o.wetDiapers} wet and ${o.dirtyDiapers} dirty
@@ -1650,15 +1650,15 @@ function ki(e, t, i) {
         </div>
     `;
 }
-function de() {
+function ue() {
   const e = window;
   return !!(e.SpeechRecognition || e.webkitSpeechRecognition);
 }
-function Si(e) {
+function Ci(e) {
   var t;
   return !!(e != null && e.connection && typeof navigator < "u" && ((t = navigator.mediaDevices) != null && t.getUserMedia) && window.AudioWorkletNode);
 }
-async function Ci() {
+async function Ai() {
   const e = window, t = e.SpeechRecognition || e.webkitSpeechRecognition;
   if (!t) throw new Error("SpeechRecognition not supported");
   const i = new t();
@@ -1698,7 +1698,7 @@ async function Ci() {
     }
   };
 }
-const Ai = `
+const Ei = `
 class PcmWorklet extends AudioWorkletProcessor {
   process(inputs) {
     const input = inputs[0];
@@ -1718,7 +1718,7 @@ registerProcessor("bt-pcm-worklet", PcmWorklet);
 `;
 async function Pi(e) {
   const t = await navigator.mediaDevices.getUserMedia({ audio: !0 }), i = window.AudioContext || window.webkitAudioContext, r = new i({ sampleRate: 16e3 }), n = URL.createObjectURL(
-    new Blob([Ai], { type: "text/javascript" })
+    new Blob([Ei], { type: "text/javascript" })
   );
   try {
     await r.audioWorklet.addModule(n);
@@ -1770,19 +1770,19 @@ async function Pi(e) {
         var w, x, _, u, v;
         const $ = p == null ? void 0 : p.type;
         if ($ === "run-start")
-          a = (x = (w = p == null ? void 0 : p.data) == null ? void 0 : w.runner_data) == null ? void 0 : x.stt_binary_handler_id, s.port.onmessage = (P) => {
-            var E;
+          a = (x = (w = p == null ? void 0 : p.data) == null ? void 0 : w.runner_data) == null ? void 0 : x.stt_binary_handler_id, s.port.onmessage = (E) => {
+            var D;
             if (a == null || g) return;
-            const D = new Uint8Array(P.data), S = new Uint8Array(D.length + 1);
-            S[0] = a, S.set(D, 1);
+            const P = new Uint8Array(E.data), S = new Uint8Array(P.length + 1);
+            S[0] = a, S.set(P, 1);
             try {
-              (E = e.connection.socket) == null || E.send(S);
+              (D = e.connection.socket) == null || D.send(S);
             } catch {
             }
           };
         else if ($ === "stt-end") {
-          const P = ((u = (_ = p == null ? void 0 : p.data) == null ? void 0 : _.stt_output) == null ? void 0 : u.text) ?? "";
-          m(P);
+          const E = ((u = (_ = p == null ? void 0 : p.data) == null ? void 0 : _.stt_output) == null ? void 0 : u.text) ?? "";
+          m(E);
         } else $ === "error" && y(
           new Error(
             ((v = p == null ? void 0 : p.data) == null ? void 0 : v.message) ?? "assist_pipeline error"
@@ -1824,19 +1824,19 @@ async function Pi(e) {
     }
   };
 }
-var Di = Object.defineProperty, Ei = Object.getOwnPropertyDescriptor, jt = (e, t, i, r) => {
-  for (var n = r > 1 ? void 0 : r ? Ei(t, i) : t, o = e.length - 1, s; o >= 0; o--)
+var Di = Object.defineProperty, Ti = Object.getOwnPropertyDescriptor, qt = (e, t, i, r) => {
+  for (var n = r > 1 ? void 0 : r ? Ti(t, i) : t, o = e.length - 1, s; o >= 0; o--)
     (s = e[o]) && (n = (r ? s(t, i, n) : s(n)) || n);
   return r && n && Di(t, i, n), n;
 };
-let ft = class extends N {
+let yt = class extends N {
   constructor() {
     super(...arguments), this._state = "idle", this._onClick = async (e) => {
       e.preventDefault(), e.stopPropagation(), this._state === "idle" ? await this._start() : this._state === "listening" && await this._stop();
     };
   }
   get _supported() {
-    return de() || Si(this.hass);
+    return ue() || Ci(this.hass);
   }
   _findNotesInput() {
     const e = this.closest("form");
@@ -1853,7 +1853,7 @@ let ft = class extends N {
   async _start() {
     this._state = "listening";
     try {
-      this._controller = de() ? await Ci() : await Pi(this.hass);
+      this._controller = ue() ? await Ai() : await Pi(this.hass);
     } catch (e) {
       console.warn("babytracker: mic start failed", e), this._controller = void 0, this._state = "idle";
     }
@@ -1902,7 +1902,7 @@ let ft = class extends N {
         `;
   }
 };
-ft.styles = j`
+yt.styles = q`
         :host {
             display: inline-flex;
         }
@@ -1931,16 +1931,16 @@ ft.styles = j`
             50% { opacity: 0.55; }
         }
     `;
-jt([
+qt([
   T({ attribute: !1 })
-], ft.prototype, "hass", 2);
-jt([
+], yt.prototype, "hass", 2);
+qt([
   k()
-], ft.prototype, "_state", 2);
-ft = jt([
-  q("bt-mic-button")
-], ft);
-const Ti = 5 * 1024 * 1024, Ni = /* @__PURE__ */ new Set([
+], yt.prototype, "_state", 2);
+yt = qt([
+  W("bt-mic-button")
+], yt);
+const Ni = 5 * 1024 * 1024, Mi = /* @__PURE__ */ new Set([
   "image/jpeg",
   "image/jpg",
   "image/png",
@@ -1948,38 +1948,38 @@ const Ti = 5 * 1024 * 1024, Ni = /* @__PURE__ */ new Set([
   "image/heic",
   "image/heif"
 ]);
-class U extends Error {
+class B extends Error {
   constructor(t, i) {
     super(i), this.code = t;
   }
 }
-function Mi(e) {
+function Oi(e) {
   return new Promise((t, i) => {
     const r = new FileReader();
     r.onload = () => {
       const n = r.result;
       if (typeof n != "string") {
-        i(new U("read_failed", "FileReader returned non-string"));
+        i(new B("read_failed", "FileReader returned non-string"));
         return;
       }
       const o = n.indexOf(",");
       t(o >= 0 ? n.slice(o + 1) : n);
-    }, r.onerror = () => i(new U("read_failed", "FileReader failed")), r.readAsDataURL(e);
+    }, r.onerror = () => i(new B("read_failed", "FileReader failed")), r.readAsDataURL(e);
   });
 }
-async function Oi(e, t) {
-  if (t.size > Ti)
-    throw new U(
+async function Ri(e, t) {
+  if (t.size > Ni)
+    throw new B(
       "too_large",
       `Photo is ${Math.round(t.size / (1024 * 1024))} MB; max is 5 MB`
     );
   const i = (t.type || "").toLowerCase();
-  if (!Ni.has(i))
-    throw new U(
+  if (!Mi.has(i))
+    throw new B(
       "unsupported_mime",
       `Unsupported photo type: ${t.type || "unknown"}`
     );
-  const r = await Mi(t);
+  const r = await Oi(t);
   try {
     const n = await e.connection.sendMessagePromise({
       type: "babytracker/upload_photo",
@@ -1987,20 +1987,20 @@ async function Oi(e, t) {
       mime: i
     }), o = n == null ? void 0 : n.photo_path;
     if (typeof o != "string" || !o)
-      throw new U("bad_response", "upload returned no photo_path");
+      throw new B("bad_response", "upload returned no photo_path");
     return { photo_path: o };
   } catch (n) {
-    if (n instanceof U) throw n;
+    if (n instanceof B) throw n;
     const o = (n == null ? void 0 : n.code) ?? "upload_failed", s = (n == null ? void 0 : n.message) ?? "upload failed";
-    throw new U(o, s);
+    throw new B(o, s);
   }
 }
-var Ri = Object.defineProperty, Li = Object.getOwnPropertyDescriptor, dt = (e, t, i, r) => {
-  for (var n = r > 1 ? void 0 : r ? Li(t, i) : t, o = e.length - 1, s; o >= 0; o--)
+var Li = Object.defineProperty, Hi = Object.getOwnPropertyDescriptor, ut = (e, t, i, r) => {
+  for (var n = r > 1 ? void 0 : r ? Hi(t, i) : t, o = e.length - 1, s; o >= 0; o--)
     (s = e[o]) && (n = (r ? s(t, i, n) : s(n)) || n);
-  return r && n && Ri(t, i, n), n;
+  return r && n && Li(t, i, n), n;
 };
-let V = class extends N {
+let F = class extends N {
   constructor() {
     super(...arguments), this.value = "", this._busy = !1, this._error = "", this._onClickAdd = (e) => {
       var t;
@@ -2028,10 +2028,10 @@ let V = class extends N {
     if (t.value = "", !!i) {
       this._busy = !0, this._error = "";
       try {
-        const { photo_path: n } = await Oi(this.hass, i);
+        const { photo_path: n } = await Ri(this.hass, i);
         this._setValue(n);
       } catch (n) {
-        const o = n instanceof U ? n.message : "Photo upload failed";
+        const o = n instanceof B ? n.message : "Photo upload failed";
         this._error = o, console.warn("babytracker: photo upload failed", n);
       } finally {
         this._busy = !1;
@@ -2079,7 +2079,7 @@ let V = class extends N {
         ` : d``;
   }
 };
-V.styles = j`
+F.styles = q`
         :host {
             display: inline-block;
         }
@@ -2112,25 +2112,25 @@ V.styles = j`
             margin-top: 4px;
         }
     `;
-dt([
+ut([
   T({ attribute: !1 })
-], V.prototype, "hass", 2);
-dt([
+], F.prototype, "hass", 2);
+ut([
   T()
-], V.prototype, "value", 2);
-dt([
+], F.prototype, "value", 2);
+ut([
   k()
-], V.prototype, "_busy", 2);
-dt([
+], F.prototype, "_busy", 2);
+ut([
   k()
-], V.prototype, "_error", 2);
-dt([
-  Se("input[type=file]")
-], V.prototype, "_fileInput", 2);
-V = dt([
-  q("bt-photo-button")
-], V);
-function W(e, t = {}) {
+], F.prototype, "_error", 2);
+ut([
+  Ce("input[type=file]")
+], F.prototype, "_fileInput", 2);
+F = ut([
+  W("bt-photo-button")
+], F);
+function K(e, t = {}) {
   return d`
         <div
             style="display:flex;gap:6px;align-items:center;"
@@ -2148,7 +2148,7 @@ function W(e, t = {}) {
         </div>
     `;
 }
-function K(e, t) {
+function Y(e, t) {
   return d`
         <label>Photo</label>
         <bt-photo-button
@@ -2157,59 +2157,89 @@ function K(e, t) {
         ></bt-photo-button>
     `;
 }
-function Y(e) {
+function G(e) {
   const t = e.querySelector("bt-photo-button"), i = t == null ? void 0 : t.value;
   return typeof i == "string" && i.length > 0 ? i : void 0;
 }
-function $t() {
+function pt() {
   const e = /* @__PURE__ */ new Date(), t = (i) => String(i).padStart(2, "0");
   return `${e.getFullYear()}-${t(e.getMonth() + 1)}-${t(e.getDate())}T${t(e.getHours())}:${t(e.getMinutes())}`;
 }
-function F(e) {
+function R(e) {
+  const t = (i) => {
+    var o;
+    const n = (o = i.currentTarget.parentElement) == null ? void 0 : o.querySelector(
+      "input"
+    );
+    n && (n.value = pt(), n.dispatchEvent(new Event("input", { bubbles: !0 })), n.dispatchEvent(new Event("change", { bubbles: !0 })));
+  };
+  return d`
+        <div class="dt-row">
+            <input
+                id=${e.id}
+                name=${e.id}
+                type="datetime-local"
+                .value=${e.value ?? ""}
+                placeholder=${e.placeholder ?? ""}
+                ?required=${e.required ?? !1}
+            />
+            <button
+                type="button"
+                class="now-btn"
+                aria-label="Set to now"
+                title="Set to current time"
+                @click=${t}
+            >
+                Now
+            </button>
+        </div>
+    `;
+}
+function j(e) {
   if (!e) return;
   const t = Date.parse(e);
   if (!Number.isNaN(t))
     return new Date(t).toISOString();
 }
-function Lt(e) {
+function Ht(e) {
   if (!e) return "";
   const t = Date.parse(e);
   if (Number.isNaN(t)) return "";
   const i = new Date(t), r = (n) => String(n).padStart(2, "0");
   return `${i.getFullYear()}-${r(i.getMonth() + 1)}-${r(i.getDate())}T${r(i.getHours())}:${r(i.getMinutes())}`;
 }
-function Me() {
+function Oe() {
   const e = /* @__PURE__ */ new Date(), t = (i) => String(i).padStart(2, "0");
   return `${e.getFullYear()}-${t(e.getMonth() + 1)}-${t(e.getDate())}`;
 }
-function Hi(e) {
+function Ii(e) {
   if (!e) return "";
   const t = Date.parse(e);
   if (Number.isNaN(t)) return "";
   const i = new Date(t), r = (n) => String(n).padStart(2, "0");
   return `${i.getFullYear()}-${r(i.getMonth() + 1)}-${r(i.getDate())}`;
 }
-function qt(e) {
+function Wt(e) {
   if (!e) return;
   const t = Date.parse(`${e}T12:00`);
   if (!Number.isNaN(t))
     return new Date(t).toISOString();
 }
-const Ii = /* @__PURE__ */ new Set([
+const zi = /* @__PURE__ */ new Set([
   "sleep",
   "feeding",
   "tummy_time",
   "walk"
 ]);
-function Wt(e, t, i, r, n, o, s) {
+function Kt(e, t, i, r, n, o, s) {
   let a = C;
   if (t !== null)
     switch (t.kind) {
       case "diaper":
-        a = Ui(e, t.baby, r, o);
+        a = Bi(e, t.baby, r, o);
         break;
       case "bottle":
-        a = Bi(
+        a = Vi(
           e,
           t.baby,
           i,
@@ -2220,13 +2250,13 @@ function Wt(e, t, i, r, n, o, s) {
         );
         break;
       case "solids":
-        a = Vi(e, t.baby, r, o);
+        a = Fi(e, t.baby, r, o);
         break;
       case "other":
-        a = ji(e, t.baby, r, o);
+        a = qi(e, t.baby, r, o);
         break;
       case "session":
-        a = Yi(
+        a = Gi(
           e,
           t.baby,
           t.activity,
@@ -2236,7 +2266,7 @@ function Wt(e, t, i, r, n, o, s) {
         );
         break;
       case "end_sleep_first":
-        a = zi(
+        a = Ui(
           t.baby,
           t.babyName,
           t.label,
@@ -2246,7 +2276,7 @@ function Wt(e, t, i, r, n, o, s) {
         );
         break;
       case "confirm_delete_imported":
-        a = qi(
+        a = Wi(
           t.entryId,
           t.entryType,
           t.source,
@@ -2256,7 +2286,7 @@ function Wt(e, t, i, r, n, o, s) {
         );
         break;
       case "edit_entry":
-        a = Wi(
+        a = Ki(
           e,
           t.entry,
           r,
@@ -2265,10 +2295,10 @@ function Wt(e, t, i, r, n, o, s) {
         );
         break;
       case "log_growth":
-        a = Gi(e, t.baby, i, r, o);
+        a = Xi(e, t.baby, i, r, o);
         break;
       case "log_vaccine":
-        a = Qi(
+        a = Ji(
           e,
           t.baby,
           t.defaultName ?? "",
@@ -2283,7 +2313,7 @@ function Wt(e, t, i, r, n, o, s) {
         <dialog @cancel=${o} @close=${o}>${a}</dialog>
     `;
 }
-function zi(e, t, i, r, n, o) {
+function Ui(e, t, i, r, n, o) {
   const s = async () => {
     o(), await r();
   }, a = async () => {
@@ -2293,7 +2323,7 @@ function zi(e, t, i, r, n, o) {
       console.warn("babytracker: end_sleep failed", c);
     }
     o(), await r();
-  }, l = Ft(t ?? e);
+  }, l = jt(t ?? e);
   return d`
         <form @submit=${(c) => c.preventDefault()}>
             <h2>End sleep first?</h2>
@@ -2313,7 +2343,7 @@ function zi(e, t, i, r, n, o) {
         </form>
     `;
 }
-function Ui(e, t, i, r) {
+function Bi(e, t, i, r) {
   return d`
         <form @submit=${(o) => {
     o.preventDefault();
@@ -2321,22 +2351,17 @@ function Ui(e, t, i, r) {
     i("log_diaper", {
       baby: t,
       kind: String(a.get("kind") ?? "wet"),
-      timestamp: F(String(a.get("when") ?? "")),
+      timestamp: j(String(a.get("when") ?? "")),
       notes: String(a.get("notes") ?? "") || void 0,
-      photo_path: Y(s)
+      photo_path: G(s)
     });
   }}>
             <h2>Log diaper</h2>
             <label for="when">When</label>
-            <input
-                id="when"
-                name="when"
-                type="datetime-local"
-                .value=${$t()}
-            />
+            ${R({ id: "when", value: pt() })}
             <label for="notes">Notes</label>
-            ${W(e)}
             ${K(e)}
+            ${Y(e)}
             <div
                 style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"
             >
@@ -2374,12 +2399,12 @@ function Ui(e, t, i, r) {
         </form>
     `;
 }
-function Bi(e, t, i, r, n, o, s) {
+function Vi(e, t, i, r, n, o, s) {
   const a = (i == null ? void 0 : i.volume_unit) ?? n ?? "oz", l = typeof r == "number" && Number.isFinite(r) ? String(r) : "";
   return d`
         <form @submit=${(b) => {
     b.preventDefault();
-    const h = b.currentTarget, g = new FormData(h), f = String(g.get("amount") ?? ""), m = f === "" ? void 0 : Number(f), y = F(String(g.get("at") ?? "")), p = String(g.get("unit") ?? a), $ = String(g.get("notes") ?? "") || void 0;
+    const h = b.currentTarget, g = new FormData(h), f = String(g.get("amount") ?? ""), m = f === "" ? void 0 : Number(f), y = j(String(g.get("at") ?? "")), p = String(g.get("unit") ?? a), $ = String(g.get("notes") ?? "") || void 0;
     o("log_feeding", {
       baby: t,
       method: "bottle",
@@ -2388,7 +2413,7 @@ function Bi(e, t, i, r, n, o, s) {
       started_at: y,
       ended_at: y,
       notes: $,
-      photo_path: Y(h)
+      photo_path: G(h)
     });
   }}>
             <h2>Log bottle</h2>
@@ -2409,16 +2434,14 @@ function Bi(e, t, i, r, n, o, s) {
                 <option value="ml" ?selected=${a === "ml"}>ml</option>
             </select>
             <label for="at">Time</label>
-            <input
-                id="at"
-                name="at"
-                type="datetime-local"
-                .value=${$t()}
-                required
-            />
+            ${R({
+    id: "at",
+    value: pt(),
+    required: !0
+  })}
             <label for="notes">Notes</label>
-            ${W(e)}
             ${K(e)}
+            ${Y(e)}
             <div class="actions">
                 <button type="button" @click=${s}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -2426,36 +2449,31 @@ function Bi(e, t, i, r, n, o, s) {
         </form>
     `;
 }
-function Vi(e, t, i, r) {
+function Fi(e, t, i, r) {
   return d`
         <form @submit=${(o) => {
     o.preventDefault();
-    const s = o.currentTarget, a = new FormData(s), l = F(String(a.get("when") ?? ""));
+    const s = o.currentTarget, a = new FormData(s), l = j(String(a.get("when") ?? ""));
     i("log_feeding", {
       baby: t,
       method: "solids",
       started_at: l,
       ended_at: l,
       notes: String(a.get("notes") ?? "") || void 0,
-      photo_path: Y(s)
+      photo_path: G(s)
     });
   }}>
             <h2>Log solids</h2>
             <label for="notes"
                 >What was fed <span class="muted">(optional)</span></label
             >
-            ${W(e, {
+            ${K(e, {
     placeholder: "e.g. banana, oatmeal",
     autofocus: !0
   })}
             <label for="when">When</label>
-            <input
-                id="when"
-                name="when"
-                type="datetime-local"
-                .value=${$t()}
-            />
-            ${K(e)}
+            ${R({ id: "when", value: pt() })}
+            ${Y(e)}
             <div class="actions">
                 <button type="button" @click=${r}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -2463,7 +2481,7 @@ function Vi(e, t, i, r) {
         </form>
     `;
 }
-const Fi = [
+const ji = [
   "Bath",
   "Butt wash",
   "Medication",
@@ -2472,23 +2490,23 @@ const Fi = [
   "Spit up",
   "Throw up"
 ];
-function ji(e, t, i, r) {
+function qi(e, t, i, r) {
   const n = (s) => {
     s.preventDefault();
     const a = s.currentTarget, l = new FormData(a);
     i("log_other", {
       baby: t,
       name: String(l.get("name") ?? ""),
-      timestamp: F(String(l.get("when") ?? "")),
+      timestamp: j(String(l.get("when") ?? "")),
       notes: String(l.get("notes") ?? "") || void 0,
-      photo_path: Y(a)
+      photo_path: G(a)
     });
   }, o = (s) => i("log_other", { baby: t, name: s });
   return d`
         <form @submit=${n}>
             <h2>Log activity</h2>
             <div class="quick-other" role="group" aria-label="Quick activities">
-                ${Fi.map(
+                ${ji.map(
     (s) => d`
                         <button
                             type="button"
@@ -2510,15 +2528,10 @@ function ji(e, t, i, r) {
                 required
             />
             <label for="when">When</label>
-            <input
-                id="when"
-                name="when"
-                type="datetime-local"
-                .value=${$t()}
-            />
+            ${R({ id: "when", value: pt() })}
             <label for="notes">Notes</label>
-            ${W(e)}
             ${K(e)}
+            ${Y(e)}
             <div class="actions">
                 <button type="button" @click=${r}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -2526,7 +2539,7 @@ function ji(e, t, i, r) {
         </form>
     `;
 }
-function qi(e, t, i, r, n, o) {
+function Wi(e, t, i, r, n, o) {
   const s = (l) => {
     l.preventDefault(), n("delete_entry", { entry_id: e });
   }, a = r ? `${i} (${r})` : i;
@@ -2548,12 +2561,12 @@ function qi(e, t, i, r, n, o) {
         </form>
     `;
 }
-function Wi(e, t, i, r, n) {
-  const o = String((t == null ? void 0 : t.type) ?? ""), s = (t == null ? void 0 : t.data) ?? {}, a = o === "feeding" && (s.method === "bottle" || s.method === "solids"), l = o === "vaccine" || o === "growth", c = Ii.has(o) && !a, b = (f) => {
+function Ki(e, t, i, r, n) {
+  const o = String((t == null ? void 0 : t.type) ?? ""), s = (t == null ? void 0 : t.data) ?? {}, a = o === "feeding" && (s.method === "bottle" || s.method === "solids"), l = o === "vaccine" || o === "growth", c = zi.has(o) && !a, b = (f) => {
     f.preventDefault();
-    const m = f.currentTarget, y = new FormData(m), p = {}, $ = l ? qt(String(y.get("started") ?? "")) : F(String(y.get("started") ?? ""));
+    const m = f.currentTarget, y = new FormData(m), p = {}, $ = l ? Wt(String(y.get("started") ?? "")) : j(String(y.get("started") ?? ""));
     if ($ && (p.timestamp = $), c) {
-      const u = F(String(y.get("ended") ?? ""));
+      const u = j(String(y.get("ended") ?? ""));
       p.ended_at = u ?? null;
     } else a && $ && (p.ended_at = $);
     const w = String(y.get("notes") ?? "");
@@ -2569,21 +2582,21 @@ function Wi(e, t, i, r, n) {
       u && (x.name = u);
     } else if (o === "growth") {
       const u = (S) => {
-        const E = y.get(S);
-        if (E === null) return;
-        const I = String(E).trim();
-        if (I === "") return null;
-        const nt = Number(I);
-        return Number.isFinite(nt) ? nt : void 0;
-      }, v = u("weight"), P = u("height"), D = u("head");
-      v !== void 0 && (x.weight = v), P !== void 0 && (x.height = P), D !== void 0 && (x.head_circumference = D), x.weight_unit = String(
+        const D = y.get(S);
+        if (D === null) return;
+        const z = String(D).trim();
+        if (z === "") return null;
+        const ot = Number(z);
+        return Number.isFinite(ot) ? ot : void 0;
+      }, v = u("weight"), E = u("height"), P = u("head");
+      v !== void 0 && (x.weight = v), E !== void 0 && (x.height = E), P !== void 0 && (x.head_circumference = P), x.weight_unit = String(
         y.get("weight_unit") ?? s.weight_unit ?? "kg"
       ), x.length_unit = String(
         y.get("length_unit") ?? s.length_unit ?? "cm"
       );
     }
     Object.keys(x).length && (p.data = x);
-    const _ = Y(m);
+    const _ = G(m);
     p.photo_path = _ ?? null, i("edit_entry", { entry_id: t.id, fields: p });
   }, h = () => {
     if (!n) {
@@ -2596,46 +2609,40 @@ function Wi(e, t, i, r, n) {
       source: t.source,
       staff: t.staff
     });
-  }, g = Ki(t);
+  }, g = Yi(t);
   return d`
         <form @submit=${b}>
             <h2>${g}</h2>
             ${c ? d`
                       <label for="started">Started</label>
-                      <input
-                          id="started"
-                          name="started"
-                          type="datetime-local"
-                          .value=${Lt(t.timestamp)}
-                          required
-                      />
+                      ${R({
+    id: "started",
+    value: Ht(t.timestamp),
+    required: !0
+  })}
                       <label for="ended"
                           >Ended <span class="muted">(blank = ongoing)</span></label
                       >
-                      <input
-                          id="ended"
-                          name="ended"
-                          type="datetime-local"
-                          .value=${Lt(t.ended_at)}
-                      />
+                      ${R({
+    id: "ended",
+    value: Ht(t.ended_at)
+  })}
                   ` : l ? d`
                       <label for="started">Date</label>
                       <input
                           id="started"
                           name="started"
                           type="date"
-                          .value=${Hi(t.timestamp)}
+                          .value=${Ii(t.timestamp)}
                           required
                       />
                   ` : d`
                       <label for="started">Time</label>
-                      <input
-                          id="started"
-                          name="started"
-                          type="datetime-local"
-                          .value=${Lt(t.timestamp)}
-                          required
-                      />
+                      ${R({
+    id: "started",
+    value: Ht(t.timestamp),
+    required: !0
+  })}
                   `}
             ${o === "diaper" ? d`
                       <label for="kind">Kind</label>
@@ -2764,10 +2771,10 @@ function Wi(e, t, i, r, n) {
                       </div>
                   ` : ""}
             <label for="notes">Notes</label>
-            ${W(e, {
+            ${K(e, {
     value: String(t.notes ?? "")
   })}
-            ${K(e, t.photo_path ?? "")}
+            ${Y(e, t.photo_path ?? "")}
             <div class="actions">
                 <button type="button" @click=${r}>Cancel</button>
                 <button
@@ -2783,11 +2790,11 @@ function Wi(e, t, i, r, n) {
         </form>
     `;
 }
-function Ki(e) {
+function Yi(e) {
   const t = String((e == null ? void 0 : e.type) ?? "entry"), i = (e == null ? void 0 : e.data) ?? {}, r = i.name ?? i.method ?? i.kind;
   return r ? `Edit ${t} (${r})` : `Edit ${t}`;
 }
-function Yi(e, t, i, r, n, o) {
+function Gi(e, t, i, r, n, o) {
   const s = {
     sleep: "Log sleep",
     tummy_time: "Log tummy time",
@@ -2797,7 +2804,7 @@ function Yi(e, t, i, r, n, o) {
   return d`
         <form @submit=${(l) => {
     l.preventDefault();
-    const c = l.currentTarget, b = new FormData(c), h = F(String(b.get("started") ?? "")), g = F(String(b.get("ended") ?? "")), f = String(b.get("notes") ?? "") || void 0, m = Y(c);
+    const c = l.currentTarget, b = new FormData(c), h = j(String(b.get("started") ?? "")), g = j(String(b.get("ended") ?? "")), f = String(b.get("notes") ?? "") || void 0, m = G(c);
     if (!g) {
       const $ = {
         baby: t,
@@ -2848,23 +2855,19 @@ function Yi(e, t, i, r, n, o) {
   }}>
             <h2>${s[i]}</h2>
             <label for="started">Started</label>
-            <input
-                id="started"
-                name="started"
-                type="datetime-local"
-                .value=${$t()}
-                required
-            />
+            ${R({
+    id: "started",
+    value: pt(),
+    required: !0
+  })}
             <label for="ended">Ended <span class="muted">(optional)</span></label>
-            <input
-                id="ended"
-                name="ended"
-                type="datetime-local"
-                placeholder="leave blank for an open session"
-            />
+            ${R({
+    id: "ended",
+    placeholder: "leave blank for an open session"
+  })}
             <label for="notes">Notes</label>
-            ${W(e)}
             ${K(e)}
+            ${Y(e)}
             <div class="actions">
                 <button type="button" @click=${o}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -2872,7 +2875,7 @@ function Yi(e, t, i, r, n, o) {
         </form>
     `;
 }
-function Gi(e, t, i, r, n) {
+function Xi(e, t, i, r, n) {
   const o = (i == null ? void 0 : i.weight_unit) ?? "kg", s = (i == null ? void 0 : i.length_unit) ?? "cm";
   return d`
         <form @submit=${(l) => {
@@ -2890,9 +2893,9 @@ function Gi(e, t, i, r, n) {
       head_circumference: h("head"),
       weight_unit: String(b.get("weight_unit") ?? o),
       length_unit: String(b.get("length_unit") ?? s),
-      timestamp: qt(String(b.get("when") ?? "")),
+      timestamp: Wt(String(b.get("when") ?? "")),
       notes: String(b.get("notes") ?? "") || void 0,
-      photo_path: Y(c)
+      photo_path: G(c)
     });
   }}>
             <h2>Log growth measurement</h2>
@@ -2962,11 +2965,11 @@ function Gi(e, t, i, r, n) {
                 id="when"
                 name="when"
                 type="date"
-                .value=${Me()}
+                .value=${Oe()}
             />
             <label for="notes">Notes</label>
-            ${W(e)}
             ${K(e)}
+            ${Y(e)}
             <div class="actions">
                 <button type="button" @click=${n}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -2974,7 +2977,7 @@ function Gi(e, t, i, r, n) {
         </form>
     `;
 }
-const Xi = [
+const Zi = [
   "COVID-19",
   "DTaP",
   "Hepatitis A (HepA)",
@@ -2993,7 +2996,7 @@ const Xi = [
   "RSV",
   "Tdap",
   "Varicella (VAR)"
-], Zi = {
+], Qi = {
   HepA: "Hepatitis A (HepA)",
   "Hepatitis A": "Hepatitis A (HepA)",
   HepB: "Hepatitis B (HepB)",
@@ -3012,10 +3015,10 @@ const Xi = [
   PCV15: "Pneumococcal (PCV15)",
   PCV20: "Pneumococcal (PCV20)"
 };
-function ue(e) {
-  return Zi[e] ?? e;
+function pe(e) {
+  return Qi[e] ?? e;
 }
-function Qi(e, t, i, r, n, o, s) {
+function Ji(e, t, i, r, n, o, s) {
   const a = [
     "left_thigh",
     "right_thigh",
@@ -3027,23 +3030,23 @@ function Qi(e, t, i, r, n, o, s) {
     p.preventDefault();
     const $ = p.currentTarget, w = new FormData($), x = String(w.get("vaccine_select") ?? "").trim(), _ = String(w.get("vaccine_custom") ?? "").trim(), u = x === "__other__" ? _ : x;
     if (!u) return;
-    const v = String(w.get("dose_number") ?? "").trim(), P = v === "" ? void 0 : Number(v), D = String(w.get("site") ?? "").trim() || void 0, S = String(w.get("lot_number") ?? "").trim() || void 0, E = String(w.get("provider") ?? "").trim() || void 0;
+    const v = String(w.get("dose_number") ?? "").trim(), E = v === "" ? void 0 : Number(v), P = String(w.get("site") ?? "").trim() || void 0, S = String(w.get("lot_number") ?? "").trim() || void 0, D = String(w.get("provider") ?? "").trim() || void 0;
     o("log_vaccine", {
       baby: t,
       name: u,
-      dose_number: P,
-      site: D,
+      dose_number: E,
+      site: P,
       lot_number: S,
-      provider: E,
-      timestamp: qt(String(w.get("when") ?? "")),
+      provider: D,
+      timestamp: Wt(String(w.get("when") ?? "")),
       notes: String(w.get("notes") ?? "") || void 0,
-      photo_path: Y($)
+      photo_path: G($)
     });
   }, c = Array.from(
     new Set(
-      [...Xi, ...n].filter((p) => !!p && p !== "none").map(ue)
+      [...Zi, ...n].filter((p) => !!p && p !== "none").map(pe)
     )
-  ).sort((p, $) => p.localeCompare($)), b = i && i !== "none" ? ue(i) : "", h = !!b && c.includes(b), g = !!b && !h, f = h ? b : g ? "__other__" : "", m = g ? b : "";
+  ).sort((p, $) => p.localeCompare($)), b = i && i !== "none" ? pe(i) : "", h = !!b && c.includes(b), g = !!b && !h, f = h ? b : g ? "__other__" : "", m = g ? b : "";
   return d`
         <form @submit=${l}>
             <h2>Log vaccine</h2>
@@ -3125,11 +3128,11 @@ function Qi(e, t, i, r, n, o, s) {
                 id="when"
                 name="when"
                 type="date"
-                .value=${Me()}
+                .value=${Oe()}
             />
             <label for="notes">Notes</label>
-            ${W(e)}
             ${K(e)}
+            ${Y(e)}
             <div class="actions">
                 <button type="button" @click=${s}>Cancel</button>
                 <button type="submit" class="primary">Log</button>
@@ -3137,16 +3140,16 @@ function Qi(e, t, i, r, n, o, s) {
         </form>
     `;
 }
-const Ht = 24 * 60 * 60 * 1e3, pe = 29.5735, he = [
+const It = 24 * 60 * 60 * 1e3, he = 29.5735, be = [
   { key: "bottle", label: "Bottle", color: "var(--primary-color, #4a90e2)" },
   { key: "breast", label: "Breast", color: "var(--success-color, #43a047)" },
   { key: "solids", label: "Solids", color: "var(--warning-color, #f5a623)" }
-], be = [
+], ge = [
   { key: "wet", label: "Wet", color: "var(--info-color, #4fc3f7)" },
   { key: "dirty", label: "Dirty", color: "var(--accent-color, #f57c00)" },
   { key: "both", label: "Both", color: "var(--error-color, #d32f2f)" }
 ];
-function Ji(e) {
+function tr(e) {
   return {
     label: e,
     sleepMinutes: 0,
@@ -3155,48 +3158,48 @@ function Ji(e) {
     diaperByCategory: { wet: 0, dirty: 0, both: 0 }
   };
 }
-function tr(e) {
+function er(e) {
   return e === "bottle" ? "bottle" : e === "breast_left" || e === "breast_right" ? "breast" : e === "solids" ? "solids" : null;
 }
-function er(e) {
+function ir(e) {
   return e === "wet" || e === "dirty" || e === "both" ? e : null;
 }
-function ir(e) {
+function rr(e) {
   return {
     feedings: e.feedingByCategory.bottle + e.feedingByCategory.breast + e.feedingByCategory.solids,
     diapers: e.diaperByCategory.wet + e.diaperByCategory.dirty + e.diaperByCategory.both
   };
 }
-function rr(e, t, i = 7) {
+function nr(e, t, i = 7) {
   var y, p, $, w, x, _;
   const r = (y = e == null ? void 0 : e.states) == null ? void 0 : y[A(t, "recent_entries")], n = ((p = r == null ? void 0 : r.attributes) == null ? void 0 : p.entries) ?? [], o = Date.now(), s = new Date(o);
   s.setHours(0, 0, 0, 0);
   const a = [], l = (u) => u.toLocaleDateString([], { weekday: "short" });
   for (let u = i - 1; u >= 0; u--) {
-    const v = new Date(s.getTime() - u * Ht);
-    a.push(Ji(l(v)));
+    const v = new Date(s.getTime() - u * It);
+    a.push(tr(l(v)));
   }
-  const c = s.getTime() - (i - 1) * Ht;
+  const c = s.getTime() - (i - 1) * It;
   for (const u of n) {
     const v = Date.parse(u == null ? void 0 : u.timestamp);
     if (!Number.isFinite(v)) continue;
-    const P = Math.floor((v - c) / Ht);
-    if (P < 0 || P >= i) continue;
-    const D = a[P];
+    const E = Math.floor((v - c) / It);
+    if (E < 0 || E >= i) continue;
+    const P = a[E];
     if (u.type === "feeding") {
-      const S = tr(String((($ = u == null ? void 0 : u.data) == null ? void 0 : $.method) ?? ""));
-      S && (D.feedingByCategory[S] += 1);
-      const E = Number(((w = u == null ? void 0 : u.data) == null ? void 0 : w.amount) ?? 0), I = String(((x = u == null ? void 0 : u.data) == null ? void 0 : x.unit) ?? "");
-      E > 0 && I === "oz" ? D.bottleMl += E * pe : E > 0 && I === "ml" && (D.bottleMl += E);
+      const S = er(String((($ = u == null ? void 0 : u.data) == null ? void 0 : $.method) ?? ""));
+      S && (P.feedingByCategory[S] += 1);
+      const D = Number(((w = u == null ? void 0 : u.data) == null ? void 0 : w.amount) ?? 0), z = String(((x = u == null ? void 0 : u.data) == null ? void 0 : x.unit) ?? "");
+      D > 0 && z === "oz" ? P.bottleMl += D * he : D > 0 && z === "ml" && (P.bottleMl += D);
     } else if (u.type === "diaper") {
-      const S = er(String(((_ = u == null ? void 0 : u.data) == null ? void 0 : _.kind) ?? ""));
-      S && (D.diaperByCategory[S] += 1);
+      const S = ir(String(((_ = u == null ? void 0 : u.data) == null ? void 0 : _.kind) ?? ""));
+      S && (P.diaperByCategory[S] += 1);
     } else if (u.type === "sleep") {
       const S = u != null && u.ended_at && u.ended_at !== "" ? Date.parse(u.ended_at) : o;
-      Number.isFinite(S) && S > v && (D.sleepMinutes += (S - v) / 6e4);
+      Number.isFinite(S) && S > v && (P.sleepMinutes += (S - v) / 6e4);
     }
   }
-  const b = a.map(ir);
+  const b = a.map(rr);
   if (a.every(
     (u, v) => u.sleepMinutes === 0 && b[v].feedings === 0 && b[v].diapers === 0
   ))
@@ -3206,7 +3209,7 @@ function rr(e, t, i = 7) {
     value: u.sleepMinutes
   })), g = a.map((u) => ({
     label: u.label,
-    parts: he.map((v) => ({
+    parts: be.map((v) => ({
       ...v,
       value: u.feedingByCategory[v.key]
     }))
@@ -3215,7 +3218,7 @@ function rr(e, t, i = 7) {
     value: u.bottleMl
   })), m = a.map((u) => ({
     label: u.label,
-    parts: be.map((v) => ({
+    parts: ge.map((v) => ({
       ...v,
       value: u.diaperByCategory[v.key]
     }))
@@ -3225,7 +3228,7 @@ function rr(e, t, i = 7) {
             <h2>Trends · last ${i} days</h2>
             <bt-chart-lightbox
                 label="Sleep (min/day)"
-                .renderChart=${() => ge(
+                .renderChart=${() => me(
     h,
     "Sleep (min/day)",
     (u) => `${Math.round(u)}`
@@ -3233,34 +3236,34 @@ function rr(e, t, i = 7) {
             ></bt-chart-lightbox>
             <bt-chart-lightbox
                 label="Feedings/day"
-                .renderChart=${() => me(
+                .renderChart=${() => fe(
     g,
     "Feedings/day",
-    he,
+    be,
     (u) => `${u}`
   )}
             ></bt-chart-lightbox>
             <bt-chart-lightbox
                 label="Bottle (oz/day)"
-                .renderChart=${() => ge(
+                .renderChart=${() => me(
     f,
     "Bottle (oz/day)",
-    (u) => (u / pe).toFixed(1)
+    (u) => (u / he).toFixed(1)
   )}
             ></bt-chart-lightbox>
             <bt-chart-lightbox
                 label="Diapers/day"
-                .renderChart=${() => me(
+                .renderChart=${() => fe(
     m,
     "Diapers/day",
-    be,
+    ge,
     (u) => `${u}`
   )}
             ></bt-chart-lightbox>
         </div>
     `;
 }
-function ge(e, t, i) {
+function me(e, t, i) {
   const a = Math.max(1, ...e.map((c) => c.value)), l = (320 - 14 * 2) / e.length;
   return d`
         <div class="trend">
@@ -3309,7 +3312,7 @@ function ge(e, t, i) {
         </div>
     `;
 }
-function me(e, t, i, r) {
+function fe(e, t, i, r) {
   const l = e.map((h) => h.parts.reduce((g, f) => g + f.value, 0)), c = Math.max(1, ...l), b = (320 - 14 * 2) / e.length;
   return d`
         <div class="trend">
@@ -3382,7 +3385,7 @@ function me(e, t, i, r) {
         </div>
     `;
 }
-function nr(e) {
+function or(e) {
   if (!e) return "—";
   const t = Date.parse(e);
   return Number.isNaN(t) ? "—" : new Date(t).toLocaleDateString([], {
@@ -3391,12 +3394,12 @@ function nr(e) {
     day: "numeric"
   });
 }
-function It(e) {
+function zt(e) {
   var r, n;
   const t = String(((r = e == null ? void 0 : e.data) == null ? void 0 : r.name) ?? "vaccine"), i = (n = e == null ? void 0 : e.data) == null ? void 0 : n.dose_number;
   return i != null ? `${t} dose ${i}` : t;
 }
-function or(e, t) {
+function sr(e, t) {
   return !e || e.length === 0 ? "" : d`
         <div
             class="section vaccine-history"
@@ -3412,16 +3415,16 @@ function or(e, t) {
                         class=${t ? "clickable" : ""}
                         role=${t ? "button" : "listitem"}
                         tabindex=${t ? "0" : "-1"}
-                        aria-label=${t ? `Edit ${It(i)}` : It(i)}
+                        aria-label=${t ? `Edit ${zt(i)}` : zt(i)}
                         @click=${t ? () => t(i) : void 0}
                         @keydown=${t ? (n) => {
         (n.key === "Enter" || n.key === " ") && (n.preventDefault(), t(i));
       } : void 0}
                     >
                         <span class="vh-date muted"
-                            >${nr(i.timestamp)}</span
+                            >${or(i.timestamp)}</span
                         >
-                        <span class="vh-name">${It(i)}</span>
+                        <span class="vh-name">${zt(i)}</span>
                         ${(r = i == null ? void 0 : i.data) != null && r.site ? d`<span class="muted">${String(
         i.data.site
       ).replace("_", " ")}</span>` : ""}
@@ -3432,7 +3435,7 @@ function or(e, t) {
         </div>
     `;
 }
-function sr(e, t, i) {
+function ar(e, t, i) {
   var o, s;
   const r = e.states[A(t, "vaccines_due")];
   if (!r || r.state === "unknown") return "";
@@ -3459,13 +3462,13 @@ function sr(e, t, i) {
         </div>
     `;
 }
-var ar = Object.defineProperty, lr = Object.getOwnPropertyDescriptor, it = (e, t, i, r) => {
-  for (var n = r > 1 ? void 0 : r ? lr(t, i) : t, o = e.length - 1, s; o >= 0; o--)
+var lr = Object.defineProperty, cr = Object.getOwnPropertyDescriptor, rt = (e, t, i, r) => {
+  for (var n = r > 1 ? void 0 : r ? cr(t, i) : t, o = e.length - 1, s; o >= 0; o--)
     (s = e[o]) && (n = (r ? s(t, i, n) : s(n)) || n);
-  return r && n && ar(t, i, n), n;
+  return r && n && lr(t, i, n), n;
 };
-const cr = ["vaccines", "growth", "trends", "export"];
-let L = class extends N {
+const dr = ["vaccines", "growth", "trends", "export"];
+let H = class extends N {
   constructor() {
     super(...arguments), this._modal = null, this._vaccines = [], this._growth = [], this._closeModal = () => {
       this._modal = null;
@@ -3528,18 +3531,18 @@ let L = class extends N {
   }
   _maybeSubscribe() {
     var e, t;
-    !this.hass || !this._config || (this._unsubOptions || (this._unsubOptions = Ce(
+    !this.hass || !this._config || (this._unsubOptions || (this._unsubOptions = Ae(
       this.hass,
       (i) => {
         this._options = i;
       }
-    )), !this._unsubVaccines && this._sections.includes("vaccines") && ((e = this._config) != null && e.baby) && (this._unsubVaccines = ni(
+    )), !this._unsubVaccines && this._sections.includes("vaccines") && ((e = this._config) != null && e.baby) && (this._unsubVaccines = oi(
       this.hass,
       this._config.baby,
       (i) => {
         this._vaccines = Array.isArray(i) ? i : [];
       }
-    )), !this._unsubGrowth && this._sections.includes("growth") && ((t = this._config) != null && t.baby) && (this._unsubGrowth = oi(
+    )), !this._unsubGrowth && this._sections.includes("growth") && ((t = this._config) != null && t.baby) && (this._unsubGrowth = si(
       this.hass,
       this._config.baby,
       (i) => {
@@ -3549,7 +3552,7 @@ let L = class extends N {
   }
   get _sections() {
     var e;
-    return ((e = this._config) == null ? void 0 : e.sections) ?? cr;
+    return ((e = this._config) == null ? void 0 : e.sections) ?? dr;
   }
   render() {
     if (!this.hass || !this._config) return d``;
@@ -3557,17 +3560,17 @@ let L = class extends N {
     return d`
             <ha-card>
                 ${e.includes("vaccines") ? d`
-                          ${sr(
+                          ${ar(
       this.hass,
       this._config.baby,
       this._requestLogVaccine
     )}
-                          ${or(
+                          ${sr(
       this._vaccines,
       this._requestEditEntry
     )}
                       ` : ""}
-                ${e.includes("growth") ? Te(
+                ${e.includes("growth") ? Ne(
       this.hass,
       this._config.baby,
       this._options,
@@ -3577,14 +3580,14 @@ let L = class extends N {
       this._requestEditEntry,
       this._growth
     ) : ""}
-                ${e.includes("trends") ? rr(
+                ${e.includes("trends") ? nr(
       this.hass,
       this._config.baby,
       this._config.trend_days ?? 7
     ) : ""}
-                ${e.includes("export") ? Ne(this.hass, this._config.baby) : ""}
+                ${e.includes("export") ? Me(this.hass, this._config.baby) : ""}
             </ha-card>
-            ${Wt(
+            ${Kt(
       this.hass,
       this._modal,
       this._options,
@@ -3599,7 +3602,7 @@ let L = class extends N {
     return { type: "custom:babytracker-summary-card", baby: "ava" };
   }
 };
-L.styles = j`
+H.styles = q`
         :host {
             display: block;
             font-family: var(--primary-font-family, system-ui);
@@ -3811,52 +3814,52 @@ L.styles = j`
             font-weight: 500;
         }
     `;
-it([
+rt([
   T({ attribute: !1 })
-], L.prototype, "hass", 2);
-it([
+], H.prototype, "hass", 2);
+rt([
   k()
-], L.prototype, "_config", 2);
-it([
+], H.prototype, "_config", 2);
+rt([
   k()
-], L.prototype, "_options", 2);
-it([
+], H.prototype, "_options", 2);
+rt([
   k()
-], L.prototype, "_modal", 2);
-it([
+], H.prototype, "_modal", 2);
+rt([
   k()
-], L.prototype, "_vaccines", 2);
-it([
+], H.prototype, "_vaccines", 2);
+rt([
   k()
-], L.prototype, "_growth", 2);
-L = it([
-  q("babytracker-summary-card")
-], L);
+], H.prototype, "_growth", 2);
+H = rt([
+  W("babytracker-summary-card")
+], H);
 window.customCards = window.customCards ?? [];
 window.customCards.push({
   type: "babytracker-summary-card",
   name: "babytracker — summary",
   description: "Vaccines, growth, 7-day trend charts, and pediatrician export for one baby."
 });
-var dr = Object.defineProperty, ur = Object.getOwnPropertyDescriptor, rt = (e, t, i, r) => {
-  for (var n = r > 1 ? void 0 : r ? ur(t, i) : t, o = e.length - 1, s; o >= 0; o--)
+var ur = Object.defineProperty, pr = Object.getOwnPropertyDescriptor, nt = (e, t, i, r) => {
+  for (var n = r > 1 ? void 0 : r ? pr(t, i) : t, o = e.length - 1, s; o >= 0; o--)
     (s = e[o]) && (n = (r ? s(t, i, n) : s(n)) || n);
-  return r && n && dr(t, i, n), n;
+  return r && n && ur(t, i, n), n;
 };
-function fe(e) {
+function _e(e) {
   return String(e).padStart(2, "0");
 }
-function xt(e) {
-  return `${e.getFullYear()}-${fe(e.getMonth() + 1)}-${fe(e.getDate())}`;
+function kt(e) {
+  return `${e.getFullYear()}-${_e(e.getMonth() + 1)}-${_e(e.getDate())}`;
 }
-function _t(e) {
+function vt(e) {
   const t = /^(\d{4})-(\d{2})-(\d{2})$/.exec(e);
   if (!t) return null;
   const i = Number(t[1]), r = Number(t[2]) - 1, n = Number(t[3]), o = new Date(i, r, n, 0, 0, 0, 0);
   return Number.isNaN(o.getTime()) ? null : o;
 }
-function pr(e) {
-  const t = _t(e) ?? /* @__PURE__ */ new Date(), i = new Date(t.getFullYear(), t.getMonth(), t.getDate(), 0, 0, 0, 0), r = new Date(
+function hr(e) {
+  const t = vt(e) ?? /* @__PURE__ */ new Date(), i = new Date(t.getFullYear(), t.getMonth(), t.getDate(), 0, 0, 0, 0), r = new Date(
     t.getFullYear(),
     t.getMonth(),
     t.getDate(),
@@ -3867,12 +3870,12 @@ function pr(e) {
   );
   return { startIso: i.toISOString(), endIso: r.toISOString() };
 }
-function hr(e, t) {
-  const i = _t(e) ?? /* @__PURE__ */ new Date();
-  return i.setDate(i.getDate() + t), xt(i);
+function br(e, t) {
+  const i = vt(e) ?? /* @__PURE__ */ new Date();
+  return i.setDate(i.getDate() + t), kt(i);
 }
-function br(e) {
-  const t = _t(e);
+function gr(e) {
+  const t = vt(e);
   return t ? t.toLocaleDateString([], {
     weekday: "short",
     year: "numeric",
@@ -3880,13 +3883,13 @@ function br(e) {
     day: "numeric"
   }) : e;
 }
-let H = class extends N {
+let I = class extends N {
   constructor() {
-    super(...arguments), this._date = xt(/* @__PURE__ */ new Date()), this._entries = [], this._modal = null, this._expandedNotes = /* @__PURE__ */ new Set(), this._today = () => {
-      this._date = xt(/* @__PURE__ */ new Date());
+    super(...arguments), this._date = kt(/* @__PURE__ */ new Date()), this._entries = [], this._modal = null, this._expandedNotes = /* @__PURE__ */ new Set(), this._today = () => {
+      this._date = kt(/* @__PURE__ */ new Date());
     }, this._onDateChange = (e) => {
       const t = e.currentTarget.value;
-      t && _t(t) && (this._date = t);
+      t && vt(t) && (this._date = t);
     }, this._requestEdit = (e) => {
       this._modal = { kind: "edit_entry", entry: e };
     }, this._requestDelete = (e) => {
@@ -3915,7 +3918,7 @@ let H = class extends N {
   setConfig(e) {
     if (!(e != null && e.baby))
       throw new Error("babytracker-history-card: 'baby' is required");
-    this._config = { ...e }, e.initial_date && _t(e.initial_date) && (this._date = e.initial_date);
+    this._config = { ...e }, e.initial_date && vt(e.initial_date) && (this._date = e.initial_date);
   }
   getCardSize() {
     return 6;
@@ -3939,8 +3942,8 @@ let H = class extends N {
     var i, r;
     if (!this.hass || !((i = this._config) != null && i.baby)) return;
     (r = this._unsubEntries) == null || r.call(this);
-    const { startIso: e, endIso: t } = pr(this._date);
-    this._unsubEntries = ri(
+    const { startIso: e, endIso: t } = hr(this._date);
+    this._unsubEntries = ni(
       this.hass,
       this._config.baby,
       e,
@@ -3951,14 +3954,14 @@ let H = class extends N {
     );
   }
   _go(e) {
-    this._date = hr(this._date, e);
+    this._date = br(this._date, e);
   }
   render() {
     if (!this.hass || !this._config) return d``;
-    const e = this._date === xt(/* @__PURE__ */ new Date());
+    const e = this._date === kt(/* @__PURE__ */ new Date());
     return d`
             <ha-card>
-                <h2>History — ${br(this._date)}</h2>
+                <h2>History — ${gr(this._date)}</h2>
                 <div class="nav">
                     <button
                         type="button"
@@ -3992,7 +3995,7 @@ let H = class extends N {
                 ${this._entries.length === 0 ? d`<p class="empty">Nothing logged on this day.</p>` : d`
                           <ul class="entries">
                               ${this._entries.map(
-      (t) => Ee(
+      (t) => Te(
         this.hass,
         t,
         this._requestEdit,
@@ -4003,7 +4006,7 @@ let H = class extends N {
                           </ul>
                       `}
             </ha-card>
-            ${Wt(
+            ${Kt(
       this.hass,
       this._modal,
       void 0,
@@ -4018,7 +4021,7 @@ let H = class extends N {
     return { type: "custom:babytracker-history-card", baby: "ava" };
   }
 };
-H.styles = j`
+I.styles = q`
         :host {
             display: block;
             font-family: var(--primary-font-family, system-ui);
@@ -4165,39 +4168,39 @@ H.styles = j`
             font: inherit;
         }
     `;
-rt([
+nt([
   T({ attribute: !1 })
-], H.prototype, "hass", 2);
-rt([
+], I.prototype, "hass", 2);
+nt([
   k()
-], H.prototype, "_config", 2);
-rt([
+], I.prototype, "_config", 2);
+nt([
   k()
-], H.prototype, "_date", 2);
-rt([
+], I.prototype, "_date", 2);
+nt([
   k()
-], H.prototype, "_entries", 2);
-rt([
+], I.prototype, "_entries", 2);
+nt([
   k()
-], H.prototype, "_modal", 2);
-rt([
+], I.prototype, "_modal", 2);
+nt([
   k()
-], H.prototype, "_expandedNotes", 2);
-H = rt([
-  q("babytracker-history-card")
-], H);
+], I.prototype, "_expandedNotes", 2);
+I = nt([
+  W("babytracker-history-card")
+], I);
 window.customCards = window.customCards ?? [];
 window.customCards.push({
   type: "babytracker-history-card",
   name: "babytracker — history",
   description: "Paginate through one baby's entries by calendar day with edit + delete."
 });
-var gr = Object.defineProperty, mr = Object.getOwnPropertyDescriptor, G = (e, t, i, r) => {
-  for (var n = r > 1 ? void 0 : r ? mr(t, i) : t, o = e.length - 1, s; o >= 0; o--)
+var mr = Object.defineProperty, fr = Object.getOwnPropertyDescriptor, X = (e, t, i, r) => {
+  for (var n = r > 1 ? void 0 : r ? fr(t, i) : t, o = e.length - 1, s; o >= 0; o--)
     (s = e[o]) && (n = (r ? s(t, i, n) : s(n)) || n);
-  return r && n && gr(t, i, n), n;
+  return r && n && mr(t, i, n), n;
 };
-const fr = [
+const _r = [
   "status",
   "today",
   "active_session",
@@ -4210,7 +4213,7 @@ let M = class extends N {
     super(...arguments), this._modal = null, this._expandedNotes = /* @__PURE__ */ new Set(), this._handleService = async (e, t, i) => {
       const r = i instanceof HTMLElement && i.classList.contains("quick") ? i : null;
       try {
-        const n = await ei(this.hass, "babytracker", e, t);
+        const n = await ii(this.hass, "babytracker", e, t);
         return r && (r.classList.add("logged"), setTimeout(() => r.classList.remove("logged"), 700)), this.requestUpdate(), n;
       } catch (n) {
         throw console.warn("babytracker: service call failed", e, n), n;
@@ -4298,13 +4301,13 @@ let M = class extends N {
     (e.has("hass") || e.has("_config")) && this._maybeSubscribe(), e.has("_modal") && (this._modal && this._dialog && !this._dialog.open ? this._dialog.showModal() : !this._modal && ((t = this._dialog) != null && t.open) && this._dialog.close());
   }
   _maybeSubscribe() {
-    !this.hass || !this._config || (this._unsubBaby || (this._unsubBaby = ii(
+    !this.hass || !this._config || (this._unsubBaby || (this._unsubBaby = ri(
       this.hass,
       this._config.baby,
       (e) => {
         this._babyConfig = e;
       }
-    )), this._unsubOptions || (this._unsubOptions = Ce(
+    )), this._unsubOptions || (this._unsubOptions = Ae(
       this.hass,
       (e) => {
         this._options = e;
@@ -4313,7 +4316,7 @@ let M = class extends N {
   }
   get _sections() {
     var e;
-    return ((e = this._config) == null ? void 0 : e.sections) ?? fr;
+    return ((e = this._config) == null ? void 0 : e.sections) ?? _r;
   }
   _baby() {
     return this._config.baby;
@@ -4328,7 +4331,7 @@ let M = class extends N {
    */
   _renderStatusChips() {
     var l, c, b, h, g, f, m, y, p, $, w, x, _;
-    const e = this.hass, t = (c = (l = e.states) == null ? void 0 : l[this._entityId("last_feeding")]) == null ? void 0 : c.state, i = (h = (b = e.states) == null ? void 0 : b[this._entityId("last_diaper")]) == null ? void 0 : h.state, r = ((f = (g = e.states) == null ? void 0 : g[this._entityId("sleeping", "binary_sensor")]) == null ? void 0 : f.state) === "on", n = ((y = (m = e.states) == null ? void 0 : m[this._entityId("walking", "binary_sensor")]) == null ? void 0 : y.state) === "on", o = (($ = (p = e.states) == null ? void 0 : p[this._entityId("at_daycare", "binary_sensor")]) == null ? void 0 : $.state) === "on", s = ((_ = (x = (w = e.states) == null ? void 0 : w[this._entityId("recent_entries")]) == null ? void 0 : x.attributes) == null ? void 0 : _.entries) ?? [], a = r ? null : di(s);
+    const e = this.hass, t = (c = (l = e.states) == null ? void 0 : l[this._entityId("last_feeding")]) == null ? void 0 : c.state, i = (h = (b = e.states) == null ? void 0 : b[this._entityId("last_diaper")]) == null ? void 0 : h.state, r = ((f = (g = e.states) == null ? void 0 : g[this._entityId("sleeping", "binary_sensor")]) == null ? void 0 : f.state) === "on", n = ((y = (m = e.states) == null ? void 0 : m[this._entityId("walking", "binary_sensor")]) == null ? void 0 : y.state) === "on", o = (($ = (p = e.states) == null ? void 0 : p[this._entityId("at_daycare", "binary_sensor")]) == null ? void 0 : $.state) === "on", s = ((_ = (x = (w = e.states) == null ? void 0 : w[this._entityId("recent_entries")]) == null ? void 0 : x.attributes) == null ? void 0 : _.entries) ?? [], a = r ? null : ui(s);
     return d`
             <div class="chip" role="listitem">
                 Last feed: ${this._timeSince(t)}
@@ -4382,37 +4385,37 @@ let M = class extends N {
     const e = this._sections, t = e.includes("status"), i = e.includes("today");
     return d`
             <ha-card>
-                <h2>${Ft(((r = this._babyConfig) == null ? void 0 : r.name) ?? this._baby())}</h2>
+                <h2>${jt(((r = this._babyConfig) == null ? void 0 : r.name) ?? this._baby())}</h2>
                 ${t || i ? d`<div
                           class="chips"
                           role="list"
                           aria-label="Status and last 24 hours"
                       >
                           ${t ? this._renderStatusChips() : ""}
-                          ${i ? ki(
+                          ${i ? Si(
       this.hass,
       this._baby(),
       this._babyConfig
     ) : ""}
                       </div>` : ""}
-                ${e.includes("active_session") ? ai(
+                ${e.includes("active_session") ? li(
       this.hass,
       this._baby(),
       this._handleService
     ) : ""}
-                ${e.includes("quick_log") ? si(
+                ${e.includes("quick_log") ? ai(
       this._babyConfig,
       this._baby(),
       this._handleService,
       this._requestModal
     ) : ""}
-                ${e.includes("growth") ? Te(
+                ${e.includes("growth") ? Ne(
       this.hass,
       this._baby(),
       this._options,
       this._config.units
     ) : ""}
-                ${e.includes("recent") ? fi(
+                ${e.includes("recent") ? _i(
       this.hass,
       this._baby(),
       this._requestEdit,
@@ -4420,14 +4423,14 @@ let M = class extends N {
       this._expandedNotes,
       this._toggleNotes
     ) : ""}
-                ${e.includes("importer_sync") ? xi(
+                ${e.includes("importer_sync") ? ki(
       this._babyConfig,
       this._baby(),
       this._handleService
     ) : ""}
-                ${e.includes("export") ? Ne(this.hass, this._baby()) : ""}
+                ${e.includes("export") ? Me(this.hass, this._baby()) : ""}
             </ha-card>
-            ${Wt(
+            ${Kt(
       this.hass,
       this._modal,
       this._options,
@@ -4439,7 +4442,7 @@ let M = class extends N {
         `;
   }
 };
-M.styles = j`
+M.styles = q`
         :host {
             display: block;
             font-family: var(--primary-font-family, system-ui);
@@ -4662,6 +4665,20 @@ M.styles = j`
             justify-content: flex-end;
             margin-top: 8px;
         }
+        dialog .dt-row {
+            display: flex;
+            gap: 6px;
+            align-items: stretch;
+        }
+        dialog .dt-row input {
+            flex: 1;
+            min-width: 0;
+        }
+        dialog .dt-row .now-btn {
+            padding: 4px 10px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
         dialog .quick-other {
             display: flex;
             flex-wrap: wrap;
@@ -4673,29 +4690,29 @@ M.styles = j`
             flex: 0 0 auto;
         }
     `;
-G([
+X([
   T({ attribute: !1 })
 ], M.prototype, "hass", 2);
-G([
+X([
   k()
 ], M.prototype, "_config", 2);
-G([
+X([
   k()
 ], M.prototype, "_babyConfig", 2);
-G([
+X([
   k()
 ], M.prototype, "_options", 2);
-G([
+X([
   k()
 ], M.prototype, "_modal", 2);
-G([
+X([
   k()
 ], M.prototype, "_expandedNotes", 2);
-G([
-  Se("dialog")
+X([
+  Ce("dialog")
 ], M.prototype, "_dialog", 2);
-M = G([
-  q("babytracker-card")
+M = X([
+  W("babytracker-card")
 ], M);
 window.customCards = window.customCards ?? [];
 window.customCards.push({
@@ -4703,13 +4720,13 @@ window.customCards.push({
   name: "babytracker",
   description: "Track feedings, sleep, diapers, growth, vaccines, and walks."
 });
-Promise.resolve().then(() => vr);
-var _r = Object.defineProperty, yr = Object.getOwnPropertyDescriptor, Kt = (e, t, i, r) => {
-  for (var n = r > 1 ? void 0 : r ? yr(t, i) : t, o = e.length - 1, s; o >= 0; o--)
+Promise.resolve().then(() => $r);
+var yr = Object.defineProperty, vr = Object.getOwnPropertyDescriptor, Yt = (e, t, i, r) => {
+  for (var n = r > 1 ? void 0 : r ? vr(t, i) : t, o = e.length - 1, s; o >= 0; o--)
     (s = e[o]) && (n = (r ? s(t, i, n) : s(n)) || n);
-  return r && n && _r(t, i, n), n;
+  return r && n && yr(t, i, n), n;
 };
-let tt = class extends N {
+let et = class extends N {
   setConfig(e) {
     this._config = { ...e };
   }
@@ -4751,7 +4768,7 @@ let tt = class extends N {
         `;
   }
 };
-tt.styles = j`
+et.styles = q`
         :host {
             display: block;
             padding: 12px;
@@ -4772,22 +4789,22 @@ tt.styles = j`
             border-radius: 6px;
         }
     `;
-Kt([
+Yt([
   T({ attribute: !1 })
-], tt.prototype, "hass", 2);
-Kt([
+], et.prototype, "hass", 2);
+Yt([
   T({ attribute: !1 })
-], tt.prototype, "_config", 2);
-tt = Kt([
-  q("babytracker-card-editor")
-], tt);
-tt.getConfigElement = function() {
+], et.prototype, "_config", 2);
+et = Yt([
+  W("babytracker-card-editor")
+], et);
+et.getConfigElement = function() {
   return document.createElement("babytracker-card-editor");
 };
-const vr = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const $r = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   get BabytrackerCardEditor() {
-    return tt;
+    return et;
   }
 }, Symbol.toStringTag, { value: "Module" }));
 export {

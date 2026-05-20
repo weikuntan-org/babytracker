@@ -281,6 +281,20 @@ export class BabytrackerCard extends LitElement {
             justify-content: flex-end;
             margin-top: 8px;
         }
+        dialog .dt-row {
+            display: flex;
+            gap: 6px;
+            align-items: stretch;
+        }
+        dialog .dt-row input {
+            flex: 1;
+            min-width: 0;
+        }
+        dialog .dt-row .now-btn {
+            padding: 4px 10px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
         dialog .quick-other {
             display: flex;
             flex-wrap: wrap;
