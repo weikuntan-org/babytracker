@@ -118,6 +118,48 @@ function dateTimeRow(opts: {
 }
 
 /**
+ * Date-only sibling of `dateTimeRow` — adds a `Today` button next to a
+ * `<input type="date">`. Used by growth and vaccine entries, which are
+ * date-only by design (no time component).
+ */
+function dateRow(opts: {
+    id: string;
+    value?: string;
+    required?: boolean;
+}): TemplateResult {
+    const setToday = (e: Event) => {
+        const btn = e.currentTarget as HTMLElement;
+        const input = btn.parentElement?.querySelector(
+            "input"
+        ) as HTMLInputElement | null;
+        if (!input) return;
+        input.value = _todayDateInput();
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    return html`
+        <div class="dt-row">
+            <input
+                id=${opts.id}
+                name=${opts.id}
+                type="date"
+                .value=${opts.value ?? ""}
+                ?required=${opts.required ?? false}
+            />
+            <button
+                type="button"
+                class="now-btn"
+                aria-label="Set to today"
+                title="Set to today's date"
+                @click=${setToday}
+            >
+                Today
+            </button>
+        </div>
+    `;
+}
+
+/**
  * Convert a `datetime-local` input value (`YYYY-MM-DDTHH:MM` in local time)
  * to a UTC ISO string the backend can parse via `cv.datetime`. Empty input
  * returns undefined so the backend falls back to "now".
@@ -792,13 +834,11 @@ function editEntryForm(
                 : isDateOnly
                 ? html`
                       <label for="started">Date</label>
-                      <input
-                          id="started"
-                          name="started"
-                          type="date"
-                          .value=${_isoToDateInput(entry.timestamp)}
-                          required
-                      />
+                      ${dateRow({
+                          id: "started",
+                          value: _isoToDateInput(entry.timestamp),
+                          required: true
+                      })}
                   `
                 : html`
                       <label for="started">Time</label>
@@ -1179,12 +1219,7 @@ function growthLogForm(
                 </div>
             </div>
             <label for="when">Date</label>
-            <input
-                id="when"
-                name="when"
-                type="date"
-                .value=${_todayDateInput()}
-            />
+            ${dateRow({ id: "when", value: _todayDateInput() })}
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
             ${photoRow(hass)}
@@ -1417,12 +1452,7 @@ function vaccineLogForm(
                 placeholder="optional"
             />
             <label for="when">Date</label>
-            <input
-                id="when"
-                name="when"
-                type="date"
-                .value=${_todayDateInput()}
-            />
+            ${dateRow({ id: "when", value: _todayDateInput() })}
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
             ${photoRow(hass)}
