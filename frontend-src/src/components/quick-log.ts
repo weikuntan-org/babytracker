@@ -4,6 +4,13 @@
 //  - Sleep, Tummy, Walk, Breast feeds: session entries with start + optional
 //    end. If End is left blank → starts an open session at Started. If filled
 //    → log_* retroactively with both bounds.
+//
+// Until the baby config arrives over WS (on first load / HA restart) we
+// render a loading spinner instead of falling back to "all activities":
+// showing disabled buttons gave users a false affordance and let them
+// queue services that the eligibility gate would reject on the server.
+// The WS subscribe helpers retry with backoff, so the spinner converges
+// on the real grid as soon as the integration is up.
 import { html, type TemplateResult } from "lit";
 import { displayBabyName } from "../lib/ha-helpers";
 
@@ -21,30 +28,30 @@ export type ModalRequester = (
     target: "diaper" | "bottle" | "solids" | "other" | SessionRequest
 ) => void;
 
-const DEFAULT_ACTIVITIES = [
-    "feeding",
-    "sleep",
-    "tummy_time",
-    "diaper",
-    "growth",
-    "medication",
-    "vaccine",
-    "walk",
-    "other"
-];
-const DEFAULT_METHODS = ["bottle", "breast_left", "breast_right", "solids"];
-
 export function quickLogTemplate(
     babyConfig: any | undefined,
     baby: string,
     _call: ServiceCaller,
     requestModal: ModalRequester
 ): TemplateResult {
-    const activities: string[] = babyConfig?.enabled_activities ?? DEFAULT_ACTIVITIES;
-    const methods: string[] = babyConfig?.enabled_feeding_methods ?? DEFAULT_METHODS;
+    if (!babyConfig) {
+        return html`
+            <div
+                class="section quick-log-loading"
+                role="status"
+                aria-live="polite"
+                aria-label="Loading activities"
+            >
+                <span class="spinner" aria-hidden="true"></span>
+                <span class="muted">Loading activities…</span>
+            </div>
+        `;
+    }
+    const activities: string[] = babyConfig.enabled_activities ?? [];
+    const methods: string[] = babyConfig.enabled_feeding_methods ?? [];
 
     const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-    const displayName = displayBabyName(babyConfig?.name ?? baby);
+    const displayName = displayBabyName(babyConfig.name ?? baby);
     const buttons: TemplateResult[] = [];
 
     if (activities.includes("diaper")) {
