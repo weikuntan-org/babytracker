@@ -112,6 +112,29 @@ export function summarize(
     return { feedings, wetDiapers, dirtyDiapers, totalVolumeMl, sleepMinutes };
 }
 
+/** Minutes elapsed since the most-recently-ended sleep, or null when no
+ *  completed sleep is present. Iterates and takes the max `ended_at`
+ *  rather than relying on iteration order — recent_entries is sorted by
+ *  start time, so the latest-start isn't necessarily the latest-end if a
+ *  future change ever introduces overlap.
+ */
+export function timeSinceLastWakeMinutes(
+    entries: any[],
+    now: number = Date.now()
+): number | null {
+    let latestEnd: number | null = null;
+    for (const e of entries) {
+        if (e?.type !== "sleep" || !e?.ended_at) continue;
+        const t = Date.parse(e.ended_at);
+        if (!Number.isFinite(t)) continue;
+        if (latestEnd === null || t > latestEnd) latestEnd = t;
+    }
+    if (latestEnd === null) return null;
+    // Clock skew between HA and the browser can flip the sign for a
+    // freshly-ended session; clamp at 0 so the chip never shows "-5m".
+    return Math.max(0, (now - latestEnd) / 60000);
+}
+
 /** Format minutes as "Xm", "Xh", or "Xh Ym". 0 or NaN renders as "0m". */
 export function formatMinutes(mins: number): string {
     if (!Number.isFinite(mins) || mins <= 0) return "0m";
