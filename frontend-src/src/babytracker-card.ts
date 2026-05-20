@@ -94,6 +94,27 @@ export class BabytrackerCard extends LitElement {
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
         }
+        .quick-log-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px 0;
+        }
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--divider-color, #888);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: bt-spin 0.8s linear infinite;
+        }
+        @keyframes bt-spin {
+            to { transform: rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .spinner { animation: none; }
+        }
         .growth-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
