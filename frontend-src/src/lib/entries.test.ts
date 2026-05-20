@@ -7,6 +7,7 @@ import {
     formatVolume,
     parseTimestamp,
     summarize,
+    summarizeDay,
     timeSinceLastWakeMinutes
 } from "./entries";
 
@@ -149,6 +150,157 @@ describe("summarize", () => {
             totalVolumeMl: 0,
             sleepMinutes: 0
         });
+    });
+});
+
+describe("summarizeDay", () => {
+    it("returns zeros for an empty day", () => {
+        const s = summarizeDay([], NOW);
+        expect(s.diapers).toBe(0);
+        expect(s.sleepMinutes).toBe(0);
+        expect(s.longestSleepMinutes).toBe(0);
+        expect(s.bottleFeeds).toBe(0);
+        expect(s.nursingMinutes).toBe(0);
+        expect(s.pumpingMl).toBe(0);
+        expect(s.solidsCount).toBe(0);
+        expect(s.tummyMinutes).toBe(0);
+        expect(s.walkCount).toBe(0);
+        expect(s.medCount).toBe(0);
+        expect(s.vaccineCount).toBe(0);
+    });
+
+    it("counts diapers and splits wet/dirty/both into separate buckets", () => {
+        const entries = [
+            { type: "diaper", timestamp: iso(-1), data: { kind: "wet" } },
+            { type: "diaper", timestamp: iso(-2), data: { kind: "dirty" } },
+            { type: "diaper", timestamp: iso(-3), data: { kind: "both" } },
+            { type: "diaper", timestamp: iso(-4), data: { kind: "wet" } }
+        ];
+        const s = summarizeDay(entries, NOW);
+        expect(s.diapers).toBe(4);
+        expect(s.wet).toBe(2);
+        expect(s.dirty).toBe(1);
+        expect(s.mixed).toBe(1);
+    });
+
+    it("sums sleep durations and tracks the longest single stretch", () => {
+        const entries = [
+            { type: "sleep", timestamp: iso(-8), ended_at: iso(-7) }, // 60m
+            { type: "sleep", timestamp: iso(-4), ended_at: iso(-0.5) }, // 210m
+            { type: "sleep", timestamp: iso(-12), ended_at: iso(-10) } // 120m
+        ];
+        const s = summarizeDay(entries, NOW);
+        expect(s.sleepMinutes).toBeCloseTo(60 + 210 + 120, 2);
+        expect(s.longestSleepMinutes).toBeCloseTo(210, 2);
+    });
+
+    it("treats an in-progress sleep as ending at `now`", () => {
+        const entries = [
+            { type: "sleep", timestamp: iso(-2), ended_at: null }
+        ];
+        const s = summarizeDay(entries, NOW);
+        expect(s.sleepMinutes).toBeCloseTo(120, 2);
+        expect(s.longestSleepMinutes).toBeCloseTo(120, 2);
+    });
+
+    it("counts bottle feeds separately from nursing/solids and totals volume", () => {
+        const entries = [
+            {
+                type: "feeding",
+                timestamp: iso(-1),
+                data: { method: "bottle", amount: 4, unit: "oz" }
+            },
+            {
+                type: "feeding",
+                timestamp: iso(-3),
+                data: { method: "bottle", amount: 100, unit: "ml" }
+            },
+            {
+                type: "feeding",
+                timestamp: iso(-5),
+                ended_at: iso(-4.5),
+                data: { method: "breast_left" }
+            },
+            {
+                type: "feeding",
+                timestamp: iso(-6),
+                data: { method: "solids" }
+            }
+        ];
+        const s = summarizeDay(entries, NOW);
+        expect(s.bottleFeeds).toBe(2);
+        expect(s.bottleVolumeMl).toBeCloseTo(4 * 29.5735 + 100, 4);
+        expect(s.nursingMinutes).toBeCloseTo(30, 2);
+        expect(s.solidsCount).toBe(1);
+    });
+
+    it("splits nursing minutes per side", () => {
+        const entries = [
+            {
+                type: "feeding",
+                timestamp: iso(-2),
+                ended_at: iso(-1.75),
+                data: { method: "breast_left" } // 15m
+            },
+            {
+                type: "feeding",
+                timestamp: iso(-4),
+                ended_at: iso(-3.5),
+                data: { method: "breast_right" } // 30m
+            }
+        ];
+        const s = summarizeDay(entries, NOW);
+        expect(s.nursingMinutes).toBeCloseTo(45, 2);
+        expect(s.nursingLeftMinutes).toBeCloseTo(15, 2);
+        expect(s.nursingRightMinutes).toBeCloseTo(30, 2);
+    });
+
+    it("totals pumping volume across sessions, normalising oz→ml", () => {
+        const entries = [
+            {
+                type: "pumping",
+                timestamp: iso(-1),
+                data: { volume: 4, unit: "oz" }
+            },
+            {
+                type: "pumping",
+                timestamp: iso(-3),
+                data: { volume: 80, unit: "ml" }
+            }
+        ];
+        const s = summarizeDay(entries, NOW);
+        expect(s.pumpingMl).toBeCloseTo(4 * 29.5735 + 80, 4);
+    });
+
+    it("counts tummy time, walks, meds, and vaccines", () => {
+        const entries = [
+            { type: "tummy_time", timestamp: iso(-2), ended_at: iso(-1.75) },
+            { type: "walk", timestamp: iso(-3), ended_at: iso(-2.5) },
+            { type: "walk", timestamp: iso(-5), ended_at: iso(-4) },
+            { type: "medication", timestamp: iso(-6), data: {} },
+            { type: "medication", timestamp: iso(-7), data: {} },
+            { type: "vaccine", timestamp: iso(-8), data: {} }
+        ];
+        const s = summarizeDay(entries, NOW);
+        expect(s.tummyMinutes).toBeCloseTo(15, 2);
+        expect(s.walkCount).toBe(2);
+        expect(s.walkMinutes).toBeCloseTo(90, 2);
+        expect(s.medCount).toBe(2);
+        expect(s.vaccineCount).toBe(1);
+    });
+
+    it("does not double-count `both` diapers into wet+dirty", () => {
+        // Unlike the 24h `summarize`, the day summary keeps the three diaper
+        // kinds in separate buckets so the chip detail breakdown is honest
+        // about how many were mixed vs only-wet/only-dirty.
+        const entries = [
+            { type: "diaper", timestamp: iso(-1), data: { kind: "both" } }
+        ];
+        const s = summarizeDay(entries, NOW);
+        expect(s.diapers).toBe(1);
+        expect(s.wet).toBe(0);
+        expect(s.dirty).toBe(0);
+        expect(s.mixed).toBe(1);
     });
 });
 

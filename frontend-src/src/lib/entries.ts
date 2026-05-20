@@ -112,6 +112,158 @@ export function summarize(
     return { feedings, wetDiapers, dirtyDiapers, totalVolumeMl, sleepMinutes };
 }
 
+export interface DaySummary {
+    // Core — always rendered
+    diapers: number;
+    wet: number;
+    dirty: number;
+    mixed: number;
+    sleepMinutes: number;
+    longestSleepMinutes: number;
+    // Conditional — only render chip when non-zero
+    bottleFeeds: number;
+    bottleVolumeMl: number;
+    nursingMinutes: number;
+    nursingLeftMinutes: number;
+    nursingRightMinutes: number;
+    pumpingMl: number;
+    solidsCount: number;
+    tummyMinutes: number;
+    walkCount: number;
+    walkMinutes: number;
+    medCount: number;
+    vaccineCount: number;
+}
+
+function _durationMinutes(
+    start: number,
+    endedAt: string | null | undefined,
+    now: number
+): number {
+    if (start <= 0) return 0;
+    const end =
+        endedAt != null && endedAt !== "" ? parseTimestamp(endedAt) : now;
+    if (end <= start) return 0;
+    return (end - start) / 60000;
+}
+
+/**
+ * Compute summary chips for a single calendar day. Entries are assumed to be
+ * already day-bounded by the caller (the WS subscription filters by timestamp
+ * falling inside the local-day window) — duration-bearing entries (sleep,
+ * tummy time, walks, nursing) are counted in full on the day they *start*,
+ * even if they extend past midnight, since that's what the user sees in the
+ * day's entry list.
+ *
+ * For in-progress sessions (no `ended_at`) `now` is used as the end. This is
+ * intentional for today's view; on past days an unclosed session is unusual
+ * but treated the same way to keep the function pure.
+ */
+export function summarizeDay(
+    entries: readonly RawEntry[],
+    now: number = Date.now()
+): DaySummary {
+    const s: DaySummary = {
+        diapers: 0,
+        wet: 0,
+        dirty: 0,
+        mixed: 0,
+        sleepMinutes: 0,
+        longestSleepMinutes: 0,
+        bottleFeeds: 0,
+        bottleVolumeMl: 0,
+        nursingMinutes: 0,
+        nursingLeftMinutes: 0,
+        nursingRightMinutes: 0,
+        pumpingMl: 0,
+        solidsCount: 0,
+        tummyMinutes: 0,
+        walkCount: 0,
+        walkMinutes: 0,
+        medCount: 0,
+        vaccineCount: 0
+    };
+
+    for (const e of entries) {
+        const ts = parseTimestamp(e.timestamp);
+        const data = (e.data ?? {}) as Record<string, unknown>;
+
+        switch (e.type) {
+            case "diaper": {
+                const kind = String(data.kind ?? "");
+                if (kind === "wet") {
+                    s.diapers += 1;
+                    s.wet += 1;
+                } else if (kind === "dirty") {
+                    s.diapers += 1;
+                    s.dirty += 1;
+                } else if (kind === "both") {
+                    s.diapers += 1;
+                    s.mixed += 1;
+                }
+                break;
+            }
+            case "sleep": {
+                const mins = _durationMinutes(ts, e.ended_at, now);
+                s.sleepMinutes += mins;
+                if (mins > s.longestSleepMinutes) s.longestSleepMinutes = mins;
+                break;
+            }
+            case "feeding": {
+                const method = String(data.method ?? "");
+                if (method === "bottle") {
+                    s.bottleFeeds += 1;
+                    const amount = Number(data.amount ?? 0);
+                    const unit = String(data.unit ?? "");
+                    if (amount > 0) {
+                        s.bottleVolumeMl +=
+                            unit === "oz" ? amount * ML_PER_OZ : amount;
+                    }
+                } else if (
+                    method === "breast_left" ||
+                    method === "breast_right"
+                ) {
+                    const mins = _durationMinutes(ts, e.ended_at, now);
+                    s.nursingMinutes += mins;
+                    if (method === "breast_left")
+                        s.nursingLeftMinutes += mins;
+                    else s.nursingRightMinutes += mins;
+                } else if (method === "solids") {
+                    s.solidsCount += 1;
+                }
+                break;
+            }
+            case "pumping": {
+                const volume = Number(data.volume ?? 0);
+                const unit = String(data.unit ?? "");
+                if (volume > 0) {
+                    s.pumpingMl += unit === "oz" ? volume * ML_PER_OZ : volume;
+                }
+                break;
+            }
+            case "tummy_time": {
+                s.tummyMinutes += _durationMinutes(ts, e.ended_at, now);
+                break;
+            }
+            case "walk": {
+                s.walkCount += 1;
+                s.walkMinutes += _durationMinutes(ts, e.ended_at, now);
+                break;
+            }
+            case "medication": {
+                s.medCount += 1;
+                break;
+            }
+            case "vaccine": {
+                s.vaccineCount += 1;
+                break;
+            }
+        }
+    }
+
+    return s;
+}
+
 /** Minutes elapsed since the most-recently-ended sleep, or null when no
  *  completed sleep is present. Iterates and takes the max `ended_at`
  *  rather than relying on iteration order — recent_entries is sorted by
