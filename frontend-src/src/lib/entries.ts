@@ -147,6 +147,20 @@ function _durationMinutes(
 }
 
 /**
+ * Public wrapper around `_durationMinutes` for ISO-string inputs. When
+ * `endedAt` is null/undefined/empty the session is treated as still open
+ * and `now` is used as the end. Returns 0 when the start is missing or
+ * non-positive (i.e. the entry has no usable timestamp).
+ */
+export function sessionDurationMinutes(
+    timestamp: string | null | undefined,
+    endedAt: string | null | undefined,
+    now: number = Date.now()
+): number {
+    return _durationMinutes(parseTimestamp(timestamp), endedAt, now);
+}
+
+/**
  * Compute summary chips for a single calendar day. Entries are assumed to be
  * already day-bounded by the caller (the WS subscription filters by timestamp
  * falling inside the local-day window) — duration-bearing entries (sleep,

@@ -4,7 +4,12 @@
 // place so the two surfaces stay visually consistent.
 import { html, type TemplateResult } from "lit";
 
-import { entryLabel, formatClock } from "../lib/entries";
+import {
+    entryLabel,
+    formatClock,
+    formatMinutes,
+    sessionDurationMinutes
+} from "../lib/entries";
 import "./entry-thumbnail";
 
 export type EntryRequester = (entry: any) => void;
@@ -82,18 +87,37 @@ export function entryRowTemplate(
 
 function _renderTime(entry: any): TemplateResult {
     const start = formatClock(entry.timestamp);
+    const isSleep = entry.type === "sleep";
+    const isSession = SESSION_TYPES.has(String(entry.type ?? ""));
+    // Sleep entries show duration in both states so the user can see how
+    // long the stretch was (or has been so far) without opening the row.
+    // For ongoing sleep we still only have the start clock to show.
+    if (isSleep && (!entry.ended_at || entry.ended_at === entry.timestamp)) {
+        const mins = sessionDurationMinutes(entry.timestamp, entry.ended_at);
+        return html`<span class="muted"
+            >${start} (${formatMinutes(mins)}, ongoing)</span
+        >`;
+    }
     // Show the closing time for completed session-shaped entries (sleep,
-    // feeding, tummy time, walk) so the user can see how long it lasted
-    // without opening the row. Bottle feedings have started_at == ended_at;
-    // omit the range to avoid noise like "1:39 PM – 1:39 PM".
+    // feeding, tummy time, walk) so the user can see when it ended without
+    // opening the row. Bottle feedings have started_at == ended_at; omit
+    // the range to avoid noise like "1:39 PM – 1:39 PM".
     if (
-        SESSION_TYPES.has(String(entry.type ?? "")) &&
+        isSession &&
         entry.ended_at &&
         entry.ended_at !== entry.timestamp
     ) {
-        return html`<span class="muted"
-            >${start} – ${formatClock(entry.ended_at)}</span
-        >`;
+        const end = formatClock(entry.ended_at);
+        if (isSleep) {
+            const mins = sessionDurationMinutes(
+                entry.timestamp,
+                entry.ended_at
+            );
+            return html`<span class="muted"
+                >${start} – ${end} (${formatMinutes(mins)})</span
+            >`;
+        }
+        return html`<span class="muted">${start} – ${end}</span>`;
     }
     return html`<span class="muted">${start}</span>`;
 }

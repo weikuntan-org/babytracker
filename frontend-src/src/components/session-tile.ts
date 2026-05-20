@@ -2,6 +2,7 @@
 // one-tap end button.
 import { html, type TemplateResult } from "lit";
 
+import { formatMinutes, sessionDurationMinutes } from "../lib/entries";
 import { babyEntityId } from "../lib/ha-helpers";
 
 type ServiceCaller = (
@@ -32,10 +33,14 @@ export function sessionTileTemplate(
     const banners: TemplateResult[] = [];
     if (sleeping) {
         const started = hass.states[babyEntityId(baby, "last_sleep_start")]?.state;
+        const mins = started ? sessionDurationMinutes(started, null) : 0;
         banners.push(
             html`
                 <div class="chip warning" role="status">
-                    Sleeping ${started ? html`· started ${_clock(started)}` : ""}
+                    Sleeping${started
+                        ? html` · started ${_clock(started)} ·
+                          ${formatMinutes(mins)}`
+                        : ""}
                     <button
                         aria-label="End sleep"
                         @click=${(e: Event) =>
