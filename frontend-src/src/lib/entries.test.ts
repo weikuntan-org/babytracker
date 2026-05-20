@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     entriesInLastWindow,
+    entryLabel,
     formatClock,
     formatMinutes,
     formatVolume,
@@ -247,5 +248,65 @@ describe("timeSinceLastWakeMinutes", () => {
         ];
         const mins = timeSinceLastWakeMinutes(entries, NOW);
         expect(mins).toBeCloseTo(60, 2);
+    });
+});
+
+describe("entryLabel", () => {
+    it("capitalizes the leading letter of plain types", () => {
+        expect(entryLabel({ type: "sleep" })).toBe("Sleep");
+        expect(entryLabel({ type: "walk" })).toBe("Walk");
+        expect(entryLabel({ type: "growth" })).toBe("Growth");
+        expect(entryLabel({ type: "medication" })).toBe("Medication");
+    });
+
+    it("replaces underscores with spaces in type names", () => {
+        expect(entryLabel({ type: "tummy_time" })).toBe("Tummy time");
+    });
+
+    it("renders feedings with method and humanises breast_left/right", () => {
+        expect(
+            entryLabel({ type: "feeding", data: { method: "breast_left" } })
+        ).toBe("Feeding (breast left)");
+        expect(
+            entryLabel({ type: "feeding", data: { method: "solids" } })
+        ).toBe("Feeding (solids)");
+    });
+
+    it("includes amount/unit on bottle feedings", () => {
+        expect(
+            entryLabel({
+                type: "feeding",
+                data: { method: "bottle", amount: 4, unit: "oz" }
+            })
+        ).toBe("Feeding (bottle, 4 oz)");
+    });
+
+    it("renders diapers with their kind", () => {
+        expect(entryLabel({ type: "diaper", data: { kind: "wet" } })).toBe(
+            "Diaper (wet)"
+        );
+        expect(entryLabel({ type: "diaper", data: { kind: "both" } })).toBe(
+            "Diaper (both)"
+        );
+    });
+
+    it("for 'other' entries shows just the user-provided name (capitalised)", () => {
+        expect(entryLabel({ type: "other", data: { name: "bath" } })).toBe(
+            "Bath"
+        );
+        // Quick-log chip labels arrive already title-cased; left alone.
+        expect(
+            entryLabel({ type: "other", data: { name: "Butt wash" } })
+        ).toBe("Butt wash");
+        // User-typed entries get the leading letter capitalised, the rest
+        // of the casing is left as the user typed it.
+        expect(
+            entryLabel({ type: "other", data: { name: "doctor visit" } })
+        ).toBe("Doctor visit");
+    });
+
+    it("falls back to the type when 'other' has no name", () => {
+        expect(entryLabel({ type: "other", data: {} })).toBe("Other");
+        expect(entryLabel({ type: "other" })).toBe("Other");
     });
 });
