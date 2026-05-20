@@ -71,6 +71,53 @@ function _nowLocalForInput(): string {
 }
 
 /**
+ * `datetime-local` input + a "Now" button that one-clicks the value to
+ * the current local time. The button lives next to the input so
+ * parents ending an open session don't have to drill through the
+ * datetime picker just to write "now".
+ */
+function dateTimeRow(opts: {
+    id: string;
+    value?: string;
+    required?: boolean;
+    placeholder?: string;
+}): TemplateResult {
+    const setNow = (e: Event) => {
+        const btn = e.currentTarget as HTMLElement;
+        const input = btn.parentElement?.querySelector(
+            "input"
+        ) as HTMLInputElement | null;
+        if (!input) return;
+        input.value = _nowLocalForInput();
+        // Fire input/change so any listeners (validation, form state)
+        // react the same way as a manual edit.
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    return html`
+        <div class="dt-row">
+            <input
+                id=${opts.id}
+                name=${opts.id}
+                type="datetime-local"
+                .value=${opts.value ?? ""}
+                placeholder=${opts.placeholder ?? ""}
+                ?required=${opts.required ?? false}
+            />
+            <button
+                type="button"
+                class="now-btn"
+                aria-label="Set to now"
+                title="Set to current time"
+                @click=${setNow}
+            >
+                Now
+            </button>
+        </div>
+    `;
+}
+
+/**
  * Convert a `datetime-local` input value (`YYYY-MM-DDTHH:MM` in local time)
  * to a UTC ISO string the backend can parse via `cv.datetime`. Empty input
  * returns undefined so the backend falls back to "now".
@@ -359,12 +406,7 @@ function diaperForm(
         <form @submit=${onSubmit}>
             <h2>Log diaper</h2>
             <label for="when">When</label>
-            <input
-                id="when"
-                name="when"
-                type="datetime-local"
-                .value=${_nowLocalForInput()}
-            />
+            ${dateTimeRow({ id: "when", value: _nowLocalForInput() })}
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
             ${photoRow(hass)}
@@ -465,13 +507,11 @@ function bottleForm(
                 <option value="ml" ?selected=${defaultUnit === "ml"}>ml</option>
             </select>
             <label for="at">Time</label>
-            <input
-                id="at"
-                name="at"
-                type="datetime-local"
-                .value=${_nowLocalForInput()}
-                required
-            />
+            ${dateTimeRow({
+                id: "at",
+                value: _nowLocalForInput(),
+                required: true
+            })}
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
             ${photoRow(hass)}
@@ -517,12 +557,7 @@ function solidsForm(
                 autofocus: true
             })}
             <label for="when">When</label>
-            <input
-                id="when"
-                name="when"
-                type="datetime-local"
-                .value=${_nowLocalForInput()}
-            />
+            ${dateTimeRow({ id: "when", value: _nowLocalForInput() })}
             ${photoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>
@@ -591,12 +626,7 @@ function otherForm(
                 required
             />
             <label for="when">When</label>
-            <input
-                id="when"
-                name="when"
-                type="datetime-local"
-                .value=${_nowLocalForInput()}
-            />
+            ${dateTimeRow({ id: "when", value: _nowLocalForInput() })}
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
             ${photoRow(hass)}
@@ -746,22 +776,18 @@ function editEntryForm(
             ${isSession
                 ? html`
                       <label for="started">Started</label>
-                      <input
-                          id="started"
-                          name="started"
-                          type="datetime-local"
-                          .value=${_isoToLocalInput(entry.timestamp)}
-                          required
-                      />
+                      ${dateTimeRow({
+                          id: "started",
+                          value: _isoToLocalInput(entry.timestamp),
+                          required: true
+                      })}
                       <label for="ended"
                           >Ended <span class="muted">(blank = ongoing)</span></label
                       >
-                      <input
-                          id="ended"
-                          name="ended"
-                          type="datetime-local"
-                          .value=${_isoToLocalInput(entry.ended_at)}
-                      />
+                      ${dateTimeRow({
+                          id: "ended",
+                          value: _isoToLocalInput(entry.ended_at)
+                      })}
                   `
                 : isDateOnly
                 ? html`
@@ -776,13 +802,11 @@ function editEntryForm(
                   `
                 : html`
                       <label for="started">Time</label>
-                      <input
-                          id="started"
-                          name="started"
-                          type="datetime-local"
-                          .value=${_isoToLocalInput(entry.timestamp)}
-                          required
-                      />
+                      ${dateTimeRow({
+                          id: "started",
+                          value: _isoToLocalInput(entry.timestamp),
+                          required: true
+                      })}
                   `}
             ${type === "diaper"
                 ? html`
@@ -1035,20 +1059,16 @@ function sessionForm(
         <form @submit=${onSubmit}>
             <h2>${titleMap[activity]}</h2>
             <label for="started">Started</label>
-            <input
-                id="started"
-                name="started"
-                type="datetime-local"
-                .value=${_nowLocalForInput()}
-                required
-            />
+            ${dateTimeRow({
+                id: "started",
+                value: _nowLocalForInput(),
+                required: true
+            })}
             <label for="ended">Ended <span class="muted">(optional)</span></label>
-            <input
-                id="ended"
-                name="ended"
-                type="datetime-local"
-                placeholder="leave blank for an open session"
-            />
+            ${dateTimeRow({
+                id: "ended",
+                placeholder: "leave blank for an open session"
+            })}
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
             ${photoRow(hass)}
