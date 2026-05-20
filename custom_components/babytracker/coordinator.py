@@ -22,7 +22,7 @@ from .const import (
     SIGNAL_DATA_UPDATED,
 )
 from .models import Baby, Entry
-from .runtime import now_iso
+from .runtime import now_iso, parse_ts
 from .store import BabytrackerStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -477,11 +477,11 @@ class BabytrackerCoordinator:
             pool = list(self._entries)
         else:
             pool = [e for e in self._entries if e.baby_id == baby_id]
-        pool.sort(key=lambda e: e.timestamp, reverse=True)
+        pool.sort(key=lambda e: parse_ts(e.timestamp), reverse=True)
         return pool[:RECENT_ENTRIES_CAP]
 
     def latest_growth_data(self, baby_id: str) -> dict[str, Any]:
-        for entry in sorted(self._entries, key=lambda e: e.timestamp, reverse=True):
+        for entry in sorted(self._entries, key=lambda e: parse_ts(e.timestamp), reverse=True):
             if entry.baby_id == baby_id and entry.type == "growth":
                 return entry.data
         return {}

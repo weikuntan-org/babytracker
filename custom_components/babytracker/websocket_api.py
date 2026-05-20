@@ -17,7 +17,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from .const import SIGNAL_DATA_UPDATED
 from .models import entry_to_card_dict
 from .photo_storage import PHOTO_MAX_BYTES, PHOTO_MIME_TO_EXT, write_photo
-from .runtime import get_coordinator, get_entry_options
+from .runtime import get_coordinator, get_entry_options, parse_ts
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -235,7 +235,7 @@ def _entries_in_range_payload(
         for e in coord.entries_by_baby(baby.id)
         if start_iso <= e.timestamp <= end_iso
     ]
-    out.sort(key=lambda r: r["timestamp"], reverse=True)
+    out.sort(key=lambda r: parse_ts(r["timestamp"]), reverse=True)
     return out
 
 
@@ -306,7 +306,7 @@ def _vaccine_history_payload(coord, slug: str) -> list[dict[str, Any]] | None:
                 "staff": e.staff,
             }
         )
-    out.sort(key=lambda r: r["timestamp"], reverse=True)
+    out.sort(key=lambda r: parse_ts(r["timestamp"]), reverse=True)
     return out
 
 
@@ -373,7 +373,7 @@ def _growth_history_payload(coord, slug: str) -> list[dict[str, Any]] | None:
                 "staff": e.staff,
             }
         )
-    out.sort(key=lambda r: r["timestamp"], reverse=True)
+    out.sort(key=lambda r: parse_ts(r["timestamp"]), reverse=True)
     return out
 
 
