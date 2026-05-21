@@ -286,7 +286,7 @@ ct.elementStyles = [], ct.shadowRootOptions = { mode: "open" }, ct[mt("elementPr
  */
 const _t = globalThis, ae = (t) => t, Et = _t.trustedTypes, le = Et ? Et.createPolicy("lit-html", { createHTML: (t) => t }) : void 0, Ee = "$lit$", j = `lit$${Math.random().toFixed(9).slice(2)}$`, Pe = "?" + j, Qe = `<${Pe}>`, nt = document, yt = () => nt.createComment(""), vt = (t) => t === null || typeof t != "object" && typeof t != "function", Gt = Array.isArray, Je = (t) => Gt(t) || typeof (t == null ? void 0 : t[Symbol.iterator]) == "function", Ot = `[ 	
 \f\r]`, gt = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, ce = /-->/g, de = />/g, tt = RegExp(`>|${Ot}(?:([^\\s"'>=/]+)(${Ot}*=${Ot}*(?:[^ 	
-\f\r"'\`<>=]|("|')|))|$)`, "g"), ue = /'/g, pe = /"/g, Me = /^(?:script|style|textarea|title)$/i, Te = (t) => (e, ...i) => ({ _$litType$: t, strings: e, values: i }), c = Te(1), H = Te(2), dt = Symbol.for("lit-noChange"), C = Symbol.for("lit-nothing"), he = /* @__PURE__ */ new WeakMap(), et = nt.createTreeWalker(nt, 129);
+\f\r"'\`<>=]|("|')|))|$)`, "g"), ue = /'/g, pe = /"/g, Me = /^(?:script|style|textarea|title)$/i, Te = (t) => (e, ...i) => ({ _$litType$: t, strings: e, values: i }), c = Te(1), z = Te(2), dt = Symbol.for("lit-noChange"), C = Symbol.for("lit-nothing"), he = /* @__PURE__ */ new WeakMap(), et = nt.createTreeWalker(nt, 129);
 function Ne(t, e) {
   if (!Gt(t) || !t.hasOwnProperty("raw")) throw Error("invalid template strings array");
   return le !== void 0 ? le.createHTML(e) : e;
@@ -811,23 +811,23 @@ function gi(t, e, i, n) {
     `;
 }
 const Pt = 29.5735, Le = 24 * 60 * 60 * 1e3;
-function z(t) {
+function I(t) {
   if (!t) return 0;
   const e = Date.parse(t);
   return Number.isNaN(e) ? 0 : e;
 }
 function fi(t, e = Le, i = Date.now()) {
   const n = i - e;
-  return t.filter((r) => z(r.timestamp) >= n).slice().sort((r, s) => z(s.timestamp) - z(r.timestamp));
+  return t.filter((r) => I(r.timestamp) >= n).slice().sort((r, s) => I(s.timestamp) - I(r.timestamp));
 }
 function mi(t, e = Date.now(), i = Le) {
   var d, b, h;
   const n = e - i;
   let r = 0, s = 0, o = 0, a = 0, l = 0;
   for (const g of t) {
-    const m = z(g.timestamp);
+    const m = I(g.timestamp);
     if (g.type === "sleep") {
-      const f = m, y = g.ended_at != null && g.ended_at !== "" ? z(g.ended_at) : e;
+      const f = m, y = g.ended_at != null && g.ended_at !== "" ? I(g.ended_at) : e;
       if (f > 0 && y > f && y > n) {
         const p = Math.max(f, n), $ = Math.min(y, e);
         $ > p && (l += ($ - p) / 6e4);
@@ -849,11 +849,11 @@ function mi(t, e = Date.now(), i = Le) {
 }
 function ft(t, e, i) {
   if (t <= 0) return 0;
-  const n = e != null && e !== "" ? z(e) : i;
+  const n = e != null && e !== "" ? I(e) : i;
   return n <= t ? 0 : (n - t) / 6e4;
 }
 function qt(t, e, i = Date.now()) {
-  return ft(z(t), e, i);
+  return ft(I(t), e, i);
 }
 function _i(t, e = Date.now()) {
   const i = {
@@ -876,7 +876,7 @@ function _i(t, e = Date.now()) {
     vaccineCount: 0
   };
   for (const n of t) {
-    const r = z(n.timestamp), s = n.data ?? {};
+    const r = I(n.timestamp), s = n.data ?? {};
     switch (n.type) {
       case "diaper": {
         const o = String(s.kind ?? "");
@@ -961,7 +961,7 @@ function be(t) {
   return t && t.charAt(0).toUpperCase() + t.slice(1);
 }
 function ge(t) {
-  const e = z(t);
+  const e = I(t);
   return e === 0 ? "" : new Date(e).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit"
@@ -1044,7 +1044,7 @@ var wi = Object.defineProperty, xi = Object.getOwnPropertyDescriptor, st = (t, e
     (o = t[s]) && (r = (n ? o(e, i, r) : o(r)) || r);
   return n && r && wi(e, i, r), r;
 };
-let I = class extends O {
+let U = class extends O {
   constructor() {
     super(...arguments), this.photoPath = "", this.size = 128, this._url = "", this._failed = !1, this._open = !1, this._lastResolved = "", this._resolveToken = 0, this._onKeydown = (t) => {
       t.key === "Escape" && (t.preventDefault(), this._close_lightbox());
@@ -1148,7 +1148,7 @@ let I = class extends O {
         `;
   }
 };
-I.styles = F`
+U.styles = F`
         :host {
             display: inline-flex;
             align-items: center;
@@ -1202,25 +1202,25 @@ I.styles = F`
     `;
 st([
   M({ attribute: !1 })
-], I.prototype, "hass", 2);
+], U.prototype, "hass", 2);
 st([
   M()
-], I.prototype, "photoPath", 2);
+], U.prototype, "photoPath", 2);
 st([
   M({ type: Number })
-], I.prototype, "size", 2);
+], U.prototype, "size", 2);
 st([
   k()
-], I.prototype, "_url", 2);
+], U.prototype, "_url", 2);
 st([
   k()
-], I.prototype, "_failed", 2);
+], U.prototype, "_failed", 2);
 st([
   k()
-], I.prototype, "_open", 2);
-I = st([
+], U.prototype, "_open", 2);
+U = st([
   G("bt-entry-thumbnail")
-], I);
+], U);
 const ki = /* @__PURE__ */ new Set([
   "sleep",
   "feeding",
@@ -1622,7 +1622,7 @@ function _e(t) {
                 style="width:100%;height:${o}px;"
             >
                 ${x.map(
-    (_) => H`
+    (_) => z`
                         <line
                             x1=${a}
                             x2=${s - l}
@@ -1644,12 +1644,12 @@ function _e(t) {
                     `
   )}
                 ${y.map((_) => {
-    if (_.points.length === 0) return H``;
+    if (_.points.length === 0) return z``;
     const u = _.points.map(
       (v, D) => `${D === 0 ? "M" : "L"}${m(v.ts).toFixed(1)},${f(v.p).toFixed(1)}`
     ).join(" ");
-    return H`
-                        ${_.points.length > 1 ? H`<path
+    return z`
+                        ${_.points.length > 1 ? z`<path
                                 d=${u}
                                 fill="none"
                                 stroke=${_.color}
@@ -1658,7 +1658,7 @@ function _e(t) {
                                 stroke-linecap="round"
                               ></path>` : ""}
                         ${_.points.map(
-      (v) => H`
+      (v) => z`
                                 <circle
                                     cx=${m(v.ts)}
                                     cy=${f(v.p)}
@@ -2275,7 +2275,7 @@ function bt() {
   const t = /* @__PURE__ */ new Date();
   return `${t.getFullYear()}-${N(t.getMonth() + 1)}-${N(t.getDate())}T${N(t.getHours())}:${N(t.getMinutes())}`;
 }
-function U(t) {
+function R(t) {
   if (!t) return;
   const e = Date.parse(t);
   if (!Number.isNaN(e))
@@ -2305,7 +2305,7 @@ function Jt(t) {
   if (!Number.isNaN(e))
     return new Date(e).toISOString();
 }
-function R(t) {
+function L(t) {
   const e = (i) => {
     var s;
     const r = (s = i.currentTarget.parentElement) == null ? void 0 : s.querySelector(
@@ -2369,7 +2369,7 @@ function Yi(t, e, i, n, r, s, o) {
   return c`
         <form @submit=${(b) => {
     b.preventDefault();
-    const h = b.currentTarget, g = new FormData(h), m = String(g.get("amount") ?? ""), f = m === "" ? void 0 : Number(m), y = U(String(g.get("at") ?? "")), p = String(g.get("unit") ?? a), $ = String(g.get("notes") ?? "") || void 0;
+    const h = b.currentTarget, g = new FormData(h), m = String(g.get("amount") ?? ""), f = m === "" ? void 0 : Number(m), y = R(String(g.get("at") ?? "")), p = String(g.get("unit") ?? a), $ = String(g.get("notes") ?? "") || void 0;
     s("log_feeding", {
       baby: e,
       method: "bottle",
@@ -2399,7 +2399,7 @@ function Yi(t, e, i, n, r, s, o) {
                 <option value="ml" ?selected=${a === "ml"}>ml</option>
             </select>
             <label for="at">Time</label>
-            ${R({
+            ${L({
     id: "at",
     value: bt(),
     required: !0
@@ -2444,14 +2444,14 @@ function Xi(t, e, i, n) {
     i("log_diaper", {
       baby: e,
       kind: String(a.get("kind") ?? "wet"),
-      timestamp: U(String(a.get("when") ?? "")),
+      timestamp: R(String(a.get("when") ?? "")),
       notes: String(a.get("notes") ?? "") || void 0,
       photo_path: Q(o)
     });
   }}>
             <h2>Log diaper</h2>
             <label for="when">When</label>
-            ${R({ id: "when", value: bt() })}
+            ${L({ id: "when", value: bt() })}
             <label for="notes">Notes</label>
             ${X(t)}
             ${Z(t)}
@@ -2495,9 +2495,9 @@ function Xi(t, e, i, n) {
 function Zi(t, e, i, n, r) {
   const s = String((e == null ? void 0 : e.type) ?? ""), o = (e == null ? void 0 : e.data) ?? {}, a = s === "feeding" && (o.method === "bottle" || o.method === "solids"), l = s === "vaccine" || s === "growth", d = Wi.has(s) && !a, b = (m) => {
     m.preventDefault();
-    const f = m.currentTarget, y = new FormData(f), p = {}, $ = l ? Jt(String(y.get("started") ?? "")) : U(String(y.get("started") ?? ""));
+    const f = m.currentTarget, y = new FormData(f), p = {}, $ = l ? Jt(String(y.get("started") ?? "")) : R(String(y.get("started") ?? ""));
     if ($ && (p.timestamp = $), d) {
-      const u = U(String(y.get("ended") ?? ""));
+      const u = R(String(y.get("ended") ?? ""));
       p.ended_at = u ?? null;
     } else a && $ && (p.ended_at = $);
     const w = String(y.get("notes") ?? "");
@@ -2546,7 +2546,7 @@ function Zi(t, e, i, n, r) {
             <h2>${g}</h2>
             ${d ? c`
                       <label for="started">Started</label>
-                      ${R({
+                      ${L({
     id: "started",
     value: Bt(e.timestamp),
     required: !0
@@ -2554,7 +2554,7 @@ function Zi(t, e, i, n, r) {
                       <label for="ended"
                           >Ended <span class="muted">(blank = ongoing)</span></label
                       >
-                      ${R({
+                      ${L({
     id: "ended",
     value: Bt(e.ended_at)
   })}
@@ -2567,7 +2567,7 @@ function Zi(t, e, i, n, r) {
   })}
                   ` : c`
                       <label for="started">Time</label>
-                      ${R({
+                      ${L({
     id: "started",
     value: Bt(e.timestamp),
     required: !0
@@ -2867,22 +2867,38 @@ function nn(t, e, i, n) {
     i("log_other", {
       baby: e,
       name: String(l.get("name") ?? ""),
-      timestamp: U(String(l.get("started") ?? "")),
-      ended_at: U(String(l.get("ended") ?? "")) || void 0,
+      timestamp: R(String(l.get("started") ?? "")),
+      ended_at: R(String(l.get("ended") ?? "")) || void 0,
       notes: String(l.get("notes") ?? "") || void 0,
       photo_path: Q(a)
     });
-  }, s = (o) => i("log_other", { baby: e, name: o });
+  }, s = (o, a) => {
+    const l = o.currentTarget.form, d = { baby: e, name: a };
+    if (l) {
+      const b = new FormData(l), h = R(String(b.get("started") ?? "")), g = R(String(b.get("ended") ?? ""));
+      h && (d.timestamp = h), g && (d.ended_at = g);
+    }
+    i("log_other", d);
+  };
   return c`
         <form @submit=${r}>
             <h2>Log activity</h2>
+            <label for="started">Started</label>
+            ${L({ id: "started", value: bt() })}
+            <label for="ended"
+                >Ended <span class="muted">(optional)</span></label
+            >
+            ${L({
+    id: "ended",
+    placeholder: "leave blank for a point-in-time event"
+  })}
             <div class="quick-other" role="group" aria-label="Quick activities">
                 ${en.map(
     (o) => c`
                         <button
                             type="button"
                             class="quick"
-                            @click=${() => s(o)}
+                            @click=${(a) => s(a, o)}
                         >
                             ${o}
                         </button>
@@ -2898,15 +2914,6 @@ function nn(t, e, i, n) {
                 autofocus
                 required
             />
-            <label for="started">Started</label>
-            ${R({ id: "started", value: bt() })}
-            <label for="ended"
-                >Ended <span class="muted">(optional)</span></label
-            >
-            ${R({
-    id: "ended",
-    placeholder: "leave blank for a point-in-time event"
-  })}
             <label for="notes">Notes</label>
             ${X(t)}
             ${Z(t)}
@@ -2927,7 +2934,7 @@ function rn(t, e, i, n, r, s) {
   return c`
         <form @submit=${(l) => {
     l.preventDefault();
-    const d = l.currentTarget, b = new FormData(d), h = U(String(b.get("started") ?? "")), g = U(String(b.get("ended") ?? "")), m = String(b.get("notes") ?? "") || void 0, f = Q(d);
+    const d = l.currentTarget, b = new FormData(d), h = R(String(b.get("started") ?? "")), g = R(String(b.get("ended") ?? "")), m = String(b.get("notes") ?? "") || void 0, f = Q(d);
     if (!g) {
       const $ = {
         baby: e,
@@ -2978,13 +2985,13 @@ function rn(t, e, i, n, r, s) {
   }}>
             <h2>${o[i]}</h2>
             <label for="started">Started</label>
-            ${R({
+            ${L({
     id: "started",
     value: bt(),
     required: !0
   })}
             <label for="ended">Ended <span class="muted">(optional)</span></label>
-            ${R({
+            ${L({
     id: "ended",
     placeholder: "leave blank for an open session"
   })}
@@ -3002,7 +3009,7 @@ function sn(t, e, i, n) {
   return c`
         <form @submit=${(s) => {
     s.preventDefault();
-    const o = s.currentTarget, a = new FormData(o), l = U(String(a.get("when") ?? ""));
+    const o = s.currentTarget, a = new FormData(o), l = R(String(a.get("when") ?? ""));
     i("log_feeding", {
       baby: e,
       method: "solids",
@@ -3021,7 +3028,7 @@ function sn(t, e, i, n) {
     autofocus: !0
   })}
             <label for="when">When</label>
-            ${R({ id: "when", value: bt() })}
+            ${L({ id: "when", value: bt() })}
             ${Z(t)}
             <div class="actions">
                 <button type="button" @click=${n}>Cancel</button>
@@ -3468,7 +3475,7 @@ function ke(t, e, i) {
       d.value > 0 ? 2 : 0,
       d.value / a * (90 - 24 * 2)
     ), y = 66 - f;
-    return H`
+    return z`
                         <rect
                             x=${m}
                             y=${y}
@@ -3534,9 +3541,9 @@ function Se(t, e, i, n) {
     ), w = 66;
     let x = w;
     const _ = h.parts.map((u) => {
-      if (u.value <= 0) return H``;
+      if (u.value <= 0) return z``;
       const v = u.value / p * $;
-      return x -= v, H`
+      return x -= v, z`
                             <rect
                                 x=${y}
                                 y=${x}
@@ -3548,7 +3555,7 @@ function Se(t, e, i, n) {
                             </rect>
                         `;
     });
-    return H`
+    return z`
                         ${_}
                         <text
                             x=${y + f / 2}
@@ -4407,7 +4414,7 @@ const An = [
   "recent",
   "importer_sync"
 ];
-let L = class extends O {
+let H = class extends O {
   constructor() {
     super(...arguments), this._modal = null, this._expandedNotes = /* @__PURE__ */ new Set(), this._handleService = async (t, e, i) => {
       const n = i instanceof HTMLElement && i.classList.contains("quick") ? i : null;
@@ -4641,7 +4648,7 @@ let L = class extends O {
         `;
   }
 };
-L.styles = F`
+H.styles = F`
         :host {
             display: block;
             font-family: var(--primary-font-family, system-ui);
@@ -4891,28 +4898,28 @@ L.styles = F`
     `;
 J([
   M({ attribute: !1 })
-], L.prototype, "hass", 2);
+], H.prototype, "hass", 2);
 J([
   k()
-], L.prototype, "_config", 2);
+], H.prototype, "_config", 2);
 J([
   k()
-], L.prototype, "_babyConfig", 2);
+], H.prototype, "_babyConfig", 2);
 J([
   k()
-], L.prototype, "_options", 2);
+], H.prototype, "_options", 2);
 J([
   k()
-], L.prototype, "_modal", 2);
+], H.prototype, "_modal", 2);
 J([
   k()
-], L.prototype, "_expandedNotes", 2);
+], H.prototype, "_expandedNotes", 2);
 J([
   Oe("dialog")
-], L.prototype, "_dialog", 2);
-L = J([
+], H.prototype, "_dialog", 2);
+H = J([
   G("babytracker-card")
-], L);
+], H);
 window.customCards = window.customCards ?? [];
 window.customCards.push({
   type: "babytracker-card",
@@ -5007,6 +5014,6 @@ const Pn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   }
 }, Symbol.toStringTag, { value: "Module" }));
 export {
-  L as BabytrackerCard
+  H as BabytrackerCard
 };
 //# sourceMappingURL=babytracker-card.js.map

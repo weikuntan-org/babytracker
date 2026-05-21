@@ -12,9 +12,10 @@ import {
 } from "./_helpers";
 
 // Common one-tap activities. Each chip submits `log_other` with `name`
-// set to the chip label and timestamp/notes/photo left blank so the
-// server defaults to "now". Users who need finer control type into
-// the input below and use the dated form.
+// set to the chip label and reads the Started/Ended pickers above the
+// chip row so a user who set a custom time before tapping gets that
+// honored. Untouched Started defaults to the modal's render time —
+// effectively "now" for typical tap-and-go usage.
 const QUICK_OTHER_OPTIONS = [
     "Bath",
     "Butt wash",
@@ -46,17 +47,41 @@ export function otherForm(
             photo_path: readPhotoPath(form)
         });
     };
-    const onQuick = (name: string) => submit("log_other", { baby, name });
+    // Chips read the Started/Ended pickers so a user who set a time
+    // before tapping a chip gets that time honored. The Started picker
+    // defaults to the modal's render time, so untouched taps still log
+    // ~now (the few-second drift between render and tap is acceptable).
+    const onQuick = (e: Event, name: string) => {
+        const form = (e.currentTarget as HTMLButtonElement).form;
+        const payload: Record<string, unknown> = { baby, name };
+        if (form) {
+            const data = new FormData(form);
+            const started = localInputToIso(String(data.get("started") ?? ""));
+            const ended = localInputToIso(String(data.get("ended") ?? ""));
+            if (started) payload.timestamp = started;
+            if (ended) payload.ended_at = ended;
+        }
+        submit("log_other", payload);
+    };
     return html`
         <form @submit=${onSubmit}>
             <h2>Log activity</h2>
+            <label for="started">Started</label>
+            ${dateTimeRow({ id: "started", value: nowLocalForInput() })}
+            <label for="ended"
+                >Ended <span class="muted">(optional)</span></label
+            >
+            ${dateTimeRow({
+                id: "ended",
+                placeholder: "leave blank for a point-in-time event"
+            })}
             <div class="quick-other" role="group" aria-label="Quick activities">
                 ${QUICK_OTHER_OPTIONS.map(
                     name => html`
                         <button
                             type="button"
                             class="quick"
-                            @click=${() => onQuick(name)}
+                            @click=${(e: Event) => onQuick(e, name)}
                         >
                             ${name}
                         </button>
@@ -72,15 +97,6 @@ export function otherForm(
                 autofocus
                 required
             />
-            <label for="started">Started</label>
-            ${dateTimeRow({ id: "started", value: nowLocalForInput() })}
-            <label for="ended"
-                >Ended <span class="muted">(optional)</span></label
-            >
-            ${dateTimeRow({
-                id: "ended",
-                placeholder: "leave blank for a point-in-time event"
-            })}
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
             ${photoRow(hass)}
