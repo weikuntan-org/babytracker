@@ -282,6 +282,10 @@ log_other:
       description: When this happened; defaults to now if omitted.
       selector:
         datetime:
+    ended_at:
+      description: Optional end time when the activity spans a duration (e.g. diaper-free time).
+      selector:
+        datetime:
     notes:
       selector:
         text:

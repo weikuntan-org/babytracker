@@ -462,6 +462,7 @@ LOG_OTHER_SCHEMA = vol.Schema(
         vol.Required("baby"): cv.string,
         vol.Required("name"): cv.string,
         vol.Optional("timestamp"): cv.datetime,
+        vol.Optional("ended_at"): cv.datetime,
         vol.Optional("notes"): cv.string,
     }
 )
@@ -472,10 +473,12 @@ async def _handle_log_other(call: ServiceCall) -> None:
     baby = await _resolve_baby(hass, call.data["baby"])
     await _ensure_can_log(hass, baby, "other")
     ts = call.data.get("timestamp")
+    ended = call.data.get("ended_at")
     entry = _build_entry(
         type_="other",
         baby_id=baby.id,
         timestamp=ts.isoformat() if ts else None,
+        ended_at=ended.isoformat() if ended else None,
         notes=call.data.get("notes"),
         data={"name": call.data["name"]},
     )

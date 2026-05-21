@@ -14,7 +14,13 @@ import "./entry-thumbnail";
 
 export type EntryRequester = (entry: any) => void;
 
-const SESSION_TYPES = new Set(["sleep", "feeding", "tummy_time", "walk"]);
+const SESSION_TYPES = new Set([
+    "sleep",
+    "feeding",
+    "tummy_time",
+    "walk",
+    "other"
+]);
 
 export function entryRowTemplate(
     hass: any,

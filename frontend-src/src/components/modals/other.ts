@@ -39,7 +39,9 @@ export function otherForm(
         submit("log_other", {
             baby,
             name: String(data.get("name") ?? ""),
-            timestamp: localInputToIso(String(data.get("when") ?? "")),
+            timestamp: localInputToIso(String(data.get("started") ?? "")),
+            ended_at:
+                localInputToIso(String(data.get("ended") ?? "")) || undefined,
             notes: String(data.get("notes") ?? "") || undefined,
             photo_path: readPhotoPath(form)
         });
@@ -70,8 +72,15 @@ export function otherForm(
                 autofocus
                 required
             />
-            <label for="when">When</label>
-            ${dateTimeRow({ id: "when", value: nowLocalForInput() })}
+            <label for="started">Started</label>
+            ${dateTimeRow({ id: "started", value: nowLocalForInput() })}
+            <label for="ended"
+                >Ended <span class="muted">(optional)</span></label
+            >
+            ${dateTimeRow({
+                id: "ended",
+                placeholder: "leave blank for a point-in-time event"
+            })}
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
             ${photoRow(hass)}
