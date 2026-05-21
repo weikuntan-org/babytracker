@@ -448,9 +448,6 @@ class BabytrackerOptionsFlow(OptionsFlow):
                         "daycare_open_time": user_input.get("daycare_open_time") or None,
                         "daycare_close_time": user_input.get("daycare_close_time") or None,
                         "daycare_days": list(user_input.get("daycare_days") or []),
-                        "block_local_while_checked_in": user_input[
-                            "block_local_while_checked_in"
-                        ],
                         "presence_inference_window_minutes": user_input.get(
                             "presence_inference_window_minutes", 60
                         ),
@@ -506,10 +503,6 @@ class BabytrackerOptionsFlow(OptionsFlow):
                         multiple=True,
                     )
                 ),
-                vol.Required(
-                    "block_local_while_checked_in",
-                    default=defaults.get("block_local_while_checked_in", True),
-                ): bool,
                 vol.Optional(
                     "presence_inference_window_minutes",
                     default=defaults.get("presence_inference_window_minutes", 60),

@@ -102,7 +102,6 @@
                     "daycare_open_time": "Daycare open time (HH:MM)",
                     "daycare_close_time": "Daycare close time (HH:MM)",
                     "daycare_days": "Operating days",
-                    "block_local_while_checked_in": "Block local logs while checked in",
                     "presence_inference_window_minutes": "Presence inference window (minutes)"
                 }
             },
@@ -188,9 +187,6 @@
     "exceptions": {
         "eligibility_rejected": {
             "message": "{method_label} isn't enabled for {baby_name}"
-        },
-        "daycare_lockout": {
-            "message": "{baby_name} is checked in at daycare; logs are coming from the Procare importer"
         },
         "unknown_baby": {
             "message": "Unknown baby \"{baby}\""

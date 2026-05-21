@@ -28,7 +28,6 @@ from .const import (
 from .eligibility import (
     ensure_activity_enabled,
     ensure_feeding_method_enabled,
-    ensure_local_not_locked_out,
     find_baby_by_slug,
 )
 from .models import Entry
@@ -76,11 +75,10 @@ async def _resolve_baby(hass: HomeAssistant, slug: str):
     return find_baby_by_slug(coord.babies, slug)
 
 
-async def _ensure_can_log(hass: HomeAssistant, baby, activity: str, source: str) -> None:
+async def _ensure_can_log(hass: HomeAssistant, baby, activity: str) -> None:
     coord = get_coordinator(hass)
     if coord is None:
         raise ServiceValidationError("babytracker not configured")
-    ensure_local_not_locked_out(baby, coord.at_daycare(baby), source)
     ensure_activity_enabled(baby, activity)
 
 
@@ -128,7 +126,7 @@ LOG_FEEDING_SCHEMA = vol.Schema(
 async def _handle_log_feeding(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "feeding", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "feeding")
     method = call.data["method"]
     ensure_feeding_method_enabled(baby, method)
     started = call.data.get("started_at")
@@ -171,7 +169,7 @@ END_FEEDING_SCHEMA = vol.Schema(
 async def _handle_start_feeding(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "feeding", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "feeding")
     method = call.data["method"]
     ensure_feeding_method_enabled(baby, method)
     coord = get_coordinator(hass)
@@ -191,7 +189,7 @@ async def _handle_start_feeding(call: ServiceCall) -> None:
 async def _handle_end_feeding(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "feeding", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "feeding")
     coord = get_coordinator(hass)
     entry = coord.open_session(baby.id, "feeding")
     if entry is None:
@@ -224,7 +222,7 @@ LOG_DIAPER_SCHEMA = vol.Schema(
 async def _handle_log_diaper(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "diaper", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "diaper")
     ts = call.data.get("timestamp")
     entry = _build_entry(
         type_="diaper",
@@ -289,7 +287,7 @@ LOG_TUMMY_SCHEMA = vol.Schema(
 async def _handle_start_sleep(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "sleep", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "sleep")
     coord = get_coordinator(hass)
     if coord.open_session(baby.id, "sleep") is not None:
         raise ServiceValidationError("a sleep session is already open")
@@ -307,7 +305,7 @@ async def _handle_start_sleep(call: ServiceCall) -> None:
 async def _handle_log_sleep(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "sleep", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "sleep")
     entry = _build_entry(
         type_="sleep",
         baby_id=baby.id,
@@ -323,7 +321,7 @@ async def _handle_log_sleep(call: ServiceCall) -> None:
 async def _handle_end_sleep(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "sleep", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "sleep")
     coord = get_coordinator(hass)
     entry = coord.open_session(baby.id, "sleep")
     if entry is None:
@@ -336,7 +334,7 @@ async def _handle_end_sleep(call: ServiceCall) -> None:
 async def _handle_start_tummy(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "tummy_time", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "tummy_time")
     coord = get_coordinator(hass)
     if coord.open_session(baby.id, "tummy_time") is not None:
         raise ServiceValidationError("a tummy_time session is already open")
@@ -353,7 +351,7 @@ async def _handle_start_tummy(call: ServiceCall) -> None:
 async def _handle_end_tummy(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "tummy_time", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "tummy_time")
     coord = get_coordinator(hass)
     entry = coord.open_session(baby.id, "tummy_time")
     if entry is None:
@@ -366,7 +364,7 @@ async def _handle_end_tummy(call: ServiceCall) -> None:
 async def _handle_log_tummy(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "tummy_time", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "tummy_time")
     entry = _build_entry(
         type_="tummy_time",
         baby_id=baby.id,
@@ -408,7 +406,7 @@ LOG_WALK_SCHEMA = vol.Schema(
 async def _handle_start_walk(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "walk", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "walk")
     coord = get_coordinator(hass)
     if coord.open_session(baby.id, "walk") is not None:
         raise ServiceValidationError("a walk session is already open")
@@ -429,7 +427,7 @@ async def _handle_start_walk(call: ServiceCall) -> None:
 async def _handle_end_walk(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "walk", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "walk")
     coord = get_coordinator(hass)
     entry = coord.open_session(baby.id, "walk")
     if entry is None:
@@ -442,7 +440,7 @@ async def _handle_end_walk(call: ServiceCall) -> None:
 async def _handle_log_walk(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "walk", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "walk")
     data: dict[str, Any] = {}
     if call.data.get("location"):
         data["location"] = call.data["location"]
@@ -472,7 +470,7 @@ LOG_OTHER_SCHEMA = vol.Schema(
 async def _handle_log_other(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "other", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "other")
     ts = call.data.get("timestamp")
     entry = _build_entry(
         type_="other",
@@ -533,7 +531,7 @@ LOG_GROWTH_SCHEMA = vol.Schema(
 async def _handle_log_growth(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "growth", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "growth")
     if (
         call.data.get("weight") is None
         and call.data.get("height") is None
@@ -584,7 +582,7 @@ LOG_MEDICATION_SCHEMA = vol.Schema(
 async def _handle_log_medication(call: ServiceCall) -> None:
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "medication", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "medication")
     entry = _build_entry(
         type_="medication",
         baby_id=baby.id,
@@ -619,7 +617,7 @@ async def _handle_log_vaccine(call: ServiceCall) -> None:
 
     hass = call.hass
     baby = await _resolve_baby(hass, call.data["baby"])
-    await _ensure_can_log(hass, baby, "vaccine", ENTRY_SOURCE_USER)
+    await _ensure_can_log(hass, baby, "vaccine")
     coord = get_coordinator(hass)
     name = call.data["name"]
     dose_number = call.data.get("dose_number")

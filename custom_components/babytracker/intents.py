@@ -13,12 +13,10 @@ from .const import (
     ALL_DIAPER_KINDS,
     ALL_FEEDING_METHODS,
     ALL_VOLUME_UNITS,
-    ENTRY_SOURCE_USER,
 )
 from .eligibility import (
     ensure_activity_enabled,
     ensure_feeding_method_enabled,
-    ensure_local_not_locked_out,
     find_baby_by_slug,
 )
 from .models import Entry
@@ -34,8 +32,7 @@ def _resolve(hass: HomeAssistant, slug: str):
     return coord, find_baby_by_slug(coord.babies, slug)
 
 
-def _ensure(coord, baby, activity):
-    ensure_local_not_locked_out(baby, coord.at_daycare(baby), ENTRY_SOURCE_USER)
+def _ensure(baby, activity):
     ensure_activity_enabled(baby, activity)
 
 
@@ -51,11 +48,6 @@ def _handle_validation(err: ServiceValidationError, response: intent.IntentRespo
         return _speak(
             response,
             f"{placeholders.get('method_label', '').replace('_', ' ').title()} isn't enabled for {placeholders.get('baby_name', 'baby')}",
-        )
-    if key == "daycare_lockout":
-        return _speak(
-            response,
-            f"{placeholders.get('baby_name', 'baby')} is checked in at daycare",
         )
     if key == "unknown_baby":
         return _speak(response, f"I don't know a baby named {placeholders.get('baby', 'that')}")
@@ -86,7 +78,7 @@ class LogDiaperIntent(_BaseHandler):
         if kind not in ALL_DIAPER_KINDS:
             return _speak(response, f"{kind} is not a recognised diaper kind")
         coord, baby = _resolve(intent_obj.hass, baby_slug)
-        _ensure(coord, baby, "diaper")
+        _ensure(baby, "diaper")
         entry = Entry.new(type_="diaper", baby_id=baby.id, data={"kind": kind})
         await coord.add_entry(entry)
         return _speak(response, f"Logged a {kind} diaper for {baby.name}")
@@ -99,7 +91,7 @@ class StartSleepIntent(_BaseHandler):
     async def _async_handle(self, intent_obj, response):
         slots = self.async_validate_slots(intent_obj.slots)
         coord, baby = _resolve(intent_obj.hass, slots["baby"]["value"])
-        _ensure(coord, baby, "sleep")
+        _ensure(baby, "sleep")
         location = slots.get("location", {}).get("value") or "home"
         if coord.open_session(baby.id, "sleep") is not None:
             return _speak(response, f"{baby.name} is already asleep")
@@ -116,7 +108,7 @@ class EndSleepIntent(_BaseHandler):
     async def _async_handle(self, intent_obj, response):
         slots = self.async_validate_slots(intent_obj.slots)
         coord, baby = _resolve(intent_obj.hass, slots["baby"]["value"])
-        _ensure(coord, baby, "sleep")
+        _ensure(baby, "sleep")
         entry = coord.open_session(baby.id, "sleep")
         if entry is None:
             return _speak(response, f"{baby.name} doesn't have an open sleep session")
@@ -134,7 +126,7 @@ class StartFeedingIntent(_BaseHandler):
         method = slots["method"]["value"]
         if method not in ALL_FEEDING_METHODS:
             return _speak(response, f"{method} is not a recognised feeding method")
-        _ensure(coord, baby, "feeding")
+        _ensure(baby, "feeding")
         ensure_feeding_method_enabled(baby, method)
         if coord.open_session(baby.id, "feeding") is not None:
             return _speak(response, f"{baby.name} already has an open feeding")
@@ -151,7 +143,7 @@ class EndFeedingIntent(_BaseHandler):
     async def _async_handle(self, intent_obj, response):
         slots = self.async_validate_slots(intent_obj.slots)
         coord, baby = _resolve(intent_obj.hass, slots["baby"]["value"])
-        _ensure(coord, baby, "feeding")
+        _ensure(baby, "feeding")
         entry = coord.open_session(baby.id, "feeding")
         if entry is None:
             return _speak(response, f"{baby.name} has no open feeding session")
@@ -179,7 +171,7 @@ class LogFeedingIntent(_BaseHandler):
         method = slots["method"]["value"]
         if method not in ALL_FEEDING_METHODS:
             return _speak(response, f"{method} is not a recognised feeding method")
-        _ensure(coord, baby, "feeding")
+        _ensure(baby, "feeding")
         ensure_feeding_method_enabled(baby, method)
         amount = slots.get("amount", {}).get("value")
         unit = slots.get("unit", {}).get("value")
@@ -204,7 +196,7 @@ class LogTummyTimeIntent(_BaseHandler):
     async def _async_handle(self, intent_obj, response):
         slots = self.async_validate_slots(intent_obj.slots)
         coord, baby = _resolve(intent_obj.hass, slots["baby"]["value"])
-        _ensure(coord, baby, "tummy_time")
+        _ensure(baby, "tummy_time")
         minutes = int(float(slots["duration_minutes"]["value"]))
         now = datetime.now(tz=timezone.utc)
         start = now - timedelta(minutes=minutes)
