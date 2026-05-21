@@ -52,5 +52,9 @@
     {
         "pattern": "^Learning\\b",
         "type": "other"
+    },
+    {
+        "pattern": "^Photo\\b",
+        "type": "other"
     }
 ]

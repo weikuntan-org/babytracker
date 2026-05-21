@@ -473,17 +473,16 @@ class ProcareImporter(BaseImporter):
             method = mapping.get("method", "bottle")
             data: dict[str, Any] = {"method": method}
             if method == "bottle":
+                # Amount + unit may be missing entirely (parents who don't
+                # log volume, or Procare details like staff initials e.g.
+                # "HA"). The feeding entry is still valid — just leave
+                # `amount`/`unit` off and skip the noisy warning.
                 m = BOTTLE_AMOUNT_RE.search(details) or BOTTLE_AMOUNT_RE.search(
                     activity.get("title") or ""
                 )
                 if m:
                     data["amount"] = float(m.group(1))
                     data["unit"] = m.group(2).lower()
-                else:
-                    _LOGGER.warning(
-                        "babytracker: could not parse bottle amount from %r",
-                        details or activity.get("title"),
-                    )
             elif method == "solids":
                 if details:
                     data["food"] = details

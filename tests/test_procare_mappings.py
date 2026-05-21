@@ -99,4 +99,17 @@ def test_match_sleep_start_end():
 
 def test_match_unknown_returns_none():
     rows = load_mappings()
-    assert match_title(rows, "Photo of cool drawing") is None
+    assert match_title(rows, "Some Brand New Activity") is None
+
+
+def test_match_photo():
+    # Procare emits bare "Photo" titles for photo-only activities. They
+    # land as "other" entries so the photo still shows up in the log
+    # instead of getting dropped as unmapped.
+    rows = load_mappings()
+    m = match_title(rows, "Photo")
+    assert m is not None and m["type"] == "other"
+    # "Photo: something" / "Photo of X" forms still match too.
+    assert match_title(rows, "Photo of cool drawing") is not None
+    # Word boundary keeps unrelated prefixes from matching.
+    assert match_title(rows, "Photographer present") is None
