@@ -415,6 +415,12 @@ class PercentileSensor(_BabyEntity):
 
 
 class RecentEntriesSensor(_BabyEntity):
+    # The `entries` payload exceeds the recorder's 16 KB attribute cap
+    # at large RECENT_ENTRIES_CAP values; keep it out of the DB. The
+    # in-memory state attribute is still available to the card and to
+    # any state subscribers.
+    _unrecorded_attributes = frozenset({"entries"})
+
     def __init__(self, coord, baby):
         super().__init__(coord, baby, "recent_entries", "Recent entries")
 
@@ -424,19 +430,12 @@ class RecentEntriesSensor(_BabyEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        # `photo_url` is omitted on purpose: it's only set on Procare
-        # imports and can be a few hundred bytes of signed URL — at 50
-        # entries it can push the attribute past HA's 16 KB recorder
-        # cap (`State attributes ... exceed maximum size`). The card
-        # only reads `photo_path` from this attribute, so dropping
-        # `photo_url` is free; consumers that need it can subscribe
-        # to `babytracker/list_entries_in_range` over WS instead.
-        entries = []
-        for e in self._coord.recent_entries(self.baby.id):
-            d = entry_to_card_dict(e)
-            d.pop("photo_url", None)
-            entries.append(d)
-        return {"entries": entries}
+        return {
+            "entries": [
+                entry_to_card_dict(e)
+                for e in self._coord.recent_entries(self.baby.id)
+            ]
+        }
 
 
 # ----- Vaccines (M7) ------------------------------------------------
@@ -650,6 +649,8 @@ class GlobalPumpingTodaySensor(_GlobalEntity):
 
 
 class GlobalRecentEntriesSensor(_GlobalEntity):
+    _unrecorded_attributes = frozenset({"entries"})
+
     def __init__(self, coord):
         super().__init__(coord, "recent_entries", "Recent entries")
 
