@@ -58,17 +58,3 @@ def ensure_feeding_method_enabled(baby: Baby, method: str) -> None:
             "eligibility_rejected",
             {"baby_name": baby.name, "method_label": method},
         )
-
-
-def ensure_local_not_locked_out(baby: Baby, at_daycare: bool, source: str) -> None:
-    """Block non-Procare writes while a baby is checked in at daycare (§4.6)."""
-    if source == "procare":
-        return
-    if not at_daycare:
-        return
-    block = True
-    if baby.importer:
-        block = baby.importer.get("block_local_while_checked_in", True)
-    if not block:
-        return
-    raise _exc("daycare_lockout", {"baby_name": baby.name})

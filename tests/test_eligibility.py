@@ -76,17 +76,3 @@ def test_eligibility_blocks_disabled_feeding_method():
         eligibility.ensure_feeding_method_enabled(baby, "breast_left")
 
 
-def test_daycare_lockout_blocks_when_checked_in():
-    baby = _baby(importer={"block_local_while_checked_in": True})
-    with pytest.raises(Exception):
-        eligibility.ensure_local_not_locked_out(baby, True, "user")
-
-
-def test_daycare_lockout_passes_for_procare_source():
-    baby = _baby(importer={"block_local_while_checked_in": True})
-    eligibility.ensure_local_not_locked_out(baby, True, "procare")  # no raise
-
-
-def test_daycare_lockout_opt_out():
-    baby = _baby(importer={"block_local_while_checked_in": False})
-    eligibility.ensure_local_not_locked_out(baby, True, "user")  # no raise

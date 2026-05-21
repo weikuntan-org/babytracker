@@ -75,9 +75,6 @@
         "eligibility_rejected": {
             "message": "{method_label} isn't enabled for {baby_name}"
         },
-        "daycare_lockout": {
-            "message": "{baby_name} is checked in at daycare; logs are coming from the Procare importer"
-        },
         "unknown_baby": {
             "message": "Unknown baby \"{baby}\""
         }
