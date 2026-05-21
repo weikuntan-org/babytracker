@@ -21,11 +21,16 @@ export type RequestDelete = (entry: {
     staff?: string | null;
 }) => void;
 
+// Entry types that the edit modal renders with a "Started + Ended"
+// pair instead of a single timestamp. "other" is included because the
+// end-time is optional — a blank "Ended" still serializes to null and
+// leaves the entry as a point-in-time event.
 export const SESSION_ENTRY_TYPES: ReadonlySet<string> = new Set([
     "sleep",
     "feeding",
     "tummy_time",
-    "walk"
+    "walk",
+    "other"
 ]);
 
 /**
