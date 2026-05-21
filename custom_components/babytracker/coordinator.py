@@ -22,6 +22,7 @@ from .const import (
     SIGNAL_DATA_UPDATED,
 )
 from .models import Baby, Entry
+from .presence import entry_sign_kind
 from .runtime import now_iso, parse_ts
 from .store import BabytrackerStore
 
@@ -49,8 +50,6 @@ class BabytrackerCoordinator:
         self._listeners: list[Callable[[], None]] = []
         self._babies: list[Baby] = []
         self._entries: list[Entry] = []
-        # Tracks per-baby daycare presence (§4.6); slug -> bool
-        self._at_daycare: dict[str, bool] = {}
         # Unmapped Procare titles, deduped (§15 #21)
         self._unmapped_procare_titles: set[str] = set()
 
@@ -61,9 +60,6 @@ class BabytrackerCoordinator:
         data = self._store.data
         self._babies = [Baby.from_dict(b) for b in data.get("babies", [])]
         self._entries = [Entry.from_dict(e) for e in data.get("entries", [])]
-        # Bring at_daycare back from importer config if any
-        for baby in self._babies:
-            self._at_daycare.setdefault(baby.slug, False)
         names_changed = self._normalize_baby_names()
         if self._migrate_babies() or names_changed:
             # Migration touched at least one baby — persist so the change
@@ -137,7 +133,29 @@ class BabytrackerCoordinator:
         return None
 
     def at_daycare(self, baby: Baby) -> bool:
-        return self._at_daycare.get(baby.slug, False)
+        """Compute presence from the entry log.
+
+        Walks this baby's entries newest-first by parsed timestamp and
+        returns True iff the most recent sign-in/out event is a sign-IN.
+        A sign-OUT — or the complete absence of any sign event — yields
+        False. There is no other source of truth: a stale sign-in with
+        no matching sign-out keeps the baby "at daycare" until the user
+        records a sign-out (or edits/deletes the stale entry). This is
+        intentional — the previous heuristic in-memory dict could be
+        flipped by inference paths that turned out to be wrong far too
+        often (see PR #76, and the bug that motivated this rewrite).
+        """
+        sign_entries = sorted(
+            (
+                e for e in self._entries
+                if e.baby_id == baby.id and entry_sign_kind(e) is not None
+            ),
+            key=lambda e: parse_ts(e.timestamp),
+            reverse=True,
+        )
+        if not sign_entries:
+            return False
+        return entry_sign_kind(sign_entries[0]) == "in"
 
     def get_unmapped_procare_titles(self) -> list[str]:
         return sorted(self._unmapped_procare_titles)
@@ -234,7 +252,6 @@ class BabytrackerCoordinator:
                 schema_version=CURRENT_BABY_SCHEMA_VERSION,
             )
             self._babies.append(baby)
-            self._at_daycare[baby.slug] = False
             await self._async_persist()
         self._notify()
         return baby
@@ -298,7 +315,6 @@ class BabytrackerCoordinator:
                 raise ValueError(f"unknown baby_id {baby_id}")
             self._babies = [b for b in self._babies if b.id != baby_id]
             self._entries = [e for e in self._entries if e.baby_id != baby_id]
-            self._at_daycare.pop(baby.slug, None)
             await self._async_persist()
         self._notify()
 
@@ -391,9 +407,23 @@ class BabytrackerCoordinator:
     # Importer hooks
     # ------------------------------------------------------------------
     async def set_at_daycare(self, baby: Baby, value: bool) -> None:
-        async with self._lock:
-            self._at_daycare[baby.slug] = bool(value)
-        self._notify()
+        """Override presence by inserting a synthetic sign-in/out entry.
+
+        Since `at_daycare` is now computed from the entry log (presence.py),
+        the only durable way to "set" presence is to write a sign event
+        that future `at_daycare` reads can see. The synthetic title uses
+        the `(manual)` suffix so it's distinguishable from Procare-emitted
+        sign events in the history list.
+        """
+        title = "Signed In (manual)" if value else "Signed Out (manual)"
+        entry = Entry(
+            id=str(uuid.uuid4()),
+            type="other",
+            baby_id=baby.id,
+            timestamp=now_iso(),
+            data={"name": title},
+        )
+        await self.add_entry(entry)
 
     def record_unmapped_procare_title(self, title: str) -> None:
         if title and title not in self._unmapped_procare_titles:

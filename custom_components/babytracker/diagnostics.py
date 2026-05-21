@@ -41,7 +41,9 @@ async def async_get_config_entry_diagnostics(
         "options": {k: v for k, v in (entry.options or {}).items() if k != "pending_baby"},
         "babies": [_redact_baby(b.to_dict()) for b in coordinator.babies],
         "entries": [_redact_entry(e.to_dict()) for e in coordinator.entries[-200:]],
-        "at_daycare": dict(coordinator._at_daycare),  # noqa: SLF001
+        "at_daycare": {
+            b.slug: coordinator.at_daycare(b) for b in coordinator.babies
+        },
         "unmapped_procare_titles_count": len(
             coordinator.get_unmapped_procare_titles()
         ),
