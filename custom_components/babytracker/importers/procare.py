@@ -25,9 +25,9 @@ from typing import Any
 import aiohttp
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_state_change_event, async_track_time_change
+from homeassistant.helpers.event import async_track_state_change_event
 
-from ..const import ENTRY_SOURCE_PROCARE, OPT_PRESENCE_INFERENCE_WINDOW_MINUTES
+from ..const import ENTRY_SOURCE_PROCARE
 from ..models import Baby, Entry
 from ..photo_storage import (
     PHOTO_MAX_BYTES,
@@ -36,39 +36,18 @@ from ..photo_storage import (
     sniff_image_mime,
     write_photo,
 )
-from ..runtime import get_entry_options, now_iso
+from ..presence import SIGN_IN_RE, SIGN_OUT_RE
+from ..runtime import now_iso
 from .base import BaseImporter
 from .procare_mappings import async_load_mappings, match_title
 
 _LOGGER = logging.getLogger(__name__)
 
 BOTTLE_AMOUNT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(ml|oz|mL|OZ)\b")
-SIGN_IN_RE = re.compile(r"^Sign(?:ed)? In(?: by .+)?$", re.IGNORECASE)
-SIGN_OUT_RE = re.compile(r"^Sign(?:ed)? Out(?: by .+)?$", re.IGNORECASE)
 SLEEP_RANGE_RE = re.compile(
     r"Slept\s+from\s+(\d{1,2}:\d{2}\s*[APap][Mm])\s+to\s+(\d{1,2}:\d{2}\s*[APap][Mm])",
     re.IGNORECASE,
 )
-
-_WEEKDAY_BY_NAME = {
-    "mon": 0,
-    "tue": 1,
-    "wed": 2,
-    "thu": 3,
-    "fri": 4,
-    "sat": 5,
-    "sun": 6,
-}
-
-
-def _parse_time(value: str | None) -> time | None:
-    if not value:
-        return None
-    try:
-        hour, minute = (int(p) for p in value.split(":")[:2])
-        return time(hour=hour, minute=minute)
-    except Exception:  # noqa: BLE001
-        return None
 
 
 def _parse_sleep_range(
@@ -218,7 +197,6 @@ class ProcareImporter(BaseImporter):
         self.config = dict(config)
         self.mappings = mappings or []
         self._unsub_state = None
-        self._unsub_close_time = None
 
     @property
     def sensor_entity_id(self) -> str:
@@ -231,23 +209,11 @@ class ProcareImporter(BaseImporter):
         self._unsub_state = async_track_state_change_event(
             self.hass, [self.sensor_entity_id], self._handle_state_change
         )
-        close = _parse_time(self.config.get("daycare_close_time"))
-        if close is not None:
-            self._unsub_close_time = async_track_time_change(
-                self.hass,
-                self._auto_sign_out,
-                hour=close.hour,
-                minute=close.minute,
-                second=0,
-            )
 
     async def async_unload(self) -> None:
         if self._unsub_state:
             self._unsub_state()
             self._unsub_state = None
-        if self._unsub_close_time:
-            self._unsub_close_time()
-            self._unsub_close_time = None
 
     # ------------------------------------------------------------------
     @callback
@@ -381,17 +347,16 @@ class ProcareImporter(BaseImporter):
         if not title:
             return
         timestamp = activity.get("timestamp") or now_iso()
-        # Sign in/out (§15 #17) — set presence AND log as an "other" entry so
-        # the check-in/out shows up in the activity log. The presence side
-        # effect runs regardless of import_types; the log entry is created
-        # inline via the standard pipeline below by treating sign-in/out as
-        # synthetic "other"-type mappings.
+        # Sign in/out (§15 #17) — log as an "other" entry so the
+        # check-in/out shows up in the activity log. Presence is no
+        # longer a separate in-memory flag: `coordinator.at_daycare`
+        # scans the entry log for the most recent sign event, so simply
+        # creating the entry through the standard pipeline below is
+        # sufficient. The synthetic mapping just bypasses the title
+        # registry (those titles aren't in the user-facing mapping
+        # rules).
         synthetic_mapping: dict[str, Any] | None = None
-        if SIGN_IN_RE.match(title):
-            await self._set_at_daycare(True, source="title_events")
-            synthetic_mapping = {"type": "other"}
-        elif SIGN_OUT_RE.match(title):
-            await self._set_at_daycare(False, source="title_events")
+        if SIGN_IN_RE.match(title) or SIGN_OUT_RE.match(title):
             synthetic_mapping = {"type": "other"}
 
         if synthetic_mapping is not None:
@@ -412,31 +377,6 @@ class ProcareImporter(BaseImporter):
             return
 
         prior = existing.get(source_id)
-
-        # Inference-window mode: if we have no recent sign-in but receive
-        # activities, assume baby is checked in — but only when the
-        # activity's timestamp is recent. Without this guard, a late
-        # photo edit / a resync / the upstream sensor republishing its
-        # cached list of the day's activities would flip at_daycare
-        # back to True hours after the baby has been picked up.
-        #
-        # Two additional carve-outs:
-        #   1. Sign-in/out events (`synthetic_mapping`) carry explicit
-        #      presence intent. A fresh sign-OUT must stay OUT — running
-        #      the inference branch right after `_set_at_daycare(False)`
-        #      would immediately flip it back to True since the sign-out's
-        #      own timestamp is by definition recent.
-        #   2. Updates to an existing entry (`prior is not None`) are
-        #      not fresh presence signals — the activity already happened.
-        #      Honoring them here lets a photo backfill or details edit
-        #      hours after pickup re-flip presence.
-        if (
-            synthetic_mapping is None
-            and prior is None
-            and self.config.get("mode", "inference_window") == "inference_window"
-            and self._activity_in_presence_window(timestamp)
-        ):
-            await self._set_at_daycare(True, source="inference_window")
 
         photo_url = activity.get("photo_url") or None
         staff = activity.get("staff")
@@ -575,58 +515,3 @@ class ProcareImporter(BaseImporter):
                 data["details"] = details
             return data
         return {}
-
-    def _activity_in_presence_window(self, timestamp: str | None) -> bool:
-        """Return True when `timestamp` falls within the configured
-        presence-inference window — i.e. it's recent enough that the
-        activity plausibly indicates the baby is currently at daycare.
-
-        A small future buffer absorbs the inevitable clock skew between
-        Procare's clocks and HA. Unparseable timestamps default to True
-        so we don't quietly drop presence updates for malformed payloads
-        — the user can still correct presence manually.
-        """
-        if not isinstance(timestamp, str) or not timestamp:
-            return True
-        try:
-            ts = datetime.fromisoformat(timestamp)
-        except ValueError:
-            return True
-        if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=timezone.utc)
-        options = get_entry_options(self.hass)
-        window_minutes = int(
-            options.get(OPT_PRESENCE_INFERENCE_WINDOW_MINUTES, 60)
-        )
-        now = datetime.now(tz=timezone.utc)
-        # Buffer against minor clock skew where Procare's stamp is
-        # slightly ahead of our local clock.
-        future_buffer = timedelta(minutes=5)
-        return (now - timedelta(minutes=window_minutes)) <= ts <= (
-            now + future_buffer
-        )
-
-    async def _set_at_daycare(self, value: bool, *, source: str) -> None:
-        await self.coordinator.set_at_daycare(self.baby, value)
-        # Mode auto-switch (§15 #19)
-        if source == "title_events" and self.config.get("mode") != "title_events":
-            self.config["mode"] = "title_events"
-            await self.coordinator.set_baby_importer(self.baby.id, self.config)
-
-    @callback
-    def _auto_sign_out(self, now: datetime) -> None:
-        weekday = now.weekday()
-        days = [
-            _WEEKDAY_BY_NAME[d] for d in (self.config.get("daycare_days") or []) if d in _WEEKDAY_BY_NAME
-        ]
-        if days and weekday not in days:
-            return
-        if not self.coordinator.at_daycare(self.baby):
-            return
-        _LOGGER.info(
-            "babytracker: auto-signing %s out at daycare close time",
-            self.baby.slug,
-        )
-        self.hass.async_create_task(
-            self.coordinator.set_at_daycare(self.baby, False)
-        )
