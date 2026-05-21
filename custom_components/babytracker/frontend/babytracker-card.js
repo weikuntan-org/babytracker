@@ -2846,6 +2846,7 @@ function tn(t, e, i, n, r) {
 const en = [
   "Bath",
   "Butt wash",
+  "Diaper free time",
   "Medication",
   "Vitamin",
   "Burp",

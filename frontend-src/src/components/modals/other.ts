@@ -18,6 +18,7 @@ import {
 const QUICK_OTHER_OPTIONS = [
     "Bath",
     "Butt wash",
+    "Diaper free time",
     "Medication",
     "Vitamin",
     "Burp",
