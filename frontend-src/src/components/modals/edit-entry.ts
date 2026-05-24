@@ -2,6 +2,7 @@ import { html, type TemplateResult } from "lit";
 
 import {
     SESSION_ENTRY_TYPES,
+    bottleAmountRow,
     dateInputToIso,
     dateRow,
     dateTimeRow,
@@ -172,27 +173,11 @@ export function editEntryForm(
                   `
                 : ""}
             ${type === "feeding" && data.method === "bottle"
-                ? html`
-                      <label for="amount">Amount</label>
-                      <input
-                          id="amount"
-                          name="amount"
-                          type="number"
-                          min="0"
-                          step="0.5"
-                          inputmode="decimal"
-                          .value=${data.amount != null ? String(data.amount) : ""}
-                      />
-                      <label for="unit">Unit</label>
-                      <select id="unit" name="unit">
-                          <option value="oz" ?selected=${data.unit === "oz"}>
-                              oz
-                          </option>
-                          <option value="ml" ?selected=${data.unit === "ml"}>
-                              ml
-                          </option>
-                      </select>
-                  `
+                ? bottleAmountRow({
+                      initialAmount:
+                          typeof data.amount === "number" ? data.amount : undefined,
+                      initialUnit: data.unit ?? "oz"
+                  })
                 : ""}
             ${type === "other" || type === "medication"
                 ? html`
