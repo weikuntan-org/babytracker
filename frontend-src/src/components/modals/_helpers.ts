@@ -205,6 +205,128 @@ export function dateTimeRow(opts: {
     `;
 }
 
+// Slider bounds for the oz bottle-amount picker. ml mode falls back
+// to a plain number input (5-ml precision via the slider would be too
+// fine to feel meaningful at typical bottle sizes). Shared between
+// the log-bottle modal and the edit-entry modal so they stay in sync.
+const OZ_SLIDER_MAX = 8;
+const OZ_SLIDER_STEP = 0.5;
+const OZ_SLIDER_DEFAULT = 4;
+
+/**
+ * Bottle "Amount + Unit" row used by both the log-bottle modal and the
+ * edit-entry modal's bottle-feeding branch. In oz mode renders a 0–8
+ * `<input type="range">` (0.5 step) with a live readout; in ml mode
+ * renders a free-form number input. The unit `<select>` swaps the
+ * input in place imperatively so both modals can stay stateless.
+ */
+export function bottleAmountRow(opts: {
+    initialAmount?: number;
+    initialUnit: "oz" | "ml" | string;
+    autofocus?: boolean;
+}): TemplateResult {
+    const initialUnit = opts.initialUnit === "ml" ? "ml" : "oz";
+    const hasAmount =
+        typeof opts.initialAmount === "number" &&
+        Number.isFinite(opts.initialAmount);
+    const initialAmount = hasAmount ? (opts.initialAmount as number) : undefined;
+    const numberValue = initialAmount != null ? String(initialAmount) : "";
+    const sliderInitial = Math.max(
+        0,
+        Math.min(OZ_SLIDER_MAX, initialAmount ?? OZ_SLIDER_DEFAULT)
+    );
+    const onAmountInput = (e: Event) => {
+        const input = e.currentTarget as HTMLInputElement;
+        if (input.type !== "range") return;
+        const readout = input.form?.querySelector<HTMLElement>(
+            "#amount-readout"
+        );
+        if (readout) readout.textContent = `${input.value} oz`;
+    };
+    const onUnitChange = (e: Event) => {
+        const select = e.currentTarget as HTMLSelectElement;
+        const form = select.form;
+        if (!form) return;
+        const amount = form.querySelector<HTMLInputElement>(
+            'input[name="amount"]'
+        );
+        const readout = form.querySelector<HTMLElement>("#amount-readout");
+        if (!amount) return;
+        if (select.value === "oz") {
+            amount.type = "range";
+            amount.min = "0";
+            amount.max = String(OZ_SLIDER_MAX);
+            amount.step = String(OZ_SLIDER_STEP);
+            amount.removeAttribute("inputmode");
+            const v = Number(amount.value);
+            const clamped = Number.isFinite(v)
+                ? Math.max(0, Math.min(OZ_SLIDER_MAX, v))
+                : OZ_SLIDER_DEFAULT;
+            amount.value = String(clamped);
+            if (readout) {
+                readout.style.display = "";
+                readout.textContent = `${amount.value} oz`;
+            }
+        } else {
+            amount.type = "number";
+            amount.min = "0";
+            amount.step = "1";
+            amount.removeAttribute("max");
+            amount.inputMode = "decimal";
+            if (readout) readout.style.display = "none";
+        }
+    };
+    return html`
+        <label for="amount">Amount</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+            ${initialUnit === "oz"
+                ? html`
+                      <input
+                          id="amount"
+                          name="amount"
+                          type="range"
+                          min="0"
+                          max=${OZ_SLIDER_MAX}
+                          step=${OZ_SLIDER_STEP}
+                          .value=${String(sliderInitial)}
+                          @input=${onAmountInput}
+                          style="flex:1;min-width:0;"
+                          ?autofocus=${opts.autofocus ?? false}
+                      />
+                      <span
+                          id="amount-readout"
+                          class="muted"
+                          style="min-width:4ch;text-align:right;"
+                          >${sliderInitial} oz</span
+                      >
+                  `
+                : html`
+                      <input
+                          id="amount"
+                          name="amount"
+                          type="number"
+                          min="0"
+                          step="1"
+                          inputmode="decimal"
+                          .value=${numberValue}
+                          style="flex:1;min-width:0;"
+                          ?autofocus=${opts.autofocus ?? false}
+                      />
+                      <span
+                          id="amount-readout"
+                          class="muted"
+                          style="display:none;"
+                      ></span>
+                  `}
+        </div>
+        <label for="unit">Unit</label>
+        <select id="unit" name="unit" @change=${onUnitChange}>
+            <option value="oz" ?selected=${initialUnit === "oz"}>oz</option>
+            <option value="ml" ?selected=${initialUnit === "ml"}>ml</option>
+        </select>
+    `;
+}
+
 /**
  * Date-only sibling of `dateTimeRow` — adds a `Today` button next to a
  * `<input type="date">`. Used by growth and vaccine entries, which are
