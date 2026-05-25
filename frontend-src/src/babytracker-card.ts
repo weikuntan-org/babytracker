@@ -392,7 +392,6 @@ export class BabytrackerCard extends LitElement {
      */
     private _renderStatusChips(): TemplateResult {
         const hass = this.hass!;
-        const lastFeeding = hass.states?.[this._entityId("last_feeding")]?.state;
         const lastDiaper = hass.states?.[this._entityId("last_diaper")]?.state;
         const sleeping =
             hass.states?.[this._entityId("sleeping", "binary_sensor")]?.state ===
@@ -412,9 +411,23 @@ export class BabytrackerCard extends LitElement {
         const awakeMinutes = sleeping
             ? null
             : timeSinceLastWakeMinutes(recentEntries);
+        // Bottle/solids "last" times come straight from `recent_entries`
+        // (already sorted newest-first), so we can split what was a single
+        // "Last feed" chip into per-method visibility. Breast feedings
+        // intentionally don't get a chip — they're surfaced via the
+        // session tile when in-progress.
+        const lastBottle = recentEntries.find(
+            (e: any) => e?.type === "feeding" && e?.data?.method === "bottle"
+        )?.timestamp;
+        const lastSolids = recentEntries.find(
+            (e: any) => e?.type === "feeding" && e?.data?.method === "solids"
+        )?.timestamp;
         return html`
             <div class="chip" role="listitem">
-                Last feed: ${this._timeSince(lastFeeding)}
+                Last bottle: ${this._timeSince(lastBottle)}
+            </div>
+            <div class="chip" role="listitem">
+                Last solids: ${this._timeSince(lastSolids)}
             </div>
             <div class="chip" role="listitem">
                 Last diaper: ${this._timeSince(lastDiaper)}
