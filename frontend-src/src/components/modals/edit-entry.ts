@@ -6,6 +6,7 @@ import {
     dateInputToIso,
     dateRow,
     dateTimeRow,
+    growthMeasurementsRow,
     isoToDateInput,
     isoToLocalInput,
     localInputToIso,
@@ -191,91 +192,18 @@ export function editEntryForm(
                   `
                 : ""}
             ${type === "growth"
-                ? html`
-                      <div
-                          style="display:grid;grid-template-columns:2fr 1fr;gap:8px;align-items:end;"
-                      >
-                          <div>
-                              <label for="weight">Weight</label>
-                              <input
-                                  id="weight"
-                                  name="weight"
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  inputmode="decimal"
-                                  .value=${data.weight != null
-                                      ? String(data.weight)
-                                      : ""}
-                              />
-                          </div>
-                          <div>
-                              <label for="weight_unit">Unit</label>
-                              <select id="weight_unit" name="weight_unit">
-                                  <option
-                                      value="kg"
-                                      ?selected=${(data.weight_unit ?? "kg") === "kg"}
-                                  >
-                                      kg
-                                  </option>
-                                  <option
-                                      value="lb"
-                                      ?selected=${data.weight_unit === "lb"}
-                                  >
-                                      lb
-                                  </option>
-                              </select>
-                          </div>
-                          <div>
-                              <label for="height">Height</label>
-                              <input
-                                  id="height"
-                                  name="height"
-                                  type="number"
-                                  min="0"
-                                  step="0.1"
-                                  inputmode="decimal"
-                                  .value=${data.height != null
-                                      ? String(data.height)
-                                      : ""}
-                              />
-                          </div>
-                          <div>
-                              <label for="length_unit">Unit</label>
-                              <select id="length_unit" name="length_unit">
-                                  <option
-                                      value="cm"
-                                      ?selected=${(data.length_unit ?? "cm") === "cm"}
-                                  >
-                                      cm
-                                  </option>
-                                  <option
-                                      value="in"
-                                      ?selected=${data.length_unit === "in"}
-                                  >
-                                      in
-                                  </option>
-                              </select>
-                          </div>
-                          <div style="grid-column: span 2;">
-                              <label for="head">Head circumference</label>
-                              <input
-                                  id="head"
-                                  name="head"
-                                  type="number"
-                                  min="0"
-                                  step="0.1"
-                                  inputmode="decimal"
-                                  .value=${data.head_circumference != null
-                                      ? String(data.head_circumference)
-                                      : ""}
-                              />
-                              <span class="muted"
-                                  >(uses the length unit above)</span
-                              >
-                          </div>
-                      </div>
-                  `
+                ? growthMeasurementsRow({
+                      initialWeight:
+                          typeof data.weight === "number" ? data.weight : undefined,
+                      initialHeight:
+                          typeof data.height === "number" ? data.height : undefined,
+                      initialHead:
+                          typeof data.head_circumference === "number"
+                              ? data.head_circumference
+                              : undefined,
+                      initialWeightUnit: data.weight_unit ?? "kg",
+                      initialLengthUnit: data.length_unit ?? "cm"
+                  })
                 : ""}
             <label for="notes">Notes</label>
             ${notesInputRow(hass, {
