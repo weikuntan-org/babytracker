@@ -328,6 +328,94 @@ export function bottleAmountRow(opts: {
 }
 
 /**
+ * Growth measurements grid (weight + height + head circumference, each
+ * with its own unit selector). Shared between the log-growth modal and
+ * the edit-entry modal's growth branch so they can't drift. All three
+ * measurement inputs are optional on the create side (the backend
+ * rejects an entry with all three blank); on the edit side they pre-fill
+ * from the entry's stored values.
+ */
+export function growthMeasurementsRow(opts: {
+    initialWeight?: number;
+    initialHeight?: number;
+    initialHead?: number;
+    initialWeightUnit?: "kg" | "lb" | string;
+    initialLengthUnit?: "cm" | "in" | string;
+    autofocusWeight?: boolean;
+}): TemplateResult {
+    const weightUnit = opts.initialWeightUnit === "lb" ? "lb" : "kg";
+    const lengthUnit = opts.initialLengthUnit === "in" ? "in" : "cm";
+    const fmt = (n: number | undefined) =>
+        typeof n === "number" && Number.isFinite(n) ? String(n) : "";
+    return html`
+        <div
+            style="display:grid;grid-template-columns:2fr 1fr;gap:8px;align-items:end;"
+        >
+            <div>
+                <label for="weight">Weight</label>
+                <input
+                    id="weight"
+                    name="weight"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputmode="decimal"
+                    .value=${fmt(opts.initialWeight)}
+                    ?autofocus=${opts.autofocusWeight ?? false}
+                />
+            </div>
+            <div>
+                <label for="weight_unit">Unit</label>
+                <select id="weight_unit" name="weight_unit">
+                    <option value="kg" ?selected=${weightUnit === "kg"}>
+                        kg
+                    </option>
+                    <option value="lb" ?selected=${weightUnit === "lb"}>
+                        lb
+                    </option>
+                </select>
+            </div>
+            <div>
+                <label for="height">Height</label>
+                <input
+                    id="height"
+                    name="height"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    inputmode="decimal"
+                    .value=${fmt(opts.initialHeight)}
+                />
+            </div>
+            <div>
+                <label for="length_unit">Unit</label>
+                <select id="length_unit" name="length_unit">
+                    <option value="cm" ?selected=${lengthUnit === "cm"}>
+                        cm
+                    </option>
+                    <option value="in" ?selected=${lengthUnit === "in"}>
+                        in
+                    </option>
+                </select>
+            </div>
+            <div style="grid-column: span 2;">
+                <label for="head">Head circumference</label>
+                <input
+                    id="head"
+                    name="head"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    inputmode="decimal"
+                    .value=${fmt(opts.initialHead)}
+                />
+                <span class="muted">(uses the length unit above)</span>
+            </div>
+        </div>
+    `;
+}
+
+/**
  * Date-only sibling of `dateTimeRow` — adds a `Today` button next to a
  * `<input type="date">`. Used by growth and vaccine entries, which are
  * date-only by design (no time component).
