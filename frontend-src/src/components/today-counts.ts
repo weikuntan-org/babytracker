@@ -6,7 +6,7 @@
 import { html, type TemplateResult } from "lit";
 
 import { babyEntityId } from "../lib/ha-helpers";
-import { formatMinutes, formatVolume, summarize } from "../lib/entries";
+import { formatVolume, summarize } from "../lib/entries";
 
 export function todayCountsTemplate(
     hass: any,
@@ -22,9 +22,6 @@ export function todayCountsTemplate(
         </div>
         <div class="chip" role="listitem">
             ${s.wetDiapers} wet and ${s.dirtyDiapers} dirty
-        </div>
-        <div class="chip" role="listitem">
-            ${formatMinutes(s.sleepMinutes)} sleep
         </div>
     `;
 }

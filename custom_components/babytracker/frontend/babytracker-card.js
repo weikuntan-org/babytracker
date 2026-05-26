@@ -521,7 +521,7 @@ const ui = (t, e, i) => {
  * SPDX-License-Identifier: BSD-3-Clause
  */
 const it = globalThis;
-class O extends ct {
+class N extends ct {
   constructor() {
     super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
   }
@@ -547,9 +547,9 @@ class O extends ct {
   }
 }
 var Pe;
-O._$litElement$ = !0, O.finalized = !0, (Pe = it.litElementHydrateSupport) == null || Pe.call(it, { LitElement: O });
+N._$litElement$ = !0, N.finalized = !0, (Pe = it.litElementHydrateSupport) == null || Pe.call(it, { LitElement: N });
 const Ht = it.litElementPolyfillSupport;
-Ht == null || Ht({ LitElement: O });
+Ht == null || Ht({ LitElement: N });
 (it.litElementVersions ?? (it.litElementVersions = [])).push("4.2.2");
 /**
  * @license
@@ -934,7 +934,7 @@ function ki(t, e = Date.now()) {
   }
   return i === null ? null : Math.max(0, (e - i) / 6e4);
 }
-function T(t) {
+function O(t) {
   if (!Number.isFinite(t) || t <= 0) return "0m";
   if (t < 60) return `${Math.round(t)}m`;
   const e = Math.floor(t / 60), i = Math.round(t % 60);
@@ -978,7 +978,7 @@ function Ci(t, e, i) {
       d`
                 <div class="chip warning" role="status">
                     Sleeping${m ? d` · started ${fe(m)} ·
-                          ${T(v)}` : ""}
+                          ${O(v)}` : ""}
                     <button
                         aria-label="End sleep"
                         @click=${(b) => i("end_sleep", { baby: e }, b.currentTarget)}
@@ -1044,7 +1044,7 @@ var Ai = Object.defineProperty, Di = Object.getOwnPropertyDescriptor, ot = (t, e
     (s = t[o]) && (r = (n ? s(e, i, r) : s(r)) || r);
   return n && r && Ai(e, i, r), r;
 };
-let U = class extends O {
+let U = class extends N {
   constructor() {
     super(...arguments), this.photoPath = "", this.size = 128, this._url = "", this._failed = !1, this._open = !1, this._lastResolved = "", this._resolveToken = 0, this._onKeydown = (t) => {
       t.key === "Escape" && (t.preventDefault(), this._close_lightbox());
@@ -1277,7 +1277,7 @@ function Pi(t) {
   if (i && (!t.ended_at || t.ended_at === t.timestamp)) {
     const r = jt(t.timestamp, t.ended_at);
     return d`<span class="muted"
-            >${e} (${T(r)}, ongoing)</span
+            >${e} (${O(r)}, ongoing)</span
         >`;
   }
   if (n && t.ended_at && t.ended_at !== t.timestamp) {
@@ -1288,7 +1288,7 @@ function Pi(t) {
         t.ended_at
       );
       return d`<span class="muted"
-                >${e} – ${r} (${T(o)})</span
+                >${e} – ${r} (${O(o)})</span
             >`;
     }
     return d`<span class="muted">${e} – ${r}</span>`;
@@ -1323,7 +1323,7 @@ var Ti = Object.defineProperty, Ni = Object.getOwnPropertyDescriptor, Nt = (t, e
     (s = t[o]) && (r = (n ? s(e, i, r) : s(r)) || r);
   return n && r && Ti(e, i, r), r;
 };
-let pt = class extends O {
+let pt = class extends N {
   constructor() {
     super(...arguments), this.label = "", this.renderChart = null, this._open = !1, this._onKeydown = (t) => {
       t.key === "Escape" && (t.preventDefault(), this._close());
@@ -1749,9 +1749,6 @@ function zi(t, e, i) {
         <div class="chip" role="listitem">
             ${o.wetDiapers} wet and ${o.dirtyDiapers} dirty
         </div>
-        <div class="chip" role="listitem">
-            ${T(o.sleepMinutes)} sleep
-        </div>
     `;
 }
 function ve() {
@@ -1933,7 +1930,7 @@ var Fi = Object.defineProperty, qi = Object.getOwnPropertyDescriptor, Qt = (t, e
     (s = t[o]) && (r = (n ? s(e, i, r) : s(r)) || r);
   return n && r && Fi(e, i, r), r;
 };
-let wt = class extends O {
+let wt = class extends N {
   constructor() {
     super(...arguments), this._state = "idle", this._onClick = async (t) => {
       t.preventDefault(), t.stopPropagation(), this._state === "idle" ? await this._start() : this._state === "listening" && await this._stop();
@@ -2104,7 +2101,7 @@ var Gi = Object.defineProperty, Xi = Object.getOwnPropertyDescriptor, ht = (t, e
     (s = t[o]) && (r = (n ? s(e, i, r) : s(r)) || r);
   return n && r && Gi(e, i, r), r;
 };
-let Y = class extends O {
+let Y = class extends N {
   constructor() {
     super(...arguments), this.value = "", this._busy = !1, this._error = "", this._onClickAdd = (t) => {
       var e;
@@ -2270,10 +2267,10 @@ function Q(t) {
   const e = t.querySelector("bt-photo-button"), i = e == null ? void 0 : e.value;
   return typeof i == "string" && i.length > 0 ? i : void 0;
 }
-const N = (t) => String(t).padStart(2, "0");
+const T = (t) => String(t).padStart(2, "0");
 function bt() {
   const t = /* @__PURE__ */ new Date();
-  return `${t.getFullYear()}-${N(t.getMonth() + 1)}-${N(t.getDate())}T${N(t.getHours())}:${N(t.getMinutes())}`;
+  return `${t.getFullYear()}-${T(t.getMonth() + 1)}-${T(t.getDate())}T${T(t.getHours())}:${T(t.getMinutes())}`;
 }
 function R(t) {
   if (!t) return;
@@ -2286,18 +2283,18 @@ function Vt(t) {
   const e = Date.parse(t);
   if (Number.isNaN(e)) return "";
   const i = new Date(e);
-  return `${i.getFullYear()}-${N(i.getMonth() + 1)}-${N(i.getDate())}T${N(i.getHours())}:${N(i.getMinutes())}`;
+  return `${i.getFullYear()}-${T(i.getMonth() + 1)}-${T(i.getDate())}T${T(i.getHours())}:${T(i.getMinutes())}`;
 }
 function Jt() {
   const t = /* @__PURE__ */ new Date();
-  return `${t.getFullYear()}-${N(t.getMonth() + 1)}-${N(t.getDate())}`;
+  return `${t.getFullYear()}-${T(t.getMonth() + 1)}-${T(t.getDate())}`;
 }
 function Qi(t) {
   if (!t) return "";
   const e = Date.parse(t);
   if (Number.isNaN(e)) return "";
   const i = new Date(e);
-  return `${i.getFullYear()}-${N(i.getMonth() + 1)}-${N(i.getDate())}`;
+  return `${i.getFullYear()}-${T(i.getMonth() + 1)}-${T(i.getDate())}`;
 }
 function te(t) {
   if (!t) return;
@@ -3652,7 +3649,7 @@ var wn = Object.defineProperty, xn = Object.getOwnPropertyDescriptor, st = (t, e
   return n && r && wn(e, i, r), r;
 };
 const kn = ["vaccines", "growth", "trends", "export"];
-let B = class extends O {
+let B = class extends N {
   constructor() {
     super(...arguments), this._modal = null, this._vaccines = [], this._growth = [], this._closeModal = () => {
       this._modal = null;
@@ -4023,7 +4020,7 @@ function En(t) {
     day: "numeric"
   }) : t;
 }
-let V = class extends O {
+let V = class extends N {
   constructor() {
     super(...arguments), this._date = Dt(/* @__PURE__ */ new Date()), this._entries = [], this._modal = null, this._expandedNotes = /* @__PURE__ */ new Set(), this._today = () => {
       this._date = Dt(/* @__PURE__ */ new Date());
@@ -4093,12 +4090,12 @@ let V = class extends O {
         `), e.push(d`
             <span class="chip"
                 ><span class="chip-label">Sleep</span>
-                ${T(t.sleepMinutes)}</span
+                ${O(t.sleepMinutes)}</span
             >
         `), e.push(d`
             <span class="chip"
                 ><span class="chip-label">Longest sleep</span>
-                ${T(t.longestSleepMinutes)}</span
+                ${O(t.longestSleepMinutes)}</span
             >
         `), t.bottleFeeds > 0 && e.push(d`
                 <span class="chip"
@@ -4110,10 +4107,10 @@ let V = class extends O {
                 >
             `), t.nursingMinutes > 0) {
       const n = [];
-      t.nursingLeftMinutes > 0 && n.push(`L ${T(t.nursingLeftMinutes)}`), t.nursingRightMinutes > 0 && n.push(`R ${T(t.nursingRightMinutes)}`), e.push(d`
+      t.nursingLeftMinutes > 0 && n.push(`L ${O(t.nursingLeftMinutes)}`), t.nursingRightMinutes > 0 && n.push(`R ${O(t.nursingRightMinutes)}`), e.push(d`
                 <span class="chip"
                     ><span class="chip-label">Nursing</span>
-                    ${T(t.nursingMinutes)}
+                    ${O(t.nursingMinutes)}
                     <span class="chip-detail">(${n.join(" · ")})</span></span
                 >
             `);
@@ -4131,13 +4128,13 @@ let V = class extends O {
             `), t.tummyMinutes > 0 && e.push(d`
                 <span class="chip"
                     ><span class="chip-label">Tummy time</span>
-                    ${T(t.tummyMinutes)}</span
+                    ${O(t.tummyMinutes)}</span
                 >
             `), t.walkCount > 0 && e.push(d`
                 <span class="chip"
                     ><span class="chip-label">Walks</span> ${t.walkCount}
                     <span class="chip-detail"
-                        >· ${T(t.walkMinutes)}</span
+                        >· ${O(t.walkMinutes)}</span
                     ></span
                 >
             `), t.medCount > 0 && e.push(d`
@@ -4402,7 +4399,7 @@ const Tn = [
   "recent",
   "importer_sync"
 ];
-let H = class extends O {
+let H = class extends N {
   constructor() {
     super(...arguments), this._modal = null, this._expandedNotes = /* @__PURE__ */ new Set(), this._handleService = async (t, e, i) => {
       const n = i instanceof HTMLElement && i.classList.contains("quick") ? i : null;
@@ -4547,7 +4544,7 @@ let H = class extends O {
                 Last diaper: ${this._timeSince(e)}
             </div>
             ${s !== null ? d`<div class="chip" role="listitem">
-                      Awake for: ${T(s)}
+                      Awake for: ${O(s)}
                   </div>` : ""}
             ${i ? d`<div class="chip warning" role="listitem">Sleeping</div>` : ""}
             ${n ? d`<div class="chip warning" role="listitem">On a walk</div>` : ""}
@@ -4933,7 +4930,7 @@ var Nn = Object.defineProperty, On = Object.getOwnPropertyDescriptor, ne = (t, e
     (s = t[o]) && (r = (n ? s(e, i, r) : s(r)) || r);
   return n && r && Nn(e, i, r), r;
 };
-let rt = class extends O {
+let rt = class extends N {
   setConfig(t) {
     this._config = { ...t };
   }
