@@ -511,10 +511,72 @@ class BabytrackerCoordinator:
         return pool[:RECENT_ENTRIES_CAP]
 
     def latest_growth_data(self, baby_id: str) -> dict[str, Any]:
-        for entry in sorted(self._entries, key=lambda e: parse_ts(e.timestamp), reverse=True):
-            if entry.baby_id == baby_id and entry.type == "growth":
-                return entry.data
-        return {}
+        """Synthetic "latest growth" dict that backfills each measurement
+        from older partial updates.
+
+        For weight, height, and head_circumference: take the value AND
+        its sibling unit/percentile fields from the most-recent entry
+        that recorded a non-None value for that measurement. So a
+        weight-only update doesn't blank out height/head sensors —
+        they keep showing the last-known value.
+
+        BMI and its percentile come from the most-recent entry that
+        recorded BOTH weight and height (BMI is a function of both;
+        mixing weight and height across entries would yield a
+        misleading derived value).
+        """
+        relevant = sorted(
+            (
+                e
+                for e in self._entries
+                if e.baby_id == baby_id and e.type == "growth"
+            ),
+            key=lambda e: parse_ts(e.timestamp),
+            reverse=True,
+        )
+        out: dict[str, Any] = {}
+        # Each measurement field with its sibling percentile/unit keys.
+        # `length_unit` is shared between height and head; first-write-
+        # wins (height's entry sets it; head won't overwrite). This is
+        # fine for the consistent-unit workflow babytracker assumes.
+        fields = (
+            (
+                "weight",
+                ("weight_unit", "weight_percentile", "weight_z", "weight_percentile_source"),
+            ),
+            (
+                "height",
+                ("length_unit", "height_percentile", "height_z", "height_percentile_source"),
+            ),
+            (
+                "head_circumference",
+                ("length_unit", "head_percentile", "head_z", "head_percentile_source"),
+            ),
+        )
+        for field, siblings in fields:
+            for entry in relevant:
+                if entry.data.get(field) is None:
+                    continue
+                out[field] = entry.data[field]
+                for sib in siblings:
+                    if sib in out:
+                        continue
+                    sib_value = entry.data.get(sib)
+                    if sib_value is not None:
+                        out[sib] = sib_value
+                break
+        # BMI: only from an entry that has both weight AND height.
+        for entry in relevant:
+            if (
+                entry.data.get("weight") is not None
+                and entry.data.get("height") is not None
+            ):
+                for key in ("bmi", "bmi_percentile", "bmi_z", "bmi_percentile_source"):
+                    v = entry.data.get(key)
+                    if v is not None and key not in out:
+                        out[key] = v
+                break
+        return out
 
     def minutes_in_day(
         self,

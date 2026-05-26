@@ -147,13 +147,18 @@ export function isoToDateInput(iso?: string | null): string {
 
 /**
  * Convert a `YYYY-MM-DD` (local) date input value to a UTC ISO datetime
- * the backend's `cv.datetime` can parse. Anchors to local noon so a date
- * doesn't shift across timezones during the JSON round-trip — important
- * for events like vaccines where only the calendar day matters.
+ * the backend's `cv.datetime` can parse. Anchors to local midnight so
+ * date-only events (growth, vaccines) sort to the start of the day on
+ * the chart, ahead of any same-day activity entries.
+ *
+ * Tradeoff: a viewer in a far-future timezone could see the wall-clock
+ * day shift back by one. The babytracker workflow is single-user,
+ * single-timezone in practice, so this is acceptable in exchange for
+ * the more intuitive "first event of the day" sort order.
  */
 export function dateInputToIso(value: string): string | undefined {
     if (!value) return undefined;
-    const ms = Date.parse(`${value}T12:00`);
+    const ms = Date.parse(`${value}T00:00`);
     if (Number.isNaN(ms)) return undefined;
     return new Date(ms).toISOString();
 }

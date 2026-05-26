@@ -50,12 +50,18 @@ describe("dateInputToIso", () => {
         expect(dateInputToIso("")).toBeUndefined();
     });
 
-    it("anchors to local noon so the date doesn't slip across timezones", () => {
+    it("anchors to local midnight (start of day)", () => {
         const iso = dateInputToIso("2026-05-20")!;
         expect(iso).toBeTruthy();
-        // The wall-clock date should survive a round-trip back to the
-        // YYYY-MM-DD form regardless of the test machine's timezone.
+        // The wall-clock date should round-trip back to the same
+        // YYYY-MM-DD form for the test machine's local timezone.
         expect(isoToDateInput(iso)).toBe("2026-05-20");
+        // And the local wall-clock time should be 00:00 — the whole
+        // point of this anchor change is that date-only events sort to
+        // the very start of the day on the chart.
+        const local = new Date(iso);
+        expect(local.getHours()).toBe(0);
+        expect(local.getMinutes()).toBe(0);
     });
 });
 
