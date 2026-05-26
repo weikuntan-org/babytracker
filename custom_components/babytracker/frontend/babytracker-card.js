@@ -2298,7 +2298,7 @@ function Qi(t) {
 }
 function te(t) {
   if (!t) return;
-  const e = Date.parse(`${t}T12:00`);
+  const e = Date.parse(`${t}T00:00`);
   if (!Number.isNaN(e))
     return new Date(e).toISOString();
 }
