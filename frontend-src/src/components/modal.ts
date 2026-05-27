@@ -3,12 +3,11 @@
 // `ModalKind` union the cards type their `_modal` state against.
 import { html, nothing, type TemplateResult } from "lit";
 
-import type { Call, Close, RequestDelete, Submit } from "./modals/_helpers";
+import type { Close, RequestDelete, Submit } from "./modals/_helpers";
 import { bottleForm } from "./modals/bottle";
 import { confirmDeleteImportedForm } from "./modals/confirm-delete-imported";
 import { diaperForm } from "./modals/diaper";
 import { editEntryForm } from "./modals/edit-entry";
-import { endSleepFirstForm } from "./modals/end-sleep-first";
 import { growthLogForm } from "./modals/growth";
 import { otherForm } from "./modals/other";
 import { sessionForm, type SessionActivity } from "./modals/session";
@@ -32,14 +31,6 @@ export type ModalKind =
           activity: SessionActivity;
           /** Only set when activity = "feeding" — picks the feeding method. */
           method?: "breast_left" | "breast_right";
-      }
-    | {
-          kind: "end_sleep_first";
-          baby: string;
-          /** Configured display name (preserves casing like "TJ"). */
-          babyName?: string;
-          label: string;
-          then: () => void | Promise<void>;
       }
     | {
           kind: "confirm_delete_imported";
@@ -71,7 +62,6 @@ export function modalTemplate(
     modal: ModalKind | null,
     options: any,
     submit: Submit,
-    call: Call,
     close: Close,
     requestDelete?: RequestDelete
 ): TemplateResult {
@@ -105,16 +95,6 @@ export function modalTemplate(
                     modal.activity,
                     modal.method,
                     submit,
-                    close
-                );
-                break;
-            case "end_sleep_first":
-                body = endSleepFirstForm(
-                    modal.baby,
-                    modal.babyName,
-                    modal.label,
-                    modal.then,
-                    call,
                     close
                 );
                 break;
