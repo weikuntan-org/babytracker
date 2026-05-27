@@ -9,10 +9,6 @@ export type Submit = (
     service: string,
     data: Record<string, unknown>
 ) => Promise<void>;
-export type Call = (
-    service: string,
-    data: Record<string, unknown>
-) => Promise<unknown>;
 export type Close = () => void;
 export type RequestDelete = (entry: {
     id: string;

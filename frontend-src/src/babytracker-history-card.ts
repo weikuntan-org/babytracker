@@ -332,13 +332,6 @@ export class BabytrackerHistoryCard extends LitElement {
         this._modal = null;
     };
 
-    private _callService = async (
-        service: string,
-        data: Record<string, unknown>
-    ): Promise<unknown> => {
-        return this.hass.callService("babytracker", service, data);
-    };
-
     private _renderChips(summary: DaySummary): TemplateResult {
         const chips: TemplateResult[] = [];
 
@@ -510,7 +503,6 @@ export class BabytrackerHistoryCard extends LitElement {
                 this._modal,
                 undefined,
                 this._submitModal,
-                this._callService,
                 this._closeModal,
                 this._requestDelete
             )}

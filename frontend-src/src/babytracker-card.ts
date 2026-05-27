@@ -489,13 +489,6 @@ export class BabytrackerCard extends LitElement {
         }
     };
 
-    private _isSleeping(): boolean {
-        return (
-            this.hass?.states?.[this._entityId("sleeping", "binary_sensor")]
-                ?.state === "on"
-        );
-    }
-
     private _lastBottle():
         | { amount: number; unit: "ml" | "oz" }
         | undefined {
@@ -515,20 +508,6 @@ export class BabytrackerCard extends LitElement {
         return undefined;
     }
 
-    private _interceptIfSleeping(
-        label: string,
-        action: () => void | Promise<void>
-    ): void | Promise<void> {
-        if (!this._isSleeping()) return action();
-        this._modal = {
-            kind: "end_sleep_first",
-            baby: this._baby(),
-            babyName: this._babyConfig?.name,
-            label,
-            then: action
-        };
-    }
-
     private _requestModal = (
         target:
             | "diaper"
@@ -542,49 +521,25 @@ export class BabytrackerCard extends LitElement {
     ): void => {
         const baby = this._baby();
         if (typeof target === "string") {
-            const labels: Record<typeof target, string> = {
-                diaper: "logging a diaper",
-                bottle: "logging a bottle",
-                solids: "logging solids",
-                other: "logging this"
-            };
-            this._interceptIfSleeping(labels[target], () => {
-                if (target === "bottle") {
-                    const last = this._lastBottle();
-                    this._modal = {
-                        kind: "bottle",
-                        baby,
-                        lastAmount: last?.amount,
-                        lastUnit: last?.unit
-                    };
-                } else {
-                    this._modal = { kind: target, baby };
-                }
-            });
+            if (target === "bottle") {
+                const last = this._lastBottle();
+                this._modal = {
+                    kind: "bottle",
+                    baby,
+                    lastAmount: last?.amount,
+                    lastUnit: last?.unit
+                };
+            } else {
+                this._modal = { kind: target, baby };
+            }
             return;
         }
-        // Session request. Don't intercept "log another sleep" — backend
-        // rejects that with a clearer error. For other sessions while sleep
-        // is open, intercept so the user can end sleep first.
-        const sessionLabels: Record<typeof target.activity, string> = {
-            sleep: "logging another sleep session",
-            tummy_time: "starting tummy time",
-            walk: "starting a walk",
-            feeding: "starting a feeding session"
+        this._modal = {
+            kind: "session",
+            baby,
+            activity: target.activity,
+            method: target.method
         };
-        const open = () => {
-            this._modal = {
-                kind: "session",
-                baby,
-                activity: target.activity,
-                method: target.method
-            };
-        };
-        if (target.activity === "sleep") {
-            open();
-            return;
-        }
-        this._interceptIfSleeping(sessionLabels[target.activity], open);
     };
 
     private _requestDelete = (entry: {
@@ -705,7 +660,6 @@ export class BabytrackerCard extends LitElement {
                 this._modal,
                 this._options,
                 this._submitModal,
-                (service, data) => this._handleService(service, data),
                 this._closeModal,
                 this._requestDelete
             )}
