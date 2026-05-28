@@ -8,6 +8,7 @@
 import { LitElement, html, css, type TemplateResult } from "lit";
 import { customElement, property, state, query } from "lit/decorators.js";
 
+import { chip } from "./components/chip";
 import { quickLogTemplate, type ModalRequester } from "./components/quick-log";
 import { sessionTileTemplate } from "./components/session-tile";
 import { recentEntriesTemplate } from "./components/recent-entries";
@@ -90,6 +91,22 @@ export class BabytrackerCard extends LitElement {
         .chip.warning {
             background: var(--warning-color);
             color: var(--text-primary-color, #fff);
+        }
+        .chip .chip-icon {
+            color: var(--secondary-text-color);
+            --mdc-icon-size: 16px;
+            width: 16px;
+            height: 16px;
+        }
+        .chip.warning .chip-icon {
+            color: inherit;
+        }
+        .chip .chip-detail {
+            color: var(--secondary-text-color);
+            font-size: 0.78rem;
+        }
+        .chip.warning .chip-detail {
+            color: inherit;
         }
         .section {
             margin-top: 12px;
@@ -423,28 +440,51 @@ export class BabytrackerCard extends LitElement {
             (e: any) => e?.type === "feeding" && e?.data?.method === "solids"
         )?.timestamp;
         return html`
-            <div class="chip" role="listitem">
-                Last bottle: ${this._timeSince(lastBottle)}
-            </div>
-            <div class="chip" role="listitem">
-                Last solids: ${this._timeSince(lastSolids)}
-            </div>
-            <div class="chip" role="listitem">
-                Last diaper: ${this._timeSince(lastDiaper)}
-            </div>
+            ${chip({
+                icon: "mdi:baby-bottle-outline",
+                label: "Last bottle",
+                value: this._timeSince(lastBottle)
+            })}
+            ${chip({
+                icon: "mdi:silverware-spoon",
+                label: "Last solids",
+                value: this._timeSince(lastSolids)
+            })}
+            ${chip({
+                icon: "mdi:human-baby-changing-table",
+                label: "Last diaper",
+                value: this._timeSince(lastDiaper)
+            })}
             ${awakeMinutes !== null
-                ? html`<div class="chip" role="listitem">
-                      Awake for: ${formatMinutes(awakeMinutes)}
-                  </div>`
+                ? chip({
+                      icon: "mdi:weather-sunny",
+                      label: "Awake for",
+                      value: formatMinutes(awakeMinutes)
+                  })
                 : ""}
             ${sleeping
-                ? html`<div class="chip warning" role="listitem">Sleeping</div>`
+                ? chip({
+                      icon: "mdi:bed",
+                      label: "Sleeping",
+                      value: "Sleeping",
+                      warning: true
+                  })
                 : ""}
             ${walking
-                ? html`<div class="chip warning" role="listitem">On a walk</div>`
+                ? chip({
+                      icon: "mdi:walk",
+                      label: "On a walk",
+                      value: "On a walk",
+                      warning: true
+                  })
                 : ""}
             ${atDaycare
-                ? html`<div class="chip warning" role="listitem">At daycare</div>`
+                ? chip({
+                      icon: "mdi:school-outline",
+                      label: "At daycare",
+                      value: "At daycare",
+                      warning: true
+                  })
                 : ""}
         `;
     }
