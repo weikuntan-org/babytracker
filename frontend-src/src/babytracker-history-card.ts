@@ -37,6 +37,29 @@ function _pad(n: number): string {
     return String(n).padStart(2, "0");
 }
 
+/**
+ * One day-summary chip: leading MDI icon, the value, optional detail in
+ * smaller secondary text. `label` becomes the `title` + `aria-label` so
+ * hover and screen-reader users still get the full word — the icon by
+ * itself is just visual shorthand.
+ */
+function _chip(opts: {
+    icon: string;
+    label: string;
+    value: string;
+    detail?: string;
+}): TemplateResult {
+    return html`
+        <span class="chip" title=${opts.label} aria-label=${opts.label}>
+            <ha-icon class="chip-icon" icon=${opts.icon}></ha-icon>
+            <span class="chip-value">${opts.value}</span>
+            ${opts.detail
+                ? html`<span class="chip-detail">${opts.detail}</span>`
+                : ""}
+        </span>
+    `;
+}
+
 /** `YYYY-MM-DD` for a local Date. */
 function _toDateInput(d: Date): string {
     return `${d.getFullYear()}-${_pad(d.getMonth() + 1)}-${_pad(d.getDate())}`;
@@ -167,7 +190,7 @@ export class BabytrackerHistoryCard extends LitElement {
         }
         .chip {
             display: inline-flex;
-            align-items: baseline;
+            align-items: center;
             gap: 4px;
             padding: 4px 10px;
             border-radius: 999px;
@@ -177,8 +200,11 @@ export class BabytrackerHistoryCard extends LitElement {
             line-height: 1.2;
             color: var(--primary-text-color);
         }
-        .chip .chip-label {
+        .chip .chip-icon {
             color: var(--secondary-text-color);
+            --mdc-icon-size: 16px;
+            width: 16px;
+            height: 16px;
         }
         .chip .chip-detail {
             color: var(--secondary-text-color);
@@ -336,43 +362,47 @@ export class BabytrackerHistoryCard extends LitElement {
         const chips: TemplateResult[] = [];
 
         const diaperDetail: string[] = [];
-        if (summary.wet) diaperDetail.push(`${summary.wet} wet`);
-        if (summary.dirty) diaperDetail.push(`${summary.dirty} dirty`);
-        chips.push(html`
-            <span class="chip"
-                ><span class="chip-label">Diapers</span> ${summary.diapers}${
+        // `3W · 2D` instead of "3 wet · 2 dirty" — the chip now leads with
+        // an icon, so the verbose label inside the parens just wastes
+        // horizontal space.
+        if (summary.wet) diaperDetail.push(`${summary.wet}W`);
+        if (summary.dirty) diaperDetail.push(`${summary.dirty}D`);
+        chips.push(
+            _chip({
+                icon: "mdi:human-baby-changing-table",
+                label: "Diapers",
+                value: String(summary.diapers),
+                detail:
                     diaperDetail.length > 0
-                        ? html` <span class="chip-detail"
-                              >(${diaperDetail.join(" · ")})</span
-                          >`
-                        : ""
-                }</span
-            >
-        `);
+                        ? `(${diaperDetail.join(" · ")})`
+                        : undefined
+            })
+        );
 
-        chips.push(html`
-            <span class="chip"
-                ><span class="chip-label">Sleep</span>
-                ${formatMinutes(summary.sleepMinutes)}</span
-            >
-        `);
-        chips.push(html`
-            <span class="chip"
-                ><span class="chip-label">Longest sleep</span>
-                ${formatMinutes(summary.longestSleepMinutes)}</span
-            >
-        `);
+        chips.push(
+            _chip({
+                icon: "mdi:bed",
+                label: "Total sleep",
+                value: formatMinutes(summary.sleepMinutes)
+            })
+        );
+        chips.push(
+            _chip({
+                icon: "mdi:bed-clock",
+                label: "Longest sleep",
+                value: formatMinutes(summary.longestSleepMinutes)
+            })
+        );
 
         if (summary.bottleFeeds > 0) {
-            chips.push(html`
-                <span class="chip"
-                    ><span class="chip-label">Feeds</span>
-                    ${summary.bottleFeeds}
-                    <span class="chip-detail"
-                        >· ${formatVolume(summary.bottleVolumeMl)}</span
-                    ></span
-                >
-            `);
+            chips.push(
+                _chip({
+                    icon: "mdi:baby-bottle-outline",
+                    label: "Bottle feeds",
+                    value: String(summary.bottleFeeds),
+                    detail: `· ${formatVolume(summary.bottleVolumeMl)}`
+                })
+            );
         }
         if (summary.nursingMinutes > 0) {
             const sides: string[] = [];
@@ -380,63 +410,69 @@ export class BabytrackerHistoryCard extends LitElement {
                 sides.push(`L ${formatMinutes(summary.nursingLeftMinutes)}`);
             if (summary.nursingRightMinutes > 0)
                 sides.push(`R ${formatMinutes(summary.nursingRightMinutes)}`);
-            chips.push(html`
-                <span class="chip"
-                    ><span class="chip-label">Nursing</span>
-                    ${formatMinutes(summary.nursingMinutes)}
-                    <span class="chip-detail">(${sides.join(" · ")})</span></span
-                >
-            `);
+            chips.push(
+                _chip({
+                    icon: "mdi:mother-nurse",
+                    label: "Nursing",
+                    value: formatMinutes(summary.nursingMinutes),
+                    detail: `(${sides.join(" · ")})`
+                })
+            );
         }
         if (summary.pumpingMl > 0) {
-            chips.push(html`
-                <span class="chip"
-                    ><span class="chip-label">Pumping</span>
-                    ${formatVolume(summary.pumpingMl)}</span
-                >
-            `);
+            chips.push(
+                _chip({
+                    icon: "mdi:water-pump",
+                    label: "Pumping",
+                    value: formatVolume(summary.pumpingMl)
+                })
+            );
         }
         if (summary.solidsCount > 0) {
-            chips.push(html`
-                <span class="chip"
-                    ><span class="chip-label">Solids</span>
-                    ${summary.solidsCount}</span
-                >
-            `);
+            chips.push(
+                _chip({
+                    icon: "mdi:silverware-spoon",
+                    label: "Solids",
+                    value: String(summary.solidsCount)
+                })
+            );
         }
         if (summary.tummyMinutes > 0) {
-            chips.push(html`
-                <span class="chip"
-                    ><span class="chip-label">Tummy time</span>
-                    ${formatMinutes(summary.tummyMinutes)}</span
-                >
-            `);
+            chips.push(
+                _chip({
+                    icon: "mdi:human-handsup",
+                    label: "Tummy time",
+                    value: formatMinutes(summary.tummyMinutes)
+                })
+            );
         }
         if (summary.walkCount > 0) {
-            chips.push(html`
-                <span class="chip"
-                    ><span class="chip-label">Walks</span> ${summary.walkCount}
-                    <span class="chip-detail"
-                        >· ${formatMinutes(summary.walkMinutes)}</span
-                    ></span
-                >
-            `);
+            chips.push(
+                _chip({
+                    icon: "mdi:walk",
+                    label: "Walks",
+                    value: String(summary.walkCount),
+                    detail: `· ${formatMinutes(summary.walkMinutes)}`
+                })
+            );
         }
         if (summary.medCount > 0) {
-            chips.push(html`
-                <span class="chip"
-                    ><span class="chip-label">Meds</span>
-                    ${summary.medCount}</span
-                >
-            `);
+            chips.push(
+                _chip({
+                    icon: "mdi:pill",
+                    label: "Medications",
+                    value: String(summary.medCount)
+                })
+            );
         }
         if (summary.vaccineCount > 0) {
-            chips.push(html`
-                <span class="chip"
-                    ><span class="chip-label">Vaccines</span>
-                    ${summary.vaccineCount}</span
-                >
-            `);
+            chips.push(
+                _chip({
+                    icon: "mdi:needle",
+                    label: "Vaccines",
+                    value: String(summary.vaccineCount)
+                })
+            );
         }
 
         return html`<div class="chips" aria-label="Day summary">
