@@ -35,5 +35,10 @@ export function todayCountsTemplate(
                     ? `(${diaperDetail.join(" · ")})`
                     : undefined
         })}
+        ${chip({
+            icon: "mdi:silverware-spoon",
+            label: "Solids (last 24h)",
+            value: String(s.solidsCount)
+        })}
     `;
 }

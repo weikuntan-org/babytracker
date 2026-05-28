@@ -16,6 +16,7 @@ export interface Summary {
     dirtyDiapers: number;
     totalVolumeMl: number;
     sleepMinutes: number;
+    solidsCount: number;
 }
 
 const ML_PER_OZ = 29.5735;
@@ -65,6 +66,7 @@ export function summarize(
     let dirtyDiapers = 0;
     let totalVolumeMl = 0;
     let sleepMinutes = 0;
+    let solidsCount = 0;
 
     for (const e of entries) {
         const ts = parseTimestamp(e.timestamp);
@@ -93,6 +95,9 @@ export function summarize(
 
         if (e.type === "feeding") {
             feedings += 1;
+            if (String((e.data as any)?.method ?? "") === "solids") {
+                solidsCount += 1;
+            }
             const amount = Number((e.data as any)?.amount ?? 0);
             const unit = String((e.data as any)?.unit ?? "");
             if (amount > 0) {
@@ -109,7 +114,14 @@ export function summarize(
         }
     }
 
-    return { feedings, wetDiapers, dirtyDiapers, totalVolumeMl, sleepMinutes };
+    return {
+        feedings,
+        wetDiapers,
+        dirtyDiapers,
+        totalVolumeMl,
+        sleepMinutes,
+        solidsCount
+    };
 }
 
 export interface DaySummary {
