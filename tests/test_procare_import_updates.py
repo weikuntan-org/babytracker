@@ -28,10 +28,14 @@ from custom_components.babytracker.importers import procare as procare_module
 from custom_components.babytracker.importers.procare import (
     ProcareImporter,
     _download_procare_photo,
+    _download_procare_video,
     _existing_by_source_id,
 )
 from custom_components.babytracker.models import Baby, Entry
-from custom_components.babytracker.photo_storage import sniff_image_mime
+from custom_components.babytracker.photo_storage import (
+    sniff_image_mime,
+    sniff_video_mime,
+)
 from custom_components.babytracker.store import BabytrackerStore
 
 
@@ -43,6 +47,7 @@ _MAPPINGS = [
         "session": "range",
     },
     {"pattern": r"^Diaper.*Wet", "type": "diaper", "kind": "wet"},
+    {"pattern": r"^Video\b", "type": "other"},
 ]
 
 
@@ -690,6 +695,174 @@ async def test_download_procare_photo_still_rejects_concrete_non_image_header(
     # Confirm we didn't even try to drain the body (session.get was called
     # but no iter_chunked happened — implicit via the early return).
     assert session.requested_urls == ["https://cdn.procare.example/photo/redirect.html"]
+
+
+# ---------------------------------------------------------------------------
+# Procare video activities ship a poster (`photo_url`) + the clip
+# (`video_url`). The importer downloads both, the entry carries both
+# `photo_path` and `video_path`, and the frontend swaps the lightbox to a
+# `<video>` element when `video_path` is set.
+# ---------------------------------------------------------------------------
+
+
+_MP4_HEAD = b"\x00\x00\x00\x20ftypisom" + b"\x00" * 16
+_MOV_HEAD = b"\x00\x00\x00\x20ftypqt  " + b"\x00" * 16
+_WEBM_HEAD = b"\x1aE\xdf\xa3" + b"\x00" * 20
+
+
+def test_sniff_video_mime_recognises_known_formats() -> None:
+    assert sniff_video_mime(_MP4_HEAD) == "video/mp4"
+    assert sniff_video_mime(_MOV_HEAD) == "video/quicktime"
+    assert sniff_video_mime(_WEBM_HEAD) == "video/webm"
+    # `mp42` brand also collapses to MP4.
+    mp42 = b"\x00\x00\x00\x20ftypmp42" + b"\x00" * 16
+    assert sniff_video_mime(mp42) == "video/mp4"
+
+
+def test_sniff_video_mime_rejects_non_videos_and_truncated_payloads() -> None:
+    assert sniff_video_mime(b"") is None
+    assert sniff_video_mime(b"<html>not a video") is None
+    # A JPEG is not a video, even though the sniff_image_mime path
+    # would accept it.
+    assert sniff_video_mime(_JPEG_HEAD) is None
+    # Unknown ftyp brand — we don't write what we can't name.
+    unknown = b"\x00\x00\x00\x20ftypxxxx" + b"\x00" * 16
+    assert sniff_video_mime(unknown) is None
+
+
+class _VideoStub:
+    """Counterpart of `_PhotoStub` for the video download path."""
+
+    def __init__(self, *, fail: bool = False) -> None:
+        self.calls: list[str] = []
+        self.fail = fail
+
+    async def __call__(self, _hass, url: str) -> str | None:
+        self.calls.append(url)
+        if self.fail:
+            return None
+        return f"media-source://media_source/local/babytracker/{abs(hash(url))}.mp4"
+
+
+@pytest.mark.asyncio
+async def test_new_video_activity_persists_both_poster_and_clip(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A Procare video activity comes in with `photo_url` (poster JPG)
+    and `video_url` (the clip). The importer must download both and the
+    resulting entry must carry both `photo_path` and `video_path`.
+    """
+    importer, coord, baby = await _make_importer(hass)
+    photo_stub = _PhotoStub()
+    video_stub = _VideoStub()
+    monkeypatch.setattr(procare_module, "_download_procare_photo", photo_stub)
+    monkeypatch.setattr(procare_module, "_download_procare_video", video_stub)
+
+    await importer._process_activity(
+        {
+            "id": "act-video-1",
+            "title": "Video",
+            "timestamp": "2026-05-28T10:27:10-07:00",
+            "details": "Morning outside time!",
+            "photo_url": "https://cdn.procare.example/photo/poster.jpg",
+            "video_url": "https://cdn.procare.example/video/clip.mp4",
+            "staff": "Infant Classroom",
+        },
+        {},
+    )
+    entries = coord.entries_by_baby(baby.id)
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry.type == "other"
+    assert photo_stub.calls == ["https://cdn.procare.example/photo/poster.jpg"]
+    assert video_stub.calls == ["https://cdn.procare.example/video/clip.mp4"]
+    assert entry.photo_url == "https://cdn.procare.example/photo/poster.jpg"
+    assert entry.photo_path is not None
+    assert entry.video_url == "https://cdn.procare.example/video/clip.mp4"
+    assert entry.video_path is not None
+    assert entry.video_path.endswith(".mp4")
+    assert entry.staff == "Infant Classroom"
+    assert entry.notes == "Morning outside time!"
+
+
+@pytest.mark.asyncio
+async def test_unchanged_video_url_reuses_local_copy(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importer, coord, baby = await _make_importer(hass)
+    photo_stub = _PhotoStub()
+    video_stub = _VideoStub()
+    monkeypatch.setattr(procare_module, "_download_procare_photo", photo_stub)
+    monkeypatch.setattr(procare_module, "_download_procare_video", video_stub)
+
+    activity = {
+        "id": "act-video-2",
+        "title": "Video",
+        "timestamp": "2026-05-28T10:27:10-07:00",
+        "details": None,
+        "photo_url": "https://cdn.procare.example/photo/poster2.jpg",
+        "video_url": "https://cdn.procare.example/video/clip2.mp4",
+    }
+    await importer._process_activity(activity, {})
+    first_video_path = coord.entries_by_baby(baby.id)[0].video_path
+    assert video_stub.calls == [activity["video_url"]]
+
+    # Repeat with the same URLs — no re-download for either media kind.
+    await importer._process_activity(
+        activity, _existing_by_source_id(baby, coord)
+    )
+    entries = coord.entries_by_baby(baby.id)
+    assert len(entries) == 1
+    assert entries[0].video_path == first_video_path
+    assert video_stub.calls == [activity["video_url"]], (
+        "re-download must not fire"
+    )
+
+
+@pytest.mark.asyncio
+async def test_resync_backfills_videos_for_orphan_entries(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A Procare entry with `video_url` but no `video_path` (initial
+    download failed or pre-feature) gets backfilled on resync the same
+    way photos do.
+    """
+    importer, coord, baby = await _make_importer(hass)
+    # Pre-existing video entry whose video_path never landed (initial
+    # download failed). Leaving photo_url/path None keeps this test
+    # focused on the video backfill path; the photo backfill has its
+    # own coverage.
+    orphan = Entry(
+        id="orphan-vid",
+        type="other",
+        baby_id=baby.id,
+        timestamp="2026-05-28T10:00:00-07:00",
+        source=ENTRY_SOURCE_PROCARE,
+        source_entity_id="sensor.ava_activities",
+        source_id="orphan-vid-source",
+        imported_at="2026-05-28T10:01:00-07:00",
+        readonly=True,
+        photo_path=None,
+        photo_url=None,
+        video_path=None,
+        video_url="https://cdn.procare.example/video/orphan.mp4",
+        data={"name": "Video"},
+    )
+    coord._entries.append(orphan)
+
+    video_stub = _VideoStub()
+    monkeypatch.setattr(procare_module, "_download_procare_video", video_stub)
+
+    # Source sensor exists but exposes no activities — backfill is the
+    # only path that can reach the orphaned video on resync.
+    hass.states.async_set("sensor.ava_activities", "ok", {"activities": []})
+
+    await importer.async_resync()
+    assert video_stub.calls == ["https://cdn.procare.example/video/orphan.mp4"]
+    updated = coord.entry_by_id("orphan-vid")
+    assert updated.video_path is not None
+    assert updated.video_path.endswith(".mp4")
+    assert updated.video_url == "https://cdn.procare.example/video/orphan.mp4"
 
 
 # ---------------------------------------------------------------------------

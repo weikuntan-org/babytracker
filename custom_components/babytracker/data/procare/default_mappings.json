@@ -20,6 +20,10 @@
         "kind": "dirty"
     },
     {
+        "pattern": "^Diaper.*Dry",
+        "type": "other"
+    },
+    {
         "pattern": "^Bottle\\b",
         "type": "feeding",
         "method": "bottle"
@@ -55,6 +59,10 @@
     },
     {
         "pattern": "^Photo\\b",
+        "type": "other"
+    },
+    {
+        "pattern": "^Video\\b",
         "type": "other"
     }
 ]

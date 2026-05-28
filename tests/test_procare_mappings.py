@@ -113,3 +113,22 @@ def test_match_photo():
     assert match_title(rows, "Photo of cool drawing") is not None
     # Word boundary keeps unrelated prefixes from matching.
     assert match_title(rows, "Photographer present") is None
+
+
+def test_match_video():
+    # Procare also emits bare "Video" titles for video activities. Same
+    # treatment as Photo — log as "other" so the activity is preserved.
+    rows = load_mappings()
+    m = match_title(rows, "Video")
+    assert m is not None and m["type"] == "other"
+    assert match_title(rows, "Video of tummy time") is not None
+    assert match_title(rows, "Videographer scheduled") is None
+
+
+def test_match_diaper_dry():
+    # "Dry" diaper checks have no analogue in the wet/dirty/both model;
+    # route them through "other" so they show up in the log instead of
+    # surfacing as unmapped warnings.
+    rows = load_mappings()
+    m = match_title(rows, "Diaper: Dry")
+    assert m is not None and m["type"] == "other"

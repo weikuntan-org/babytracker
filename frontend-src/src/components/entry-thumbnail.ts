@@ -5,6 +5,11 @@
 // token), renders a thumbnail at `size` px, and pops a click-to-close
 // lightbox on tap.
 //
+// Procare video activities ship a poster JPG (`photo_path`) plus the
+// actual clip (`videoPath`). When `videoPath` is set the thumbnail
+// shows the poster with a ▶ overlay and the lightbox swaps the `<img>`
+// for a `<video controls autoplay playsinline>`.
+//
 // Falls back to the existing 📷 emoji indicator when resolution
 // fails or the image itself fails to load, so a temporarily missing
 // CDN photo never leaves the row blank. Failures are logged via
@@ -19,6 +24,11 @@ export class EntryThumbnail extends LitElement {
 
     @property() photoPath = "";
 
+    /** Optional `media-source://…` URL for the entry's video clip.
+     * When set, the thumbnail draws a ▶ overlay on the poster and the
+     * lightbox opens a `<video>` element instead of an `<img>`. */
+    @property() videoPath = "";
+
     /** Bounding-box size in pixels for the inline thumbnail (the
      * longest edge). Aspect ratio is preserved, so a portrait photo
      * renders narrower than `size` and a landscape one renders
@@ -29,18 +39,24 @@ export class EntryThumbnail extends LitElement {
     @property({ type: Number }) size = 128;
 
     @state() private _url = "";
+    @state() private _videoUrl = "";
     @state() private _failed = false;
     @state() private _open = false;
 
     private _lastResolved = "";
+    private _lastVideoResolved = "";
     // Bumped on every `_maybeResolve` call. The async callback drops its
     // result if the token has moved on, so a slow resolve for an
     // already-replaced `photoPath` can't overwrite the newer `_url`.
     private _resolveToken = 0;
+    private _videoResolveToken = 0;
 
     public updated(changed: Map<string, unknown>): void {
         if (changed.has("hass") || changed.has("photoPath")) {
             this._maybeResolve();
+        }
+        if (changed.has("hass") || changed.has("videoPath")) {
+            this._maybeResolveVideo();
         }
     }
 
@@ -83,6 +99,42 @@ export class EntryThumbnail extends LitElement {
                 err
             );
             this._failed = true;
+        }
+    }
+
+    private async _maybeResolveVideo(): Promise<void> {
+        if (!this.hass?.connection || !this.videoPath) {
+            this._videoUrl = "";
+            return;
+        }
+        if (this._lastVideoResolved === this.videoPath && this._videoUrl) {
+            return;
+        }
+        this._lastVideoResolved = this.videoPath;
+        const token = ++this._videoResolveToken;
+        try {
+            const result = await this.hass.callWS({
+                type: "media_source/resolve_media",
+                media_content_id: this.videoPath
+            });
+            if (token !== this._videoResolveToken) return;
+            const url = (result as any)?.url;
+            if (typeof url === "string" && url.length > 0) {
+                this._videoUrl = url;
+            } else {
+                console.warn(
+                    "babytracker: resolve video returned no url",
+                    this.videoPath,
+                    result
+                );
+            }
+        } catch (err) {
+            if (token !== this._videoResolveToken) return;
+            console.warn(
+                "babytracker: resolve video failed",
+                this.videoPath,
+                err
+            );
         }
     }
 
@@ -130,19 +182,25 @@ export class EntryThumbnail extends LitElement {
 
     render(): TemplateResult {
         if (!this.photoPath) return html``;
+        const hasVideo = !!this.videoPath;
         if (this._failed || !this._url) {
             // The card already used 📷 as the indicator pre-thumbnail;
             // keep it as the failure mode so a slow resolve doesn't
             // produce a row that visually loses its "has photo" cue.
-            return html`<span aria-label="Has photo">📷</span>`;
+            // Video-only entries get a clapperboard fallback so the
+            // affordance still reads as "playable media".
+            return html`<span aria-label=${hasVideo ? "Has video" : "Has photo"}
+                >${hasVideo ? "🎬" : "📷"}</span
+            >`;
         }
         const sizePx = `${this.size}px`;
+        const aria = hasVideo ? "Play video" : "View photo";
         return html`
             <button
                 class="thumb-btn"
                 type="button"
-                aria-label="View photo"
-                title="View photo"
+                aria-label=${aria}
+                title=${aria}
                 @click=${this._open_lightbox}
             >
                 <img
@@ -154,6 +212,9 @@ export class EntryThumbnail extends LitElement {
                     style="max-width:${sizePx};max-height:${sizePx}"
                     @error=${this._onImgError}
                 />
+                ${hasVideo
+                    ? html`<span class="play-overlay" aria-hidden="true">▶</span>`
+                    : ""}
             </button>
             ${this._open
                 ? html`
@@ -161,23 +222,43 @@ export class EntryThumbnail extends LitElement {
                           class="lightbox"
                           role="dialog"
                           aria-modal="true"
-                          aria-label="Entry photo"
+                          aria-label=${hasVideo ? "Entry video" : "Entry photo"}
                           @click=${this._close_lightbox}
                       >
                           <button
                               type="button"
                               class="close"
-                              aria-label="Close photo viewer"
+                              aria-label=${hasVideo
+                                  ? "Close video viewer"
+                                  : "Close photo viewer"}
                               @click=${this._close_lightbox}
                           >
                               ✕
                           </button>
-                          <img
-                              class="full"
-                              src=${this._url}
-                              alt="Entry photo"
-                              @click=${(e: Event) => e.stopPropagation()}
-                          />
+                          ${hasVideo && this._videoUrl
+                              ? html`
+                                    <video
+                                        class="full"
+                                        src=${this._videoUrl}
+                                        poster=${this._url}
+                                        controls
+                                        autoplay
+                                        playsinline
+                                        @click=${(e: Event) =>
+                                            e.stopPropagation()}
+                                    ></video>
+                                `
+                              : html`
+                                    <img
+                                        class="full"
+                                        src=${this._url}
+                                        alt=${hasVideo
+                                            ? "Entry video poster"
+                                            : "Entry photo"}
+                                        @click=${(e: Event) =>
+                                            e.stopPropagation()}
+                                    />
+                                `}
                       </div>
                   `
                 : ""}
@@ -190,6 +271,7 @@ export class EntryThumbnail extends LitElement {
             align-items: center;
         }
         .thumb-btn {
+            position: relative;
             padding: 0;
             border: 0;
             background: none;
@@ -205,6 +287,25 @@ export class EntryThumbnail extends LitElement {
             border-radius: 4px;
             border: 1px solid var(--divider-color);
             vertical-align: middle;
+        }
+        .play-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            color: #fff;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+            background: linear-gradient(
+                rgba(0, 0, 0, 0.08),
+                rgba(0, 0, 0, 0.32)
+            );
+            border-radius: 4px;
+            pointer-events: none;
+        }
+        video.full {
+            background: #000;
         }
         .lightbox {
             position: fixed;
