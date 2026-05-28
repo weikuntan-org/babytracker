@@ -99,6 +99,7 @@ describe("summarize", () => {
         expect(s.feedings).toBe(3);
         // 6oz ≈ 177.4 ml + 120 ml = ~297.4
         expect(s.totalVolumeMl).toBeCloseTo(6 * 29.5735 + 120, 4);
+        expect(s.solidsCount).toBe(1);
     });
 
     it("classifies diaper kinds (both increments wet AND dirty)", () => {
@@ -149,7 +150,8 @@ describe("summarize", () => {
             wetDiapers: 0,
             dirtyDiapers: 0,
             totalVolumeMl: 0,
-            sleepMinutes: 0
+            sleepMinutes: 0,
+            solidsCount: 0
         });
     });
 });
