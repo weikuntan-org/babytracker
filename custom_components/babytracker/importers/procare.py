@@ -32,9 +32,13 @@ from ..models import Baby, Entry
 from ..photo_storage import (
     PHOTO_MAX_BYTES,
     PHOTO_MIME_TO_EXT,
+    VIDEO_MAX_BYTES,
+    VIDEO_MIME_TO_EXT,
     local_path_for,
     sniff_image_mime,
+    sniff_video_mime,
     write_photo,
+    write_video,
 )
 from ..presence import SIGN_IN_RE, SIGN_OUT_RE
 from ..runtime import now_iso
@@ -180,6 +184,68 @@ async def _download_procare_photo(
     return await write_photo(hass, payload, mime)
 
 
+async def _download_procare_video(
+    hass: HomeAssistant, url: str
+) -> str | None:
+    """Mirror of `_download_procare_photo` for the `video_url` attachment
+    that ships alongside Procare video activities. Same https-only +
+    content-type sniffing + size-cap rules as the photo path, just with
+    the video allow-list and a larger cap.
+    """
+    if not isinstance(url, str) or not url.startswith("https://"):
+        _LOGGER.warning(
+            "babytracker: refusing non-https Procare video URL: %r", url
+        )
+        return None
+    session = async_get_clientsession(hass)
+    try:
+        async with session.get(url, timeout=_PROCARE_PHOTO_TIMEOUT) as resp:
+            if resp.status != 200:
+                _LOGGER.warning(
+                    "babytracker: Procare video HTTP %s for %s",
+                    resp.status,
+                    url,
+                )
+                return None
+            header_mime = (resp.content_type or "").lower().strip()
+            if (
+                header_mime
+                and header_mime != "application/octet-stream"
+                and header_mime not in VIDEO_MIME_TO_EXT
+            ):
+                _LOGGER.warning(
+                    "babytracker: Procare video unsupported content-type %r",
+                    header_mime,
+                )
+                return None
+            buf = bytearray()
+            async for chunk in resp.content.iter_chunked(65536):
+                buf.extend(chunk)
+                if len(buf) > VIDEO_MAX_BYTES:
+                    _LOGGER.warning(
+                        "babytracker: Procare video exceeds %d bytes, abandoning",
+                        VIDEO_MAX_BYTES,
+                    )
+                    return None
+            payload = bytes(buf)
+    except (asyncio.TimeoutError, aiohttp.ClientError) as err:
+        _LOGGER.warning("babytracker: Procare video download failed: %s", err)
+        return None
+    mime = (
+        header_mime
+        if header_mime in VIDEO_MIME_TO_EXT
+        else sniff_video_mime(payload)
+    )
+    if mime is None:
+        _LOGGER.warning(
+            "babytracker: Procare video magic bytes did not match a known "
+            "video format (header was %r); dropping",
+            header_mime,
+        )
+        return None
+    return await write_video(hass, payload, mime)
+
+
 class ProcareImporter(BaseImporter):
     """Per-baby Procare importer."""
 
@@ -271,15 +337,18 @@ class ProcareImporter(BaseImporter):
             await self._process_activity(activity, existing)
         after = len(self.coordinator.entries_by_baby(self.baby.id))
         imported = max(0, after - before)
-        backfilled = await self._backfill_photo_paths()
+        photo_backfilled = await self._backfill_photo_paths()
+        video_backfilled = await self._backfill_video_paths()
         _LOGGER.info(
             "babytracker: resync %s — source has %d activities; "
-            "%d already imported, %d newly imported, %d photos backfilled",
+            "%d already imported, %d newly imported, %d photos backfilled, "
+            "%d videos backfilled",
             self.baby.slug,
             len(activities),
             already_seen,
             imported,
-            backfilled,
+            photo_backfilled,
+            video_backfilled,
         )
         return imported
 
@@ -331,6 +400,49 @@ class ProcareImporter(BaseImporter):
                 notes=entry.notes,
                 photo_path=photo_path,
                 photo_url=entry.photo_url,
+                video_path=entry.video_path,
+                video_url=entry.video_url,
+                staff=entry.staff,
+                data=entry.data,
+            )
+            backfilled += 1
+        return backfilled
+
+    async def _backfill_video_paths(self) -> int:
+        """Video sibling of `_backfill_photo_paths`. Same two cases:
+        `video_path` was never set (download failed or pre-feature
+        entries), or `video_path` is set but the file is missing on
+        disk. Returns the number of entries that gained a local clip.
+        """
+        candidates: list[Entry] = []
+        for entry in self.coordinator.entries_by_baby(self.baby.id):
+            if entry.source != ENTRY_SOURCE_PROCARE or not entry.video_url:
+                continue
+            if not entry.video_path:
+                candidates.append(entry)
+                continue
+            target = local_path_for(self.hass, entry.video_path)
+            if target is None:
+                continue
+            exists = await self.hass.async_add_executor_job(target.exists)
+            if not exists:
+                candidates.append(entry)
+        backfilled = 0
+        for entry in candidates:
+            video_path = await _download_procare_video(
+                self.hass, entry.video_url
+            )
+            if video_path is None:
+                continue
+            await self.coordinator.update_imported_entry(
+                entry.id,
+                timestamp=entry.timestamp,
+                ended_at=entry.ended_at,
+                notes=entry.notes,
+                photo_path=entry.photo_path,
+                photo_url=entry.photo_url,
+                video_path=video_path,
+                video_url=entry.video_url,
                 staff=entry.staff,
                 data=entry.data,
             )
@@ -379,6 +491,7 @@ class ProcareImporter(BaseImporter):
         prior = existing.get(source_id)
 
         photo_url = activity.get("photo_url") or None
+        video_url = activity.get("video_url") or None
         staff = activity.get("staff")
         data = self._derive_data(entry_type, activity, mapping)
         timestamp = data.pop("__timestamp_override", None) or timestamp
@@ -405,6 +518,7 @@ class ProcareImporter(BaseImporter):
                 )
                 return
             photo_path = await self._resolve_photo_path(photo_url, prior)
+            video_path = await self._resolve_video_path(video_url, prior)
             await self.coordinator.update_imported_entry(
                 prior.id,
                 timestamp=timestamp,
@@ -412,12 +526,15 @@ class ProcareImporter(BaseImporter):
                 notes=notes,
                 photo_path=photo_path,
                 photo_url=photo_url,
+                video_path=video_path,
+                video_url=video_url,
                 staff=staff,
                 data=data,
             )
             return
 
         photo_path = await self._resolve_photo_path(photo_url, None)
+        video_path = await self._resolve_video_path(video_url, None)
         entry = Entry(
             id=str(uuid.uuid4()),
             type=entry_type,
@@ -431,6 +548,8 @@ class ProcareImporter(BaseImporter):
             readonly=self.config.get("mark_readonly", True),
             photo_path=photo_path,
             photo_url=photo_url,
+            video_path=video_path,
+            video_url=video_url,
             staff=staff,
             notes=notes,
             data=data,
@@ -459,6 +578,25 @@ class ProcareImporter(BaseImporter):
         ):
             return prior.photo_path
         return await _download_procare_photo(self.hass, photo_url)
+
+    async def _resolve_video_path(
+        self, video_url: str | None, prior: Entry | None
+    ) -> str | None:
+        """Video sibling of `_resolve_photo_path`. Procare video
+        activities include a poster (`photo_url`) and the clip itself
+        (`video_url`); the poster keeps using the photo path, this one
+        downloads + persists the actual video. Same reuse semantics:
+        unchanged URL + existing local copy means no re-download.
+        """
+        if not video_url:
+            return None
+        if (
+            prior is not None
+            and prior.video_url == video_url
+            and prior.video_path
+        ):
+            return prior.video_path
+        return await _download_procare_video(self.hass, video_url)
 
     def _derive_data(
         self,

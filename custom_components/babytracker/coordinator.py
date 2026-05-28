@@ -441,6 +441,8 @@ class BabytrackerCoordinator:
         photo_url: str | None,
         staff: str | None,
         data: dict[str, Any],
+        video_path: str | None = None,
+        video_url: str | None = None,
     ) -> Entry | None:
         """Re-sync an imported entry with the latest upstream state.
 
@@ -473,6 +475,8 @@ class BabytrackerCoordinator:
                 and entry.notes == notes
                 and entry.photo_path == photo_path
                 and entry.photo_url == photo_url
+                and entry.video_path == video_path
+                and entry.video_url == video_url
                 and entry.staff == staff
                 and entry.data == new_data
             )
@@ -483,6 +487,8 @@ class BabytrackerCoordinator:
             entry.notes = notes
             entry.photo_path = photo_path
             entry.photo_url = photo_url
+            entry.video_path = video_path
+            entry.video_url = video_url
             entry.staff = staff
             entry.data = new_data
             entry.imported_at = now_iso()

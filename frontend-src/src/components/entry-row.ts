@@ -84,6 +84,7 @@ export function entryRowTemplate(
                       <bt-entry-thumbnail
                           .hass=${hass}
                           .photoPath=${entry.photo_path}
+                          .videoPath=${entry.video_path ?? ""}
                       ></bt-entry-thumbnail>
                   </div>`
                 : ""}

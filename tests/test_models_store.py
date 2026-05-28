@@ -114,7 +114,7 @@ def test_entry_to_card_dict_shape():
         notes="changed mid-nap",
     )
     payload = entry_to_card_dict(entry)
-    # All 11 card-facing fields present, baby_id omitted by default.
+    # All 13 card-facing fields present, baby_id omitted by default.
     assert set(payload) == {
         "id",
         "type",
@@ -125,6 +125,8 @@ def test_entry_to_card_dict_shape():
         "data",
         "photo_path",
         "photo_url",
+        "video_path",
+        "video_url",
         "staff",
         "notes",
     }

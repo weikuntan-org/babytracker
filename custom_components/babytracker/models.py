@@ -100,6 +100,13 @@ class Entry:
     readonly: bool = False
     photo_url: str | None = None
     staff: str | None = None
+    # Video clip attached to the entry. Procare video activities expose
+    # `photo_url` (poster JPG) + `video_url` (actual clip); we reuse
+    # `photo_path` for the poster and stash the locally-persisted clip
+    # under `video_path`. Both fields stay importer-only for now — the
+    # user-upload WS flow only supports photos.
+    video_path: str | None = None
+    video_url: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {
@@ -123,6 +130,8 @@ class Entry:
                     "readonly": self.readonly,
                     "photo_url": self.photo_url,
                     "staff": self.staff,
+                    "video_path": self.video_path,
+                    "video_url": self.video_url,
                 }
             )
         return out
@@ -146,6 +155,8 @@ class Entry:
             readonly=bool(data.get("readonly", False)),
             photo_url=data.get("photo_url"),
             staff=data.get("staff"),
+            video_path=data.get("video_path"),
+            video_url=data.get("video_url"),
         )
 
     @classmethod
@@ -210,6 +221,8 @@ def entry_to_card_dict(entry: Entry, *, include_baby_id: bool = False) -> dict[s
         "data": dict(entry.data),
         "photo_path": entry.photo_path,
         "photo_url": entry.photo_url,
+        "video_path": entry.video_path,
+        "video_url": entry.video_url,
         "staff": entry.staff,
         "notes": entry.notes,
     }
