@@ -9,6 +9,7 @@
 import { LitElement, html, css, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
+import { chip } from "./components/chip";
 import { entryRowTemplate } from "./components/entry-row";
 import { modalTemplate, type ModalKind } from "./components/modal";
 import {
@@ -35,29 +36,6 @@ export interface BabytrackerHistoryCardConfig {
 /** Pad a number to 2 digits. */
 function _pad(n: number): string {
     return String(n).padStart(2, "0");
-}
-
-/**
- * One day-summary chip: leading MDI icon, the value, optional detail in
- * smaller secondary text. `label` becomes the `title` + `aria-label` so
- * hover and screen-reader users still get the full word — the icon by
- * itself is just visual shorthand.
- */
-function _chip(opts: {
-    icon: string;
-    label: string;
-    value: string;
-    detail?: string;
-}): TemplateResult {
-    return html`
-        <span class="chip" title=${opts.label} aria-label=${opts.label}>
-            <ha-icon class="chip-icon" icon=${opts.icon}></ha-icon>
-            <span class="chip-value">${opts.value}</span>
-            ${opts.detail
-                ? html`<span class="chip-detail">${opts.detail}</span>`
-                : ""}
-        </span>
-    `;
 }
 
 /** `YYYY-MM-DD` for a local Date. */
@@ -368,7 +346,7 @@ export class BabytrackerHistoryCard extends LitElement {
         if (summary.wet) diaperDetail.push(`${summary.wet}W`);
         if (summary.dirty) diaperDetail.push(`${summary.dirty}D`);
         chips.push(
-            _chip({
+            chip({
                 icon: "mdi:human-baby-changing-table",
                 label: "Diapers",
                 value: String(summary.diapers),
@@ -380,14 +358,14 @@ export class BabytrackerHistoryCard extends LitElement {
         );
 
         chips.push(
-            _chip({
+            chip({
                 icon: "mdi:bed",
                 label: "Total sleep",
                 value: formatMinutes(summary.sleepMinutes)
             })
         );
         chips.push(
-            _chip({
+            chip({
                 icon: "mdi:bed-clock",
                 label: "Longest sleep",
                 value: formatMinutes(summary.longestSleepMinutes)
@@ -396,7 +374,7 @@ export class BabytrackerHistoryCard extends LitElement {
 
         if (summary.bottleFeeds > 0) {
             chips.push(
-                _chip({
+                chip({
                     icon: "mdi:baby-bottle-outline",
                     label: "Bottle feeds",
                     value: String(summary.bottleFeeds),
@@ -411,7 +389,7 @@ export class BabytrackerHistoryCard extends LitElement {
             if (summary.nursingRightMinutes > 0)
                 sides.push(`R ${formatMinutes(summary.nursingRightMinutes)}`);
             chips.push(
-                _chip({
+                chip({
                     icon: "mdi:mother-nurse",
                     label: "Nursing",
                     value: formatMinutes(summary.nursingMinutes),
@@ -421,7 +399,7 @@ export class BabytrackerHistoryCard extends LitElement {
         }
         if (summary.pumpingMl > 0) {
             chips.push(
-                _chip({
+                chip({
                     icon: "mdi:water-pump",
                     label: "Pumping",
                     value: formatVolume(summary.pumpingMl)
@@ -430,7 +408,7 @@ export class BabytrackerHistoryCard extends LitElement {
         }
         if (summary.solidsCount > 0) {
             chips.push(
-                _chip({
+                chip({
                     icon: "mdi:silverware-spoon",
                     label: "Solids",
                     value: String(summary.solidsCount)
@@ -439,7 +417,7 @@ export class BabytrackerHistoryCard extends LitElement {
         }
         if (summary.tummyMinutes > 0) {
             chips.push(
-                _chip({
+                chip({
                     icon: "mdi:human-handsup",
                     label: "Tummy time",
                     value: formatMinutes(summary.tummyMinutes)
@@ -448,7 +426,7 @@ export class BabytrackerHistoryCard extends LitElement {
         }
         if (summary.walkCount > 0) {
             chips.push(
-                _chip({
+                chip({
                     icon: "mdi:walk",
                     label: "Walks",
                     value: String(summary.walkCount),
@@ -458,7 +436,7 @@ export class BabytrackerHistoryCard extends LitElement {
         }
         if (summary.medCount > 0) {
             chips.push(
-                _chip({
+                chip({
                     icon: "mdi:pill",
                     label: "Medications",
                     value: String(summary.medCount)
@@ -467,7 +445,7 @@ export class BabytrackerHistoryCard extends LitElement {
         }
         if (summary.vaccineCount > 0) {
             chips.push(
-                _chip({
+                chip({
                     icon: "mdi:needle",
                     label: "Vaccines",
                     value: String(summary.vaccineCount)

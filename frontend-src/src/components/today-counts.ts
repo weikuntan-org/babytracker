@@ -5,6 +5,7 @@
 // without an awkward line break between the two groups.
 import { html, type TemplateResult } from "lit";
 
+import { chip } from "./chip";
 import { babyEntityId } from "../lib/ha-helpers";
 import { formatVolume, summarize } from "../lib/entries";
 
@@ -16,12 +17,23 @@ export function todayCountsTemplate(
     const sensor = hass.states?.[babyEntityId(baby, "recent_entries")];
     const entries = sensor?.attributes?.entries ?? [];
     const s = summarize(entries);
+    const diaperDetail: string[] = [];
+    if (s.wetDiapers) diaperDetail.push(`${s.wetDiapers}W`);
+    if (s.dirtyDiapers) diaperDetail.push(`${s.dirtyDiapers}D`);
     return html`
-        <div class="chip" role="listitem">
-            ${formatVolume(s.totalVolumeMl)} consumed
-        </div>
-        <div class="chip" role="listitem">
-            ${s.wetDiapers} wet and ${s.dirtyDiapers} dirty
-        </div>
+        ${chip({
+            icon: "mdi:baby-bottle-outline",
+            label: "Consumed (last 24h)",
+            value: formatVolume(s.totalVolumeMl)
+        })}
+        ${chip({
+            icon: "mdi:human-baby-changing-table",
+            label: "Diapers (last 24h)",
+            value: String(s.wetDiapers + s.dirtyDiapers),
+            detail:
+                diaperDetail.length > 0
+                    ? `(${diaperDetail.join(" · ")})`
+                    : undefined
+        })}
     `;
 }
