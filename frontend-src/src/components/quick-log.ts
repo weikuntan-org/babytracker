@@ -62,6 +62,7 @@ export function quickLogTemplate(
                     aria-label="Log diaper for ${displayName}"
                     @click=${() => requestModal("diaper")}
                 >
+                    <ha-icon icon="mdi:human-baby-changing-table"></ha-icon>
                     Diaper
                 </button>
             `
@@ -77,6 +78,7 @@ export function quickLogTemplate(
                             aria-label="Log bottle feeding for ${displayName}"
                             @click=${() => requestModal("bottle")}
                         >
+                            <ha-icon icon="mdi:baby-bottle-outline"></ha-icon>
                             Bottle
                         </button>
                     `
@@ -89,6 +91,7 @@ export function quickLogTemplate(
                             aria-label="Log solids feeding for ${displayName}"
                             @click=${() => requestModal("solids")}
                         >
+                            <ha-icon icon="mdi:silverware-spoon"></ha-icon>
                             Solids
                         </button>
                     `
@@ -102,6 +105,7 @@ export function quickLogTemplate(
                             @click=${() =>
                                 requestModal({ activity: "feeding", method })}
                         >
+                            <ha-icon icon="mdi:mother-nurse"></ha-icon>
                             ${cap(method.replace("_", " "))}
                         </button>
                     `
@@ -117,6 +121,7 @@ export function quickLogTemplate(
                     aria-label="Log sleep for ${displayName}"
                     @click=${() => requestModal({ activity: "sleep" })}
                 >
+                    <ha-icon icon="mdi:bed"></ha-icon>
                     Sleep
                 </button>
             `
@@ -130,6 +135,7 @@ export function quickLogTemplate(
                     aria-label="Log tummy time for ${displayName}"
                     @click=${() => requestModal({ activity: "tummy_time" })}
                 >
+                    <ha-icon icon="mdi:human-handsup"></ha-icon>
                     Tummy time
                 </button>
             `
@@ -143,6 +149,7 @@ export function quickLogTemplate(
                     aria-label="Log walk for ${displayName}"
                     @click=${() => requestModal({ activity: "walk" })}
                 >
+                    <ha-icon icon="mdi:walk"></ha-icon>
                     Walk
                 </button>
             `
@@ -156,6 +163,7 @@ export function quickLogTemplate(
                     aria-label="Log other activity for ${displayName}"
                     @click=${() => requestModal("other")}
                 >
+                    <ha-icon icon="mdi:dots-horizontal"></ha-icon>
                     Other
                 </button>
             `
