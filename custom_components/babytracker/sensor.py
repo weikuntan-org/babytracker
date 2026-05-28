@@ -32,6 +32,7 @@ from .const import (
 )
 from .coordinator import BabytrackerCoordinator
 from .models import Baby, entry_to_card_dict
+from .runtime import parse_ts
 
 # ------------------------------------------------------------------
 # Helpers
@@ -82,7 +83,9 @@ def _last_entry_of_type(coord: BabytrackerCoordinator, baby_id: str, type_: str)
     ]
     if not entries:
         return None
-    return max(entries, key=lambda e: e.timestamp)
+    # Lex sort on mixed-offset ISO strings (Procare imports keep local
+    # offset, HA-logged entries are `+00:00`) does NOT match clock order.
+    return max(entries, key=lambda e: parse_ts(e.timestamp))
 
 
 def _count_today(
