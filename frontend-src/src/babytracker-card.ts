@@ -164,6 +164,15 @@ export class BabytrackerCard extends LitElement {
         button.quick {
             padding: 14px 12px;
             font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        button.quick ha-icon {
+            --mdc-icon-size: 18px;
+            color: var(--secondary-text-color);
+            flex-shrink: 0;
         }
         @keyframes bt-flash {
             0%   { background: var(--success-color, #43a047); color: #fff; }
