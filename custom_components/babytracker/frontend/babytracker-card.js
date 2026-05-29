@@ -4131,27 +4131,8 @@ let F = class extends O {
     this._date = An(this._date, t);
   }
   _renderChips(t) {
-    const e = [], i = [];
-    if (t.wet && i.push(`${t.wet}W`), t.dirty && i.push(`${t.dirty}D`), e.push(
-      A({
-        icon: "mdi:human-baby-changing-table",
-        label: "Diapers",
-        value: String(t.diapers),
-        detail: i.length > 0 ? `(${i.join(" · ")})` : void 0
-      })
-    ), e.push(
-      A({
-        icon: "mdi:bed",
-        label: "Total sleep",
-        value: L(t.sleepMinutes)
-      })
-    ), e.push(
-      A({
-        icon: "mdi:bed-clock",
-        label: "Longest sleep",
-        value: L(t.longestSleepMinutes)
-      })
-    ), t.bottleFeeds > 0 && e.push(
+    const e = [];
+    if (t.bottleFeeds > 0 && e.push(
       A({
         icon: "mdi:baby-bottle-outline",
         label: "Bottle feeds",
@@ -4169,7 +4150,7 @@ let F = class extends O {
         })
       );
     }
-    return t.pumpingMl > 0 && e.push(
+    t.pumpingMl > 0 && e.push(
       A({
         icon: "mdi:water-pump",
         label: "Pumping",
@@ -4180,6 +4161,27 @@ let F = class extends O {
         icon: "mdi:silverware-spoon",
         label: "Solids",
         value: String(t.solidsCount)
+      })
+    );
+    const i = [];
+    return t.wet && i.push(`${t.wet}W`), t.dirty && i.push(`${t.dirty}D`), e.push(
+      A({
+        icon: "mdi:human-baby-changing-table",
+        label: "Diapers",
+        value: String(t.diapers),
+        detail: i.length > 0 ? `(${i.join(" · ")})` : void 0
+      })
+    ), e.push(
+      A({
+        icon: "mdi:bed",
+        label: "Total sleep",
+        value: L(t.sleepMinutes)
+      })
+    ), e.push(
+      A({
+        icon: "mdi:bed-clock",
+        label: "Longest sleep",
+        value: L(t.longestSleepMinutes)
       })
     ), t.tummyMinutes > 0 && e.push(
       A({
