@@ -15,7 +15,6 @@ import { recentEntriesTemplate } from "./components/recent-entries";
 import { growthChartTemplate } from "./components/growth-chart";
 import { exportSheetTemplate } from "./components/export-sheet";
 import { importerSyncTemplate } from "./components/importer-sync";
-import { todayCountsTemplate } from "./components/today-counts";
 import { modalTemplate, type ModalKind } from "./components/modal";
 import {
     babyEntityId,
@@ -24,7 +23,12 @@ import {
     subscribeBabyConfig,
     subscribeIntegrationOptions
 } from "./lib/ha-helpers";
-import { formatMinutes, timeSinceLastWakeMinutes } from "./lib/entries";
+import {
+    formatVolume,
+    formatMinutes,
+    summarize,
+    timeSinceLastWakeMinutes
+} from "./lib/entries";
 
 export interface BabytrackerCardConfig {
     type: string;
@@ -411,59 +415,112 @@ export class BabytrackerCard extends LitElement {
         return babyEntityId(this._baby(), suffix, prefix);
     }
 
-    /** Status chip fragments (no wrapper). Caller wraps these together
-     *  with the 24 h chips inside a single `.chips` flex row so the two
-     *  groups flow continuously instead of breaking onto separate
-     *  lines.
+    /** Chip fragments (no wrapper). Ordered so that all chips referring
+     *  to the same activity sit next to each other — Last bottle next to
+     *  the 24h consumed total, Last solids next to the 24h solids count,
+     *  Last diaper next to the 24h diaper count — with state chips
+     *  (awake-for / sleeping / walking / at daycare) trailing.
      */
-    private _renderStatusChips(): TemplateResult {
+    private _renderChips(
+        showStatus: boolean,
+        showToday: boolean
+    ): TemplateResult {
         const hass = this.hass!;
-        const lastDiaper = hass.states?.[this._entityId("last_diaper")]?.state;
-        const sleeping =
-            hass.states?.[this._entityId("sleeping", "binary_sensor")]?.state ===
-            "on";
-        const walking =
-            hass.states?.[this._entityId("walking", "binary_sensor")]?.state ===
-            "on";
-        const atDaycare =
-            hass.states?.[this._entityId("at_daycare", "binary_sensor")]?.state ===
-            "on";
-        // Awake-for is hidden while a sleep session is open (the session
-        // tile carries the in-progress duration). When no completed sleep
-        // is in recent_entries we stay silent rather than show "—".
         const recentEntries =
             hass.states?.[this._entityId("recent_entries")]?.attributes?.entries ??
             [];
-        const awakeMinutes = sleeping
-            ? null
-            : timeSinceLastWakeMinutes(recentEntries);
-        // Bottle/solids "last" times come straight from `recent_entries`
-        // (already sorted newest-first), so we can split what was a single
-        // "Last feed" chip into per-method visibility. Breast feedings
-        // intentionally don't get a chip — they're surfaced via the
-        // session tile when in-progress.
-        const lastBottle = recentEntries.find(
-            (e: any) => e?.type === "feeding" && e?.data?.method === "bottle"
-        )?.timestamp;
-        const lastSolids = recentEntries.find(
-            (e: any) => e?.type === "feeding" && e?.data?.method === "solids"
-        )?.timestamp;
+        // 24h summary is only needed when the today section is enabled; the
+        // helper is cheap so an unconditional call is fine, but skipping
+        // keeps the type narrow and avoids touching recent_entries twice.
+        const s = showToday ? summarize(recentEntries) : null;
+
+        // Status-only inputs
+        const lastBottle = showStatus
+            ? recentEntries.find(
+                  (e: any) =>
+                      e?.type === "feeding" && e?.data?.method === "bottle"
+              )?.timestamp
+            : undefined;
+        const lastSolids = showStatus
+            ? recentEntries.find(
+                  (e: any) =>
+                      e?.type === "feeding" && e?.data?.method === "solids"
+              )?.timestamp
+            : undefined;
+        const lastDiaper = showStatus
+            ? hass.states?.[this._entityId("last_diaper")]?.state
+            : undefined;
+        const sleeping =
+            showStatus &&
+            hass.states?.[this._entityId("sleeping", "binary_sensor")]?.state ===
+                "on";
+        const walking =
+            showStatus &&
+            hass.states?.[this._entityId("walking", "binary_sensor")]?.state ===
+                "on";
+        const atDaycare =
+            showStatus &&
+            hass.states?.[this._entityId("at_daycare", "binary_sensor")]
+                ?.state === "on";
+        // Awake-for is hidden while a sleep session is open (the session
+        // tile carries the in-progress duration). When no completed sleep
+        // is in recent_entries we stay silent rather than show "—".
+        const awakeMinutes =
+            showStatus && !sleeping
+                ? timeSinceLastWakeMinutes(recentEntries)
+                : null;
+
+        const diaperDetail: string[] = [];
+        if (s?.wetDiapers) diaperDetail.push(`${s.wetDiapers}W`);
+        if (s?.dirtyDiapers) diaperDetail.push(`${s.dirtyDiapers}D`);
+
         return html`
-            ${chip({
-                icon: "mdi:baby-bottle-outline",
-                label: "Last bottle",
-                value: this._timeSince(lastBottle)
-            })}
-            ${chip({
-                icon: "mdi:silverware-spoon",
-                label: "Last solids",
-                value: this._timeSince(lastSolids)
-            })}
-            ${chip({
-                icon: "mdi:human-baby-changing-table",
-                label: "Last diaper",
-                value: this._timeSince(lastDiaper)
-            })}
+            ${showStatus
+                ? chip({
+                      icon: "mdi:baby-bottle-outline",
+                      label: "Last bottle",
+                      value: this._timeSince(lastBottle)
+                  })
+                : ""}
+            ${s
+                ? chip({
+                      icon: "mdi:baby-bottle-outline",
+                      label: "Consumed (last 24h)",
+                      value: formatVolume(s.totalVolumeMl)
+                  })
+                : ""}
+            ${showStatus
+                ? chip({
+                      icon: "mdi:silverware-spoon",
+                      label: "Last solids",
+                      value: this._timeSince(lastSolids)
+                  })
+                : ""}
+            ${s
+                ? chip({
+                      icon: "mdi:silverware-spoon",
+                      label: "Solids (last 24h)",
+                      value: String(s.solidsCount)
+                  })
+                : ""}
+            ${showStatus
+                ? chip({
+                      icon: "mdi:human-baby-changing-table",
+                      label: "Last diaper",
+                      value: this._timeSince(lastDiaper)
+                  })
+                : ""}
+            ${s
+                ? chip({
+                      icon: "mdi:human-baby-changing-table",
+                      label: "Diapers (last 24h)",
+                      value: String(s.wetDiapers + s.dirtyDiapers),
+                      detail:
+                          diaperDetail.length > 0
+                              ? `(${diaperDetail.join(" · ")})`
+                              : undefined
+                  })
+                : ""}
             ${awakeMinutes !== null
                 ? chip({
                       icon: "mdi:weather-sunny",
@@ -650,14 +707,7 @@ export class BabytrackerCard extends LitElement {
                           role="list"
                           aria-label="Status and last 24 hours"
                       >
-                          ${showStatus ? this._renderStatusChips() : ""}
-                          ${showToday
-                              ? todayCountsTemplate(
-                                    this.hass,
-                                    this._baby(),
-                                    this._babyConfig
-                                )
-                              : ""}
+                          ${this._renderChips(showStatus, showToday)}
                       </div>`
                     : ""}
                 ${sections.includes("active_session")
