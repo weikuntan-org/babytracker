@@ -339,39 +339,10 @@ export class BabytrackerHistoryCard extends LitElement {
     private _renderChips(summary: DaySummary): TemplateResult {
         const chips: TemplateResult[] = [];
 
-        const diaperDetail: string[] = [];
-        // `3W · 2D` instead of "3 wet · 2 dirty" — the chip now leads with
-        // an icon, so the verbose label inside the parens just wastes
-        // horizontal space.
-        if (summary.wet) diaperDetail.push(`${summary.wet}W`);
-        if (summary.dirty) diaperDetail.push(`${summary.dirty}D`);
-        chips.push(
-            chip({
-                icon: "mdi:human-baby-changing-table",
-                label: "Diapers",
-                value: String(summary.diapers),
-                detail:
-                    diaperDetail.length > 0
-                        ? `(${diaperDetail.join(" · ")})`
-                        : undefined
-            })
-        );
-
-        chips.push(
-            chip({
-                icon: "mdi:bed",
-                label: "Total sleep",
-                value: formatMinutes(summary.sleepMinutes)
-            })
-        );
-        chips.push(
-            chip({
-                icon: "mdi:bed-clock",
-                label: "Longest sleep",
-                value: formatMinutes(summary.longestSleepMinutes)
-            })
-        );
-
+        // Order mirrors the per-baby card's grouping: feeding cluster,
+        // then diaper, then sleep, then everything else. Within each
+        // group entries appear in their canonical order (bottle → nursing
+        // → pumping → solids; total sleep before longest sleep).
         if (summary.bottleFeeds > 0) {
             chips.push(
                 chip({
@@ -415,6 +386,40 @@ export class BabytrackerHistoryCard extends LitElement {
                 })
             );
         }
+
+        const diaperDetail: string[] = [];
+        // `3W · 2D` instead of "3 wet · 2 dirty" — the chip now leads with
+        // an icon, so the verbose label inside the parens just wastes
+        // horizontal space.
+        if (summary.wet) diaperDetail.push(`${summary.wet}W`);
+        if (summary.dirty) diaperDetail.push(`${summary.dirty}D`);
+        chips.push(
+            chip({
+                icon: "mdi:human-baby-changing-table",
+                label: "Diapers",
+                value: String(summary.diapers),
+                detail:
+                    diaperDetail.length > 0
+                        ? `(${diaperDetail.join(" · ")})`
+                        : undefined
+            })
+        );
+
+        chips.push(
+            chip({
+                icon: "mdi:bed",
+                label: "Total sleep",
+                value: formatMinutes(summary.sleepMinutes)
+            })
+        );
+        chips.push(
+            chip({
+                icon: "mdi:bed-clock",
+                label: "Longest sleep",
+                value: formatMinutes(summary.longestSleepMinutes)
+            })
+        );
+
         if (summary.tummyMinutes > 0) {
             chips.push(
                 chip({
