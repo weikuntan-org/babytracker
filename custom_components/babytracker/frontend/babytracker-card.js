@@ -4558,11 +4558,11 @@ let I = class extends O {
   _entityId(t, e = "sensor") {
     return M(this._baby(), t, e);
   }
-  /** Chip fragments (no wrapper). Ordered so that all chips referring
-   *  to the same activity sit next to each other — Last bottle next to
-   *  the 24h consumed total, Last solids next to the 24h solids count,
-   *  Last diaper next to the 24h diaper count — with state chips
-   *  (awake-for / sleeping / walking / at daycare) trailing.
+  /** Chip fragments (no wrapper). Current-state chips
+   *  (sleeping / on a walk / at daycare / awake-for) lead so the
+   *  user's first glance lands on what's happening right now;
+   *  the activity groups (bottle, solids, diaper, each with its
+   *  "Last …" and "… (last 24h)" side by side) follow.
    */
   _renderChips(t, e) {
     var f, m, y, h, w, $, x, _, p, v, D, P, S;
@@ -4578,6 +4578,29 @@ let I = class extends O {
       }
     )) == null ? void 0 : w.timestamp : void 0, a = t ? (x = ($ = i.states) == null ? void 0 : $[this._entityId("last_diaper")]) == null ? void 0 : x.state : void 0, l = t && ((p = (_ = i.states) == null ? void 0 : _[this._entityId("sleeping", "binary_sensor")]) == null ? void 0 : p.state) === "on", c = t && ((D = (v = i.states) == null ? void 0 : v[this._entityId("walking", "binary_sensor")]) == null ? void 0 : D.state) === "on", b = t && ((S = (P = i.states) == null ? void 0 : P[this._entityId("at_daycare", "binary_sensor")]) == null ? void 0 : S.state) === "on", u = t && !l ? Si(n) : null, g = [];
     return o != null && o.wetDiapers && g.push(`${o.wetDiapers}W`), o != null && o.dirtyDiapers && g.push(`${o.dirtyDiapers}D`), d`
+            ${l ? A({
+      icon: "mdi:bed",
+      label: "Sleeping",
+      value: "Sleeping",
+      warning: !0
+    }) : ""}
+            ${c ? A({
+      icon: "mdi:walk",
+      label: "On a walk",
+      value: "On a walk",
+      warning: !0
+    }) : ""}
+            ${b ? A({
+      icon: "mdi:school-outline",
+      label: "At daycare",
+      value: "At daycare",
+      warning: !0
+    }) : ""}
+            ${u !== null ? A({
+      icon: "mdi:weather-sunny",
+      label: "Awake for",
+      value: L(u)
+    }) : ""}
             ${t ? A({
       icon: "mdi:baby-bottle-outline",
       label: "Last bottle",
@@ -4608,29 +4631,6 @@ let I = class extends O {
       label: "Diapers (last 24h)",
       value: String(o.wetDiapers + o.dirtyDiapers),
       detail: g.length > 0 ? `(${g.join(" · ")})` : void 0
-    }) : ""}
-            ${u !== null ? A({
-      icon: "mdi:weather-sunny",
-      label: "Awake for",
-      value: L(u)
-    }) : ""}
-            ${l ? A({
-      icon: "mdi:bed",
-      label: "Sleeping",
-      value: "Sleeping",
-      warning: !0
-    }) : ""}
-            ${c ? A({
-      icon: "mdi:walk",
-      label: "On a walk",
-      value: "On a walk",
-      warning: !0
-    }) : ""}
-            ${b ? A({
-      icon: "mdi:school-outline",
-      label: "At daycare",
-      value: "At daycare",
-      warning: !0
     }) : ""}
         `;
   }

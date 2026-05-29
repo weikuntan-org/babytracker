@@ -415,11 +415,11 @@ export class BabytrackerCard extends LitElement {
         return babyEntityId(this._baby(), suffix, prefix);
     }
 
-    /** Chip fragments (no wrapper). Ordered so that all chips referring
-     *  to the same activity sit next to each other — Last bottle next to
-     *  the 24h consumed total, Last solids next to the 24h solids count,
-     *  Last diaper next to the 24h diaper count — with state chips
-     *  (awake-for / sleeping / walking / at daycare) trailing.
+    /** Chip fragments (no wrapper). Current-state chips
+     *  (sleeping / on a walk / at daycare / awake-for) lead so the
+     *  user's first glance lands on what's happening right now;
+     *  the activity groups (bottle, solids, diaper, each with its
+     *  "Last …" and "… (last 24h)" side by side) follow.
      */
     private _renderChips(
         showStatus: boolean,
@@ -475,6 +475,37 @@ export class BabytrackerCard extends LitElement {
         if (s?.dirtyDiapers) diaperDetail.push(`${s.dirtyDiapers}D`);
 
         return html`
+            ${sleeping
+                ? chip({
+                      icon: "mdi:bed",
+                      label: "Sleeping",
+                      value: "Sleeping",
+                      warning: true
+                  })
+                : ""}
+            ${walking
+                ? chip({
+                      icon: "mdi:walk",
+                      label: "On a walk",
+                      value: "On a walk",
+                      warning: true
+                  })
+                : ""}
+            ${atDaycare
+                ? chip({
+                      icon: "mdi:school-outline",
+                      label: "At daycare",
+                      value: "At daycare",
+                      warning: true
+                  })
+                : ""}
+            ${awakeMinutes !== null
+                ? chip({
+                      icon: "mdi:weather-sunny",
+                      label: "Awake for",
+                      value: formatMinutes(awakeMinutes)
+                  })
+                : ""}
             ${showStatus
                 ? chip({
                       icon: "mdi:baby-bottle-outline",
@@ -519,37 +550,6 @@ export class BabytrackerCard extends LitElement {
                           diaperDetail.length > 0
                               ? `(${diaperDetail.join(" · ")})`
                               : undefined
-                  })
-                : ""}
-            ${awakeMinutes !== null
-                ? chip({
-                      icon: "mdi:weather-sunny",
-                      label: "Awake for",
-                      value: formatMinutes(awakeMinutes)
-                  })
-                : ""}
-            ${sleeping
-                ? chip({
-                      icon: "mdi:bed",
-                      label: "Sleeping",
-                      value: "Sleeping",
-                      warning: true
-                  })
-                : ""}
-            ${walking
-                ? chip({
-                      icon: "mdi:walk",
-                      label: "On a walk",
-                      value: "On a walk",
-                      warning: true
-                  })
-                : ""}
-            ${atDaycare
-                ? chip({
-                      icon: "mdi:school-outline",
-                      label: "At daycare",
-                      value: "At daycare",
-                      warning: true
                   })
                 : ""}
         `;
