@@ -41,6 +41,7 @@ from custom_components.babytracker.store import BabytrackerStore
 
 _MAPPINGS = [
     {"pattern": r"^Nap\s+Started", "type": "sleep", "session": "start"},
+    {"pattern": r"^Nap\s+Ended", "type": "sleep", "session": "end"},
     {
         "pattern": r"^Slept\s+from\s+.*\s+to\s+",
         "type": "sleep",
@@ -154,6 +155,26 @@ async def test_unchanged_repeat_is_a_noop(hass: HomeAssistant) -> None:
     entries = coord.entries_by_baby(baby.id)
     assert len(entries) == 1
     assert entries[0].imported_at == original_imported_at
+
+
+@pytest.mark.asyncio
+async def test_nap_ended_activity_is_skipped(hass: HomeAssistant) -> None:
+    importer, coord, baby = await _make_importer(hass)
+
+    # A standalone "Nap Ended" has only an end timestamp. Creating a
+    # sleep entry from it would yield a 0-duration nap at the end
+    # instant. The importer must skip it instead; completed naps come
+    # in as "Slept from X to Y" which carries both bounds.
+    await importer._process_activity(
+        {
+            "id": "act-end-only",
+            "title": "Nap Ended at 2:30 PM",
+            "timestamp": "2026-05-19T14:30:00+00:00",
+            "details": None,
+        },
+        {},
+    )
+    assert coord.entries_by_baby(baby.id) == []
 
 
 @pytest.mark.asyncio

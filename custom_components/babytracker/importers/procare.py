@@ -488,6 +488,14 @@ class ProcareImporter(BaseImporter):
         if entry_type not in (self.config.get("import_types") or []):
             return
 
+        # "Nap Ended" arrives with only an end timestamp — the matching
+        # start is published separately. Completed naps already come in
+        # as "Slept from X to Y" (session=range) carrying both bounds, so
+        # an end-only event has nothing useful to add and would otherwise
+        # create a zero-duration nap at the end instant.
+        if mapping.get("session") == "end":
+            return
+
         prior = existing.get(source_id)
 
         photo_url = activity.get("photo_url") or None
