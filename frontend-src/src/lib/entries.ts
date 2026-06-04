@@ -12,6 +12,7 @@ export interface RawEntry {
 
 export interface Summary {
     feedings: number;
+    diapers: number;
     wetDiapers: number;
     dirtyDiapers: number;
     totalVolumeMl: number;
@@ -62,6 +63,7 @@ export function summarize(
 ): Summary {
     const cutoff = now - windowMs;
     let feedings = 0;
+    let diapers = 0;
     let wetDiapers = 0;
     let dirtyDiapers = 0;
     let totalVolumeMl = 0;
@@ -105,9 +107,17 @@ export function summarize(
             }
         } else if (e.type === "diaper") {
             const kind = String((e.data as any)?.kind ?? "");
-            if (kind === "wet") wetDiapers += 1;
-            else if (kind === "dirty") dirtyDiapers += 1;
-            else if (kind === "both") {
+            // `diapers` counts events; `wetDiapers`/`dirtyDiapers` are the
+            // W/D breakdown — `both` contributes one event but bumps W and
+            // D each (so the W·D detail line still reads correctly).
+            if (kind === "wet") {
+                diapers += 1;
+                wetDiapers += 1;
+            } else if (kind === "dirty") {
+                diapers += 1;
+                dirtyDiapers += 1;
+            } else if (kind === "both") {
+                diapers += 1;
                 wetDiapers += 1;
                 dirtyDiapers += 1;
             }
@@ -116,6 +126,7 @@ export function summarize(
 
     return {
         feedings,
+        diapers,
         wetDiapers,
         dirtyDiapers,
         totalVolumeMl,

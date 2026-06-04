@@ -545,7 +545,7 @@ export class BabytrackerCard extends LitElement {
                 ? chip({
                       icon: "mdi:human-baby-changing-table",
                       label: "Diapers (last 24h)",
-                      value: String(s.wetDiapers + s.dirtyDiapers),
+                      value: String(s.diapers),
                       detail:
                           diaperDetail.length > 0
                               ? `(${diaperDetail.join(" · ")})`
