@@ -41,7 +41,7 @@ from ..photo_storage import (
     write_video,
 )
 from ..presence import SIGN_IN_RE, SIGN_OUT_RE
-from ..runtime import now_iso
+from ..runtime import now_iso, parse_ts
 from .base import BaseImporter
 from .procare_mappings import async_load_mappings, match_title
 
@@ -103,6 +103,36 @@ def _existing_by_source_id(baby: Baby, coordinator) -> dict[str, Entry]:
         for e in coordinator.entries_by_baby(baby.id)
         if e.source == ENTRY_SOURCE_PROCARE and e.source_id
     }
+
+
+# Procare reports "Nap Started" with second-level precision but the
+# matching "Slept from H:MM to H:MM" closes-out is at minute granularity
+# (and staff often tap "Start" a beat after the displayed round-minute).
+# A few minutes of tolerance is enough to recognise the pair as the same
+# nap without false-positively merging two genuinely separate naps that
+# happen to start close together.
+_SLEEP_SAME_START_TOLERANCE_S = 300
+
+
+def _sleep_intervals_overlap(
+    a_start_iso: str,
+    a_end_iso: str | None,
+    b_start_iso: str,
+    b_end_iso: str | None,
+    now: datetime,
+) -> bool:
+    """Whether two sleep intervals overlap. Open sessions end at `now`."""
+    a_start = parse_ts(a_start_iso)
+    a_end = parse_ts(a_end_iso) if a_end_iso else now
+    b_start = parse_ts(b_start_iso)
+    b_end = parse_ts(b_end_iso) if b_end_iso else now
+    return max(a_start, b_start) < min(a_end, b_end)
+
+
+def _starts_match(a_iso: str, b_iso: str) -> bool:
+    """Whether two ISO timestamps are within the sleep-start tolerance."""
+    delta = (parse_ts(a_iso) - parse_ts(b_iso)).total_seconds()
+    return abs(delta) <= _SLEEP_SAME_START_TOLERANCE_S
 
 
 # Procare photo URLs are signed CDN links (S3/CloudFront). We allow only
@@ -540,6 +570,40 @@ class ProcareImporter(BaseImporter):
                 data=data,
             )
             return
+
+        if entry_type == "sleep":
+            now = datetime.now(tz=timezone.utc)
+            existing_sleeps = [
+                e
+                for e in self.coordinator.entries_by_baby(self.baby.id)
+                if e.type == "sleep"
+                and _sleep_intervals_overlap(
+                    e.timestamp, e.ended_at, timestamp, ended_at, now
+                )
+            ]
+            if existing_sleeps:
+                # Close-on-overlap: the canonical Procare pair is a
+                # "Nap Started" (open, same start) followed by a
+                # "Slept from X to Y" (closed range) under a different
+                # source_id. Close the existing open entry with the
+                # new ended_at instead of creating a second one.
+                if (
+                    len(existing_sleeps) == 1
+                    and existing_sleeps[0].ended_at is None
+                    and ended_at is not None
+                    and _starts_match(existing_sleeps[0].timestamp, timestamp)
+                ):
+                    await self.coordinator.close_session(
+                        existing_sleeps[0].id, ended_at=ended_at
+                    )
+                    return
+                _LOGGER.warning(
+                    "babytracker: skipping Procare sleep %s; overlaps "
+                    "existing sleep entries (%s)",
+                    source_id,
+                    ", ".join(e.id for e in existing_sleeps),
+                )
+                return
 
         photo_path = await self._resolve_photo_path(photo_url, None)
         video_path = await self._resolve_video_path(video_url, None)
