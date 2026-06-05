@@ -178,6 +178,108 @@ async def test_nap_ended_activity_is_skipped(hass: HomeAssistant) -> None:
 
 
 @pytest.mark.asyncio
+async def test_overlapping_closed_nap_closes_existing_open_session(
+    hass: HomeAssistant,
+) -> None:
+    importer, coord, baby = await _make_importer(hass)
+
+    # Existing open "Nap Started" at 1:00 PM (source_id act-1).
+    await importer._process_activity(
+        {
+            "id": "act-1",
+            "title": "Nap Started",
+            "timestamp": "2026-05-19T13:00:00+00:00",
+            "details": None,
+        },
+        {},
+    )
+    assert len(coord.entries_by_baby(baby.id)) == 1
+    open_entry = coord.entries_by_baby(baby.id)[0]
+    assert open_entry.ended_at is None
+
+    # Procare emits the closing range under a DIFFERENT source_id
+    # (the canonical duplicate pattern). Should close the existing
+    # open entry, not create a second one.
+    await importer._process_activity(
+        {
+            "id": "act-2",
+            "title": "Slept from 1:00 PM to 2:30 PM",
+            "timestamp": "2026-05-19T13:00:00+00:00",
+            "details": None,
+        },
+        _existing_by_source_id(baby, coord),
+    )
+    entries = coord.entries_by_baby(baby.id)
+    assert len(entries) == 1
+    assert entries[0].id == open_entry.id
+    assert entries[0].ended_at is not None
+
+
+@pytest.mark.asyncio
+async def test_overlapping_sleep_with_no_matching_open_is_skipped(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+) -> None:
+    importer, coord, baby = await _make_importer(hass)
+
+    # An existing closed nap spans 1:00–2:00 PM.
+    await importer._process_activity(
+        {
+            "id": "act-1",
+            "title": "Slept from 1:00 PM to 2:00 PM",
+            "timestamp": "2026-05-19T13:00:00+00:00",
+            "details": None,
+        },
+        {},
+    )
+    assert len(coord.entries_by_baby(baby.id)) == 1
+
+    # A second Procare activity reports a nap that partially overlaps
+    # (1:30–2:30 PM) with a different source_id. Skip it and warn.
+    with caplog.at_level("WARNING"):
+        await importer._process_activity(
+            {
+                "id": "act-2",
+                "title": "Slept from 1:30 PM to 2:30 PM",
+                "timestamp": "2026-05-19T13:30:00+00:00",
+                "details": None,
+            },
+            _existing_by_source_id(baby, coord),
+        )
+    entries = coord.entries_by_baby(baby.id)
+    assert len(entries) == 1  # the new overlap was skipped
+    assert any(
+        "overlaps existing sleep entries" in record.getMessage()
+        for record in caplog.records
+    )
+
+
+@pytest.mark.asyncio
+async def test_non_overlapping_sleep_is_created(hass: HomeAssistant) -> None:
+    importer, coord, baby = await _make_importer(hass)
+
+    await importer._process_activity(
+        {
+            "id": "act-1",
+            "title": "Slept from 1:00 PM to 2:00 PM",
+            "timestamp": "2026-05-19T13:00:00+00:00",
+            "details": None,
+        },
+        {},
+    )
+    # Later, non-overlapping nap → both entries should exist.
+    await importer._process_activity(
+        {
+            "id": "act-2",
+            "title": "Slept from 3:00 PM to 4:00 PM",
+            "timestamp": "2026-05-19T15:00:00+00:00",
+            "details": None,
+        },
+        _existing_by_source_id(baby, coord),
+    )
+    assert len(coord.entries_by_baby(baby.id)) == 2
+
+
+@pytest.mark.asyncio
 async def test_type_change_between_updates_is_logged_and_skipped(
     hass: HomeAssistant, caplog: pytest.LogCaptureFixture
 ) -> None:
