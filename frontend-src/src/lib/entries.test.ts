@@ -110,6 +110,7 @@ describe("summarize", () => {
             { type: "diaper", timestamp: iso(-4), data: { kind: "wet" } }
         ];
         const s = summarize(entries, NOW);
+        expect(s.diapers).toBe(4); // four diaper events total
         expect(s.wetDiapers).toBe(3); // wet + both + wet
         expect(s.dirtyDiapers).toBe(2); // dirty + both
     });
@@ -147,6 +148,7 @@ describe("summarize", () => {
         const s = summarize(entries, NOW);
         expect(s).toEqual({
             feedings: 0,
+            diapers: 0,
             wetDiapers: 0,
             dirtyDiapers: 0,
             totalVolumeMl: 0,
