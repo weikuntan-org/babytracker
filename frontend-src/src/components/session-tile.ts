@@ -2,7 +2,7 @@
 // one-tap end button.
 import { html, type TemplateResult } from "lit";
 
-import { formatMinutes, sessionDurationMinutes } from "../lib/entries";
+import { formatClock, formatMinutes, sessionDurationMinutes } from "../lib/entries";
 import { babyEntityId } from "../lib/ha-helpers";
 
 type ServiceCaller = (
@@ -38,7 +38,7 @@ export function sessionTileTemplate(
             html`
                 <div class="chip warning" role="status">
                     Sleeping${started
-                        ? html` · started ${_clock(started)} ·
+                        ? html` · started ${formatClock(started)} ·
                           ${formatMinutes(mins)}`
                         : ""}
                     <button
@@ -89,7 +89,7 @@ export function sessionTileTemplate(
         banners.push(
             html`
                 <div class="chip warning" role="status">
-                    Walking ${started ? html`· started ${_clock(started)}` : ""}
+                    Walking ${started ? html`· started ${formatClock(started)}` : ""}
                     <button
                         aria-label="End walk"
                         @click=${(e: Event) =>
@@ -103,14 +103,4 @@ export function sessionTileTemplate(
     }
 
     return html`<div class="section">${banners}</div>`;
-}
-
-function _clock(iso?: string): string {
-    if (!iso) return "";
-    const t = Date.parse(iso);
-    if (Number.isNaN(t)) return "";
-    return new Date(t).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit"
-    });
 }
