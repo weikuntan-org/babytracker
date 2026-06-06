@@ -17,6 +17,7 @@ import {
     type RequestDelete,
     type Submit
 } from "./_helpers";
+import { VACCINE_SITES } from "./vaccine";
 
 export function editEntryForm(
     hass: any,
@@ -30,6 +31,7 @@ export function editEntryForm(
     const isPointInTimeFeeding =
         type === "feeding" &&
         (data.method === "bottle" || data.method === "solids");
+    const isSolids = type === "feeding" && data.method === "solids";
     // Vaccines + growth measurements are calendar-day-only — drop the
     // time picker on the edit form too (matches the log forms).
     const isDateOnly = type === "vaccine" || type === "growth";
@@ -66,6 +68,27 @@ export function editEntryForm(
         } else if (type === "other" || type === "medication") {
             const name = String(f.get("name") ?? "");
             if (name) dataPatch.name = name;
+        } else if (type === "vaccine") {
+            // Vaccine-specific fields. Edit uses plain inputs (vs the
+            // create form's dropdown) because the edit modal isn't
+            // wired through to the configured schedule's name list —
+            // name stays free-text here. Empty optional fields are sent
+            // as null so the patch clears them server-side.
+            const name = String(f.get("name") ?? "").trim();
+            if (name) dataPatch.name = name;
+            const doseStr = String(f.get("dose_number") ?? "").trim();
+            if (doseStr === "") {
+                dataPatch.dose_number = null;
+            } else {
+                const n = Number(doseStr);
+                if (Number.isFinite(n)) dataPatch.dose_number = n;
+            }
+            dataPatch.site =
+                String(f.get("site") ?? "").trim() || null;
+            dataPatch.lot_number =
+                String(f.get("lot_number") ?? "").trim() || null;
+            dataPatch.provider =
+                String(f.get("provider") ?? "").trim() || null;
         } else if (type === "growth") {
             const num = (key: string): number | null | undefined => {
                 const raw = f.get(key);
@@ -205,9 +228,69 @@ export function editEntryForm(
                       initialLengthUnit: data.length_unit ?? "cm"
                   })
                 : ""}
-            <label for="notes">Notes</label>
+            ${type === "vaccine"
+                ? html`
+                      <label for="name">Vaccine</label>
+                      <input
+                          id="name"
+                          name="name"
+                          type="text"
+                          required
+                          .value=${String(data.name ?? "")}
+                      />
+                      <label for="dose_number">Dose number</label>
+                      <input
+                          id="dose_number"
+                          name="dose_number"
+                          type="number"
+                          min="1"
+                          max="20"
+                          step="1"
+                          inputmode="numeric"
+                          .value=${data.dose_number != null
+                              ? String(data.dose_number)
+                              : ""}
+                      />
+                      <label for="site">Site</label>
+                      <select id="site" name="site">
+                          <option value="" ?selected=${!data.site}>
+                              (unspecified)
+                          </option>
+                          ${VACCINE_SITES.map(
+                              (s) => html`<option
+                                  value=${s}
+                                  ?selected=${data.site === s}
+                              >
+                                  ${s.replace("_", " ")}
+                              </option>`
+                          )}
+                      </select>
+                      <label for="lot_number">Lot number</label>
+                      <input
+                          id="lot_number"
+                          name="lot_number"
+                          type="text"
+                          placeholder="optional"
+                          .value=${String(data.lot_number ?? "")}
+                      />
+                      <label for="provider">Provider</label>
+                      <input
+                          id="provider"
+                          name="provider"
+                          type="text"
+                          placeholder="optional"
+                          .value=${String(data.provider ?? "")}
+                      />
+                  `
+                : ""}
+            <label for="notes"
+                >${isSolids
+                    ? html`What was fed <span class="muted">(optional)</span>`
+                    : "Notes"}</label
+            >
             ${notesInputRow(hass, {
-                value: String(entry.notes ?? "")
+                value: String(entry.notes ?? ""),
+                placeholder: isSolids ? "e.g. banana, oatmeal" : undefined
             })}
             ${photoRow(hass, entry.photo_path ?? "")}
             <div class="actions">

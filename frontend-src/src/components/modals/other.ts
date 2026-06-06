@@ -67,7 +67,11 @@ export function otherForm(
         <form @submit=${onSubmit}>
             <h2>Log activity</h2>
             <label for="started">Started</label>
-            ${dateTimeRow({ id: "started", value: nowLocalForInput() })}
+            ${dateTimeRow({
+                id: "started",
+                value: nowLocalForInput(),
+                required: true
+            })}
             <label for="ended"
                 >Ended <span class="muted">(optional)</span></label
             >

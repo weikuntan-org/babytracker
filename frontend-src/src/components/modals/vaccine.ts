@@ -74,6 +74,18 @@ function _canonicalVaccine(name: string): string {
     return VACCINE_ALIASES[name] ?? name;
 }
 
+// Injection sites shown in the dropdown. Exported so the edit modal
+// renders the same choice list as the create modal — keeping the two
+// in sync without a deeper refactor.
+export const VACCINE_SITES = [
+    "left_thigh",
+    "right_thigh",
+    "left_arm",
+    "right_arm",
+    "oral",
+    "nasal"
+] as const;
+
 export function vaccineLogForm(
     hass: any,
     baby: string,
@@ -83,14 +95,7 @@ export function vaccineLogForm(
     submit: Submit,
     close: Close
 ): TemplateResult {
-    const sites = [
-        "left_thigh",
-        "right_thigh",
-        "left_arm",
-        "right_arm",
-        "oral",
-        "nasal"
-    ];
+    const sites = VACCINE_SITES;
     const onSubmit = (e: SubmitEvent) => {
         e.preventDefault();
         const form = e.currentTarget as HTMLFormElement;
@@ -232,7 +237,11 @@ export function vaccineLogForm(
                 placeholder="optional"
             />
             <label for="when">Date</label>
-            ${dateRow({ id: "when", value: todayDateInput() })}
+            ${dateRow({
+                id: "when",
+                value: todayDateInput(),
+                required: true
+            })}
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
             ${photoRow(hass)}

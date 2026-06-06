@@ -44,8 +44,12 @@ export function solidsForm(
                 placeholder: "e.g. banana, oatmeal",
                 autofocus: true
             })}
-            <label for="when">When</label>
-            ${dateTimeRow({ id: "when", value: nowLocalForInput() })}
+            <label for="when">Time</label>
+            ${dateTimeRow({
+                id: "when",
+                value: nowLocalForInput(),
+                required: true
+            })}
             ${photoRow(hass)}
             <div class="actions">
                 <button type="button" @click=${close}>Cancel</button>

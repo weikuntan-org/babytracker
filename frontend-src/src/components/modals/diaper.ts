@@ -32,8 +32,12 @@ export function diaperForm(
     return html`
         <form @submit=${onSubmit}>
             <h2>Log diaper</h2>
-            <label for="when">When</label>
-            ${dateTimeRow({ id: "when", value: nowLocalForInput() })}
+            <label for="when">Time</label>
+            ${dateTimeRow({
+                id: "when",
+                value: nowLocalForInput(),
+                required: true
+            })}
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
             ${photoRow(hass)}
