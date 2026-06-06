@@ -55,7 +55,11 @@ export function growthLogForm(
                 autofocusWeight: true
             })}
             <label for="when">Date</label>
-            ${dateRow({ id: "when", value: todayDateInput() })}
+            ${dateRow({
+                id: "when",
+                value: todayDateInput(),
+                required: true
+            })}
             <label for="notes">Notes</label>
             ${notesInputRow(hass)}
             ${photoRow(hass)}
