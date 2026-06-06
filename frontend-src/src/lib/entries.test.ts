@@ -377,11 +377,12 @@ describe("formatClock", () => {
         expect(formatClock("garbage")).toBe("");
     });
 
-    it("renders an HH:MM clock from an ISO timestamp", () => {
+    it("renders a 12-hour clock with AM/PM from an ISO timestamp", () => {
         const s = formatClock("2026-05-18T22:30:00Z");
-        // Exact rendering depends on the test runner's locale/timezone, so
-        // only assert structure: two pairs of digits separated by a colon.
-        expect(s).toMatch(/^\d{1,2}:\d{2}(\s?[AP]M)?$/i);
+        // Exact hour depends on the test runner's timezone, so only
+        // assert structure: 12-hour digits, colon, two minute digits,
+        // and a trailing AM/PM marker.
+        expect(s).toMatch(/^\d{1,2}:\d{2}\s?[AP]M$/i);
     });
 });
 

@@ -390,14 +390,17 @@ function capitalizeFirst(s: string): string {
 }
 
 /**
- * Format an ISO timestamp as a local HH:MM clock string for compact list rows.
- * Returns "" for missing/invalid input.
+ * Format an ISO timestamp as a local 12h clock string ("9:30 PM") for
+ * compact list rows. AM/PM is forced regardless of the host's locale
+ * so the time format reads the same across the card. Returns "" for
+ * missing/invalid input.
  */
 export function formatClock(iso?: string | null): string {
     const t = parseTimestamp(iso);
     if (t === 0) return "";
     return new Date(t).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit"
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
     });
 }
