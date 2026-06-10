@@ -450,6 +450,16 @@ export class BabytrackerCard extends LitElement {
         const lastDiaper = showStatus
             ? hass.states?.[this._entityId("last_diaper")]?.state
             : undefined;
+        // Newest dirty-or-both diaper. `recent_entries` is already sorted
+        // newest-first by the WS layer, so `.find` returns the latest
+        // qualifying entry within the cap.
+        const lastPoop = showStatus
+            ? recentEntries.find(
+                  (e: any) =>
+                      e?.type === "diaper" &&
+                      (e?.data?.kind === "dirty" || e?.data?.kind === "both")
+              )?.timestamp
+            : undefined;
         const sleeping =
             showStatus &&
             hass.states?.[this._entityId("sleeping", "binary_sensor")]?.state ===
@@ -539,6 +549,13 @@ export class BabytrackerCard extends LitElement {
                       icon: "mdi:human-baby-changing-table",
                       label: "Last diaper",
                       value: this._timeSince(lastDiaper)
+                  })
+                : ""}
+            ${showStatus
+                ? chip({
+                      icon: "mdi:emoticon-poop",
+                      label: "Last poop",
+                      value: this._timeSince(lastPoop)
                   })
                 : ""}
             ${s
