@@ -580,9 +580,7 @@ export class BabytrackerCard extends LitElement {
         if (mins < 1) return "now";
         if (mins < 60) return `${mins}m`;
         const hrs = Math.floor(mins / 60);
-        return hrs < 24
-            ? `${hrs}h ${mins % 60}m`
-            : `${Math.floor(hrs / 24)}d`;
+        return `${hrs}h ${mins % 60}m`;
     }
 
     private _handleService = async (
