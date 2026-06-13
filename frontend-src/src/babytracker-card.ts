@@ -700,12 +700,20 @@ export class BabytrackerCard extends LitElement {
         this._modal = null;
     };
 
+    private _submitting = false;
+
     private _submitModal = async (
         service: string,
         data: Record<string, unknown>
     ) => {
-        await this._handleService(service, data);
-        this._closeModal();
+        if (this._submitting) return;
+        this._submitting = true;
+        try {
+            await this._handleService(service, data);
+            this._closeModal();
+        } finally {
+            this._submitting = false;
+        }
     };
 
     protected render(): TemplateResult {
