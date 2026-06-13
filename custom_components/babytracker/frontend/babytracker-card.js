@@ -4729,10 +4729,7 @@ let V = class extends O {
     const e = Date.parse(t);
     if (Number.isNaN(e)) return "—";
     const i = Math.floor((Date.now() - e) / 6e4);
-    if (i < 1) return "now";
-    if (i < 60) return `${i}m`;
-    const n = Math.floor(i / 60);
-    return n < 24 ? `${n}h ${i % 60}m` : `${Math.floor(n / 24)}d`;
+    return i < 1 ? "now" : i < 60 ? `${i}m` : `${Math.floor(i / 60)}h ${i % 60}m`;
   }
   _lastBottle() {
     var i, n, o, a, r, s, l;
