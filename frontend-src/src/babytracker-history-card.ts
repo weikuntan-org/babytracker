@@ -328,12 +328,20 @@ export class BabytrackerHistoryCard extends LitElement {
         this._modal = null;
     };
 
+    private _submitting = false;
+
     private _submitModal = async (
         service: string,
         data: Record<string, unknown>
     ) => {
-        await this.hass.callService("babytracker", service, data);
-        this._modal = null;
+        if (this._submitting) return;
+        this._submitting = true;
+        try {
+            await this.hass.callService("babytracker", service, data);
+            this._modal = null;
+        } finally {
+            this._submitting = false;
+        }
     };
 
     private _renderChips(summary: DaySummary): TemplateResult {
